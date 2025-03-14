@@ -1,5 +1,6 @@
 # instructions for training on libero:
 First follow the repo install instructions.
+Make sure conda is deactivated!!!!!
 Then:
 ```bash
 uv pip install tensorflow tensorflow_datasets
