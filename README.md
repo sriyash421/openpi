@@ -1,3 +1,24 @@
+# instructions for training on libero:
+First follow the repo install instructions.
+Then:
+```bash
+uv pip install tensorflow tensorflow_datasets
+```
+
+Then download LIBERO's RLDS modified:
+```bash
+git clone https://huggingface.co/datasets/openvla/modified_libero_rlds
+```
+
+Then convert
+```bash
+uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir modified_libero_rlds/
+```
+
+
+
+
+
 # openpi
 
 openpi holds open-source models and packages for robotics, published by the [Physical Intelligence team](https://www.physicalintelligence.company/).
