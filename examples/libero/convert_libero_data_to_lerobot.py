@@ -27,8 +27,8 @@ import tyro
 
 REPO_NAME = "jesbu1/libero_90_original"  # Name of the output dataset, also used for the Hugging Face Hub
 RAW_DATASET_NAMES = [
-    #"libero_90_openvla_processed"
-    "libero_90_rlds_original" # TEMP
+    "libero_90_openvla_processed"
+    #"libero_90_rlds_original" # TEMP
     #"libero_10_no_noops",
     #"libero_goal_no_noops",
     #"libero_object_no_noops",
