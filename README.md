@@ -6,14 +6,13 @@ Then:
 uv pip install tensorflow tensorflow_datasets
 ```
 
-Then download LIBERO's RLDS modified:
-```bash
-git clone https://huggingface.co/datasets/openvla/modified_libero_rlds
-```
+Follow the instructions in my openvla repo to install and generate the modified LIBERO dataset: [here](https://github.com/jesbu1/openvla).
 
-Then convert
+Then convert the modified LIBERO dataset to a LeRobot dataset.
+First, make sure you double check the directory in the script is correct.
+Then run the script:
 ```bash
-uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir modified_libero_rlds/
+uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /home/jeszhang/tensorflow_datasets/
 ```
 
 
