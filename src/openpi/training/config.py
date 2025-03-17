@@ -358,10 +358,10 @@ class TrainConfig:
     # Random seed that will be used by random generators during training.
     seed: int = 42
     # Global batch size.
-    batch_size: int = 32
+    batch_size: int = 96 # 64 uses 31GB of memory on 1 GPU when doing LoRA fine-tuning, 96 uses 41GB of memory on 1 GPU when doing LoRA fine-tuning.
     # Number of workers to use for the data loader. Increasing this number will speed up data loading but
     # will increase memory and CPU usage.
-    num_workers: int = 2
+    num_workers: int = 16
     # Number of train steps (batches) to run.
     num_train_steps: int = 30_000
 
