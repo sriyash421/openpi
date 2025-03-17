@@ -1,4 +1,4 @@
-# instructions for training on libero:
+# Instructions for training on LIBERO:
 First follow the repo install instructions.
 Setup UV in a virtual environment in this repo before uv installing things:
 `uv venv`
@@ -17,7 +17,16 @@ Then run the script:
 uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /home/jeszhang/tensorflow_datasets/
 ```
 
+I've already processed the training stats and norms in `assets/pi0_libero_low_mem_finetune/jesbu1/libero_90_lerobot/norm_stats.json`. If not running `pi0_libero_low_mem_finetune`, you can copy the `norm_stats.json` file to the `assets/CONFIG_NAME/jesbu1/libero_90_lerobot/` directory.
 
+## Training π₀ with LoRA
+
+You may need to change the `repo_id` in the `src/openpi/training/config.py` file for the `pi0_libero_low_mem_finetune` config to the `jesbu1/libero_90_lerobot` dataset and where it is on your machine. It should by default be in `/home/$USER/.cache/huggingface/lerobot/jesbu1/libero_90_lerobot/`. You can also change the `local_files_only` flag to `False` in the `src/openpi/training/config.py` file to use the local dataset.
+
+Then train:
+```bash
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune --exp-name=EXP_NAME --overwrite
+```
 
 
 
