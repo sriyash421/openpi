@@ -1,5 +1,7 @@
 # instructions for training on libero:
 First follow the repo install instructions.
+Setup UV in a virtual environment in this repo before uv installing things:
+`uv venv`
 Make sure conda is deactivated!!!!!
 Then:
 ```bash
