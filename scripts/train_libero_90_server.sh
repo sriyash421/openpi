@@ -17,14 +17,12 @@ echo "$(date): Starting processing with $NUM_RUNS iterations" | tee -a $LOG_FILE
 for ((i=1; i<=NUM_RUNS; i++)); do
     echo "$(date): Starting run $i of $NUM_RUNS" | tee -a $LOG_FILE
     
-    # Run the command with srun and a timeout to ensure it doesn't run too long
-    # Using 150 minutes (2.5 hours) as the timeout for each run
     srun --account=nvr_srl_simpler \
                     --time=4:00:00 \
                     --gpus=8 \
                     --ntasks=1 \
                     --exclusive \
-                    --partition=grizzly,polar,polar3,polar4,batch_singlenode,backfill_block1 \
+                    --partition=interactive,grizzly,polar,polar3,polar4,batch_singlenode,backfill_block1 \
                     /bin/bash -c "cd /home/jeszhang/data/openpi && \ 
                     source activate .venv/bin/activate && \
                     export WANDB_API_KEY=41495c354f793dc48bd32583a0e3c653f9991221 && \
