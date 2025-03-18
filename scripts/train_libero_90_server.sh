@@ -23,7 +23,7 @@ for ((i=1; i<=NUM_RUNS; i++)); do
                     --ntasks=1 \
                     --exclusive \
                     --partition=interactive,grizzly,polar,polar3,polar4,batch_singlenode,backfill_block1 \
-                    /bin/bash -c "cd /home/jeszhang/data/openpi && \ 
+                    bash -c "cd /home/jeszhang/data/openpi && \ 
                     source activate .venv/bin/activate && \
                     export WANDB_API_KEY=41495c354f793dc48bd32583a0e3c653f9991221 && \
                     XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_8gpu --exp-name=$EXP_NAME --resume" 2>&1 | tee -a $LOG_FILE
