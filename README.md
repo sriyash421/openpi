@@ -1,8 +1,12 @@
 # Instructions for training on LIBERO:
 First follow the repo install instructions.
-Setup UV in a virtual environment in this repo before uv installing things:
-`uv venv`
+Setup UV in a virtual environment in this repo before uv installing things.
 Make sure conda is deactivated!!!!!
+```bash
+uv venv
+source .venv/bin/activate
+GIT_LFS_SKIP_SMUDGE=1 uv sync
+```
 Then:
 ```bash
 uv pip install tensorflow tensorflow_datasets
@@ -28,7 +32,29 @@ Then train:
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune --exp-name=EXP_NAME --overwrite
 ```
 
+## Evaluation of LIBERO
+Once done training, you can evaluate the model by running the following command to initialize a policy server:
+```bash
+CUDA_VISIBLE_DEVICES=1 uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_90_LoRA_finetune_8gpu/29999/ 
+```
 
+In a separate terminal, run the following command to run the Libero evaluation script:
+```bash
+# Create virtual environment
+conda deactivate
+uv venv --python 3.8 examples/libero/.venv
+source examples/libero/.venv/bin/activate
+uv pip sync examples/libero/requirements.txt third_party/libero/requirements.txt --extra-index-url https://download.pytorch.org/whl/cu113 --index-strategy=unsafe-best-match
+uv pip install -e packages/openpi-client
+uv pip install -e third_party/libero
+export PYTHONPATH=$PYTHONPATH:$PWD/third_party/libero
+
+# Run the simulation
+python examples/libero/main.py --args.task_suite_name=libero_10
+python examples/libero/main.py --args.task_suite_name=libero_spatial
+python examples/libero/main.py --args.task_suite_name=libero_object
+python examples/libero/main.py --args.task_suite_name=libero_goal
+```
 
 # openpi
 
