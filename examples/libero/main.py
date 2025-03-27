@@ -1,4 +1,6 @@
 import collections
+import datetime
+import wandb
 import dataclasses
 import logging
 import math
@@ -44,6 +46,10 @@ class Args:
 
     seed: int = 7  # Random Seed (for reproducibility)
 
+    use_wandb: bool = False                          # Whether to also log results in Weights & Biases
+    wandb_project: str = "p-masked-vla"              # Name of W&B project to log to (use default!)
+    wandb_entity: str = "clvr"                       # Name of entity to log under
+
 
 def eval_libero(args: Args) -> None:
     # Set random seed
@@ -69,6 +75,10 @@ def eval_libero(args: Args) -> None:
         max_steps = 400  # longest training demo has 373 steps
     else:
         raise ValueError(f"Unknown task suite: {args.task_suite_name}")
+
+    if args.use_wandb:
+        run_name = f"{args.task_suite_name}_date-{datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}"
+        wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name, config=args)
 
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
 
@@ -185,6 +195,9 @@ def eval_libero(args: Args) -> None:
     logging.info(f"Total success rate: {float(total_successes) / float(total_episodes)}")
     logging.info(f"Total episodes: {total_episodes}")
 
+    if args.use_wandb:
+        wandb.log({"success_rate": float(total_successes) / float(total_episodes)})
+        wandb.finish()
 
 def _get_libero_env(task, resolution, seed):
     """Initializes and returns the LIBERO environment, along with the task description."""
