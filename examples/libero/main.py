@@ -191,16 +191,16 @@ def eval_libero(args: Args) -> None:
 
             # Log video to wandb if we haven't reached the limit for this category
             if args.use_wandb:
-                if done and success_videos_saved < 2:
+                if done and success_videos_saved <= 2:
+                    success_videos_saved += 1
                     wandb.log({
                         f"videos/{task_description}/success_{success_videos_saved}": wandb.Video(str(video_path), fps=10)
                     })
-                    success_videos_saved += 1
-                elif not done and failure_videos_saved < 2:
+                elif not done and failure_videos_saved <= 2:
+                    failure_videos_saved += 1
                     wandb.log({
                         f"videos/{task_description}/failure_{failure_videos_saved}": wandb.Video(str(video_path), fps=10)
                     })
-                    failure_videos_saved += 1
 
             # Log current results
             logging.info(f"Success: {done}")
