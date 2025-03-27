@@ -46,7 +46,7 @@ class Args:
 
     seed: int = 7  # Random Seed (for reproducibility)
 
-    use_wandb: bool = False                          # Whether to also log results in Weights & Biases
+    use_wandb: bool = True # Whether to also log results in Weights & Biases
     wandb_project: str = "p-masked-vla"              # Name of W&B project to log to (use default!)
     wandb_entity: str = "clvr"                       # Name of entity to log under
 
@@ -77,7 +77,7 @@ def eval_libero(args: Args) -> None:
         raise ValueError(f"Unknown task suite: {args.task_suite_name}")
 
     if args.use_wandb:
-        run_name = f"{args.task_suite_name}_date-{datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}"
+        run_name = f"{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}"
         wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name, config=args)
 
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
@@ -87,6 +87,11 @@ def eval_libero(args: Args) -> None:
     for task_id in tqdm.tqdm(range(num_tasks_in_suite)):
         # Get task
         task = task_suite.get_task(task_id)
+        task_description = task.language
+
+        # Initialize video tracking for this task
+        success_videos_saved = 0
+        failure_videos_saved = 0
 
         # Get default LIBERO initial states
         initial_states = task_suite.get_task_init_states(task_id)
@@ -177,11 +182,25 @@ def eval_libero(args: Args) -> None:
             # Save a replay video of the episode
             suffix = "success" if done else "failure"
             task_segment = task_description.replace(" ", "_")
+            video_path = pathlib.Path(args.video_out_path) / f"rollout_{task_segment}_{suffix}.mp4"
             imageio.mimwrite(
-                pathlib.Path(args.video_out_path) / f"rollout_{task_segment}_{suffix}.mp4",
+                video_path,
                 [np.asarray(x) for x in replay_images],
                 fps=10,
             )
+
+            # Log video to wandb if we haven't reached the limit for this category
+            if args.use_wandb:
+                if done and success_videos_saved < 2:
+                    wandb.log({
+                        f"videos/task_{task_id}/success_{success_videos_saved}": wandb.Video(str(video_path), fps=10)
+                    })
+                    success_videos_saved += 1
+                elif not done and failure_videos_saved < 2:
+                    wandb.log({
+                        f"videos/task_{task_id}/failure_{failure_videos_saved}": wandb.Video(str(video_path), fps=10)
+                    })
+                    failure_videos_saved += 1
 
             # Log current results
             logging.info(f"Success: {done}")
