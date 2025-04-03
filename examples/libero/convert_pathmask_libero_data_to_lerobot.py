@@ -5,36 +5,38 @@ We use the Libero dataset (stored in RLDS) for this example, but it can be easil
 modified for any other data you have saved in a custom format.
 
 Usage:
-uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /path/to/your/data
+uv run examples/libero/convert_pathmask_libero_data_to_lerobot.py --data_dir /path/to/your/data --path_and_mask_file_dir /path/to/dir_containing_h5points
 
-If you want to push your dataset to the Hugging Face Hub, you can use the following command:
-uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /path/to/your/data --push_to_hub
+If you want to push your dataset to the Hugging Face Hub, you can add the `--push_to_hub` flag:
 
 Note: to run the script, you need to install tensorflow_datasets:
 `uv pip install tensorflow tensorflow_datasets`
 
-You can download the raw Libero datasets from https://huggingface.co/datasets/openvla/modified_libero_rlds
+You can download the raw Libero datasets from https://huggingface.co/datasets/jesbu1/libero_openvla_processed_hdf5/
 The resulting dataset will get saved to the $LEROBOT_HOME directory.
 Running this conversion script will take approximately 30 minutes.
 """
 
 import shutil
+from pathlib import Path
 
 from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-import tensorflow_datasets as tfds
+import h5py
+import numpy as np
 import tyro
+import os
 
 # TODO: iterate through the dataset_movement_and_masks.h5 file and extract the masks and paths.
-REPO_NAME = "jesbu1/libero_90_lerobot_pathmask"  # Name of the output dataset, also used for the Hugging Face Hub
 RAW_DATASET_NAMES = [
-    "libero_90_openvla_processed"
-    # "libero_90_rlds_original" # TEMP
-    # "libero_10_no_noops",
-    # "libero_goal_no_noops",
-    # "libero_object_no_noops",
-    # "libero_spatial_no_noops",
+    "libero_90",
+    # "libero_10",
+    # "libero_spatial",
+    # "libero_goal",
+    # "libero_object",
 ]  # For simplicity we will combine multiple Libero datasets into one training dataset
+assert len(RAW_DATASET_NAMES) == 1, "Only one dataset name is supported at a time"
+REPO_NAME = "jesbu1/libero_90_lerobot_pathmask"  # Name of the output dataset, also used for the Hugging Face Hub
 
 
 def main(data_dir: str, path_and_mask_file_dir: str, *, push_to_hub: bool = False):
@@ -90,19 +92,27 @@ def main(data_dir: str, path_and_mask_file_dir: str, *, push_to_hub: bool = Fals
 
     # Loop over raw Libero datasets and write episodes to the LeRobot dataset
     # You can modify this for your own data format
-    for raw_dataset_name in RAW_DATASET_NAMES:
-        raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
-        for episode in raw_dataset:
-            for step in episode["steps"].as_numpy_iterator():
-                dataset.add_frame(
-                    {
-                        "image": step["observation"]["image"],
-                        "wrist_image": step["observation"]["wrist_image"],
-                        "state": step["observation"]["state"],
-                        "actions": step["action"],
-                    }
-                )
-            dataset.save_episode(task=step["language_instruction"].decode())
+    with h5py.File(Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5", "r") as points_and_masks_h5:
+        for raw_dataset_name in RAW_DATASET_NAMES:
+            # open the directory containing the h5 files using raw_dataset_name
+            libero_h5_list = [file for file in os.listdir(Path(data_dir) / raw_dataset_name) if file.endswith(".h5")]
+            for libero_h5_file in libero_h5_list:
+                with h5py.File(Path(data_dir) / raw_dataset_name / libero_h5_file, "r") as f:
+                    for demo_num in enumerate(f["data"].keys()):
+                        for observation in f["data"][demo_num]["obs"]:
+                            gripper_state = observation["gripper_states"]
+                            ee_state = observation["ee_states"]
+                            state = (np.asarray(np.concatenate((ee_state, gripper_state), axis=-1), np.float32),)
+                            # TODO: mask and path
+                            dataset.add_frame(
+                                {
+                                    "image": observation["agentview_image"],
+                                    "wrist_image": observation["eye_in_hand_rgb"],
+                                    "state": state,
+                                    "actions": f["data"][demo_num]["action"],
+                                }
+                            )
+                    dataset.save_episode(task=step["language_instruction"].decode())
 
     # Consolidate the dataset, skip computing stats since we will do that later
     dataset.consolidate(run_compute_stats=False)
