@@ -209,6 +209,7 @@ def get_mask_and_path_from_h5(
     demo_key: str,
     hi_start: int,
     hi_end: int,
+    use_subtask_path: bool = False,
 ):
     """
     Helper function to load annotations (path, mask) from separate hdf5 file.
@@ -217,6 +218,7 @@ def get_mask_and_path_from_h5(
     :param demo_key: The key to the demo in the hdf5 file.
     :param hi_start: The start index of the history trajectory.
     :param hi_end: The end index of the history trajectory.
+    :param use_subtask_path: Whether to use the subtask path instead of the full path.
     Returns:
         mask_2d: A 2D mask of the significant points and stopped points in the trajectory.
         full_path_2d: A 2D path of the gripper positions in the trajectory.
@@ -289,8 +291,21 @@ def get_mask_and_path_from_h5(
     # for now, just return the masked_frames applied to the images
     masks = f_annotation["masked_frames"][()]
     masked_imgs = []
+    path_imgs = []
+    masked_path_imgs = []
     for i in range(hi_start, hi_end):
         # mask the original agentview_rgb with the mask
         masked_imgs.append(images[i] * masks[i][:, :, None])
+        if use_subtask_path:
+            masked_path_imgs.append(
+                process_path_obs(images[i], subtask_path_2d[i], path_add_img=True, path_add_channel=False)
+            )
+            path_imgs.append(process_path_obs(images[i], subtask_path_2d[i], path_add_img=False, path_add_channel=True))
+        else:
+            masked_path_imgs.append(process_path_obs(images[i], paths[i], path_add_img=True, path_add_channel=False))
+            path_imgs.append(process_path_obs(images[i], paths[i], path_add_img=False, path_add_channel=True))
     masked_imgs = np.array(masked_imgs)
-    return masked_imgs, full_path_2d, subtask_path_2d, quests
+    path_imgs = np.array(path_imgs)
+    masked_path_imgs = np.array(masked_path_imgs)
+
+    return masked_imgs, path_imgs, masked_path_imgs, quests

@@ -71,10 +71,15 @@ def main(
                 "shape": (256, 256, 3),
                 "names": ["height", "width", "channel"],
             },
-            "path": {
-                "dtype": "float32",
-                "shape": (2,),
-                "names": ["path"],
+            "path_image": {
+                "dtype": "image",
+                "shape": (256, 256, 3),
+                "names": ["height", "width", "channel"],
+            },
+            "masked_path_image": {
+                "dtype": "image",
+                "shape": (256, 256, 3),
+                "names": ["height", "width", "channel"],
             },
             "wrist_image": {
                 "dtype": "image",
@@ -105,13 +110,14 @@ def main(
             with h5py.File(Path(data_dir) / raw_dataset_name / libero_h5_file, "r", swmr=True) as f:
                 for demo_name in f["data"]:
                     num_steps = len(f["data"][demo_name]["obs"]["ee_pos"])
-                    masked_imgs, paths, subtask_paths, quests = get_mask_and_path_from_h5(
+                    masked_imgs, path_imgs, masked_path_imgs, quests = get_mask_and_path_from_h5(
                         annotation_path=Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5",
                         task_key=libero_h5_file.split(".")[0],
                         observation=f["data"][demo_name]["obs"],
                         demo_key=demo_name,
                         hi_start=0,
                         hi_end=num_steps,
+                        use_subtask_path=use_subtask_path,
                     )
 
                     # Compute the main language instruction
@@ -135,15 +141,15 @@ def main(
 
                     assert (
                         len(masked_imgs)
-                        == len(paths)
-                        == len(subtask_paths)
+                        == len(path_imgs)
+                        == len(masked_path_imgs)
                         == len(quests)
                         == num_steps
                         == len(f["data"][demo_name]["actions"])
                     ), "Lengths of masked_img, path, subtask_path, quests, ee_pos, and action must match"
 
                     assert masked_imgs[0].max() <= 255 and masked_imgs[0].min() == 0, "Masked image must be image"
-                    assert paths[0].max() <= 1 and paths[0].min() >= 0, "Path must be normalized"
+                    assert path_imgs[0].max() <= 255 and path_imgs[0].min() == 0, "Path image must be image"
 
                     for i in range(num_steps):
                         gripper_state = f["data"][demo_name]["obs"]["gripper_states"][i]
@@ -157,7 +163,8 @@ def main(
                                 ],  # flip the image as it comes from LIBERO reversed
                                 "wrist_image": f["data"][demo_name]["obs"]["eye_in_hand_rgb"][i][::-1],
                                 "masked_image": masked_imgs[i],
-                                "path": subtask_paths[i] if use_subtask_path else paths[i],
+                                "path_image": path_imgs[i],
+                                "masked_path_image": masked_path_imgs[i],
                                 "state": state,
                                 "actions": f["data"][demo_name]["actions"][i],
                             }
