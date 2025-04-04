@@ -142,17 +142,17 @@ def main(
                         == len(f["data"][demo_name]["actions"])
                     ), "Lengths of mask, path, subtask_path, quests, ee_pos, and action must match"
 
-                    for i, observation in enumerate(f["data"][demo_name]["obs"]):
-                        gripper_state = observation["gripper_states"]
-                        ee_state = observation["ee_states"]
+                    for i in range(num_steps):
+                        gripper_state = f["data"][demo_name]["obs"]["gripper_states"][i]
+                        ee_state = f["data"][demo_name]["obs"]["ee_states"][i]
                         state = (np.asarray(np.concatenate((ee_state, gripper_state), axis=-1), np.float32),)
 
                         dataset.add_frame(
                             {
-                                "image": observation["agentview_image"][
+                                "image": f["data"][demo_name]["obs"]["agentview_image"][
                                     ::-1
                                 ],  # flip the image as it comes from LIBERO reversed
-                                "wrist_image": observation["eye_in_hand_rgb"][
+                                "wrist_image": f["data"][demo_name]["obs"]["eye_in_hand_rgb"][
                                     ::-1
                                 ],  # flip the image as it comes from LIBERO reversed
                                 "mask": masks[i],
