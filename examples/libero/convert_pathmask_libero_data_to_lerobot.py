@@ -46,7 +46,6 @@ def main(
     *,
     push_to_hub: bool = False,
     use_subtask_instructions: bool = False,
-    use_subtask_path: bool = False,
 ):
     # Clean up any existing dataset in the output directory
     output_path = LEROBOT_HOME / REPO_NAME
@@ -117,7 +116,6 @@ def main(
                         demo_key=demo_name,
                         hi_start=0,
                         hi_end=num_steps,
-                        use_subtask_path=use_subtask_path,
                     )
 
                     # Compute the main language instruction
