@@ -67,12 +67,12 @@ def main(
                 "names": ["height", "width", "channel"],
             },
             "mask": {
-                "dtype": "bool",
+                "dtype": "image",
                 "shape": (256, 256),
                 "names": ["height", "width"],
             },
             "path": {
-                "dtype": "uint16",
+                "dtype": "float32",
                 "shape": (2,),
                 "names": ["x", "y"],
             },
@@ -153,7 +153,7 @@ def main(
                                     ::-1
                                 ],  # flip the image as it comes from LIBERO reversed
                                 "wrist_image": f["data"][demo_name]["obs"]["eye_in_hand_rgb"][i][::-1],
-                                "mask": masks[i].astype(np.bool),
+                                "mask": masks[i],
                                 "path": subtask_paths[i] if use_subtask_path else paths[i],
                                 "state": state,
                                 "actions": f["data"][demo_name]["actions"][i],
