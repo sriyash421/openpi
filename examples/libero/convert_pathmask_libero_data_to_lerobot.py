@@ -139,7 +139,7 @@ def main(
                         == len(subtask_paths)
                         == len(quests)
                         == num_steps
-                        == len(f["data"][demo_name]["action"])
+                        == len(f["data"][demo_name]["actions"])
                     ), "Lengths of mask, path, subtask_path, quests, ee_pos, and action must match"
 
                     for i, observation in enumerate(f["data"][demo_name]["obs"]):
@@ -158,7 +158,7 @@ def main(
                                 "mask": masks[i],
                                 "path": subtask_paths[i] if use_subtask_path else paths[i],
                                 "state": state,
-                                "actions": f["data"][demo_name]["action"],
+                                "actions": f["data"][demo_name]["actions"],
                             }
                         )
 
