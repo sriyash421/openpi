@@ -9,7 +9,7 @@ GIT_LFS_SKIP_SMUDGE=1 uv sync
 ```
 Then:
 ```bash
-uv pip install tensorflow tensorflow_datasets
+uv pip install tensorflow tensorflow_datasets shapely
 ```
 
 Follow the instructions in my openvla repo to install and generate the modified LIBERO dataset: [here](https://github.com/jesbu1/openvla).
