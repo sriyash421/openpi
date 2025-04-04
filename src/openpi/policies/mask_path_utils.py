@@ -162,7 +162,6 @@ def process_path_obs(
 
     # add noise to path
     path_len = len(path)
-    path = path[0]
 
     # following HAMSTER
     noise = np.random.normal(0, path_noise_std, path.shape[1:])
