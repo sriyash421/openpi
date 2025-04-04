@@ -293,7 +293,12 @@ def get_mask_and_path_from_h5(
         stopped_points = f_annotation["stopped_points"][i]
         # movement_key = "movement_across_video" # "movement_across_subtrajectory"
         # movement_across_video = f_annotation[movement_key]
-        mask = np.concatenate([significant_points, stopped_points], axis=1)
-        mask_2d = scale_path(mask, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
-        masks.append(mask_2d)
+        scaled_significant_points = scale_path(
+            significant_points, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out
+        )
+        scaled_stopped_points = scale_path(
+            stopped_points, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out
+        )
+        mask = np.concatenate([scaled_significant_points, scaled_stopped_points], axis=1)
+        masks.append(mask)
     return masks, full_path_2d, subtask_path_2d, quests
