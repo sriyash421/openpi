@@ -95,7 +95,7 @@ def main(data_dir: str, path_and_mask_file_dir: str, *, push_to_hub: bool = Fals
     with h5py.File(Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5", "r") as points_and_masks_h5:
         for raw_dataset_name in RAW_DATASET_NAMES:
             # open the directory containing the h5 files using raw_dataset_name
-            libero_h5_list = [file for file in os.listdir(Path(data_dir) / raw_dataset_name) if file.endswith(".h5")]
+            libero_h5_list = [file for file in os.listdir(Path(data_dir) / raw_dataset_name) if file.endswith(".hdf5")]
             for libero_h5_file in libero_h5_list:
                 with h5py.File(Path(data_dir) / raw_dataset_name / libero_h5_file, "r") as f:
                     for demo_num in enumerate(f["data"].keys()):
@@ -106,13 +106,30 @@ def main(data_dir: str, path_and_mask_file_dir: str, *, push_to_hub: bool = Fals
                             # TODO: mask and path
                             dataset.add_frame(
                                 {
-                                    "image": observation["agentview_image"],
-                                    "wrist_image": observation["eye_in_hand_rgb"],
+                                    "image": observation["agentview_image"][
+                                        ::-1
+                                    ],  # flip the image as it comes from LIBERO reversed
+                                    "wrist_image": observation["eye_in_hand_rgb"][
+                                        ::-1
+                                    ],  # flip the image as it comes from LIBERO reversed
                                     "state": state,
                                     "actions": f["data"][demo_num]["action"],
                                 }
                             )
-                    dataset.save_episode(task=step["language_instruction"].decode())
+                        # compute language instruction
+                        if "problem_info" in dataset_h5["data"].attrs:
+                            task = json.loads(dataset_h5["data"].attrs["problem_info"])["language_instruction"]
+                        else:
+                            raw_file_string = os.path.basename(libero_h5_file).split("/")[-1]
+                            words = raw_file_string[:-10].split("_")
+                            command = ""
+                            for w in words:
+                                if "SCENE" in w:
+                                    command = ""
+                                    continue
+                                command = command + w + " "
+                            command = command[:-1]
+                        dataset.save_episode(task=command)
 
     # Consolidate the dataset, skip computing stats since we will do that later
     dataset.consolidate(run_compute_stats=False)
