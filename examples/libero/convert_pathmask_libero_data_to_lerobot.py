@@ -149,10 +149,10 @@ def main(
 
                         dataset.add_frame(
                             {
-                                "image": f["data"][demo_name]["obs"]["agentview_rgb"][
+                                "image": f["data"][demo_name]["obs"]["agentview_rgb"][i][
                                     ::-1
                                 ],  # flip the image as it comes from LIBERO reversed
-                                "wrist_image": f["data"][demo_name]["obs"]["eye_in_hand_rgb"][::-1],
+                                "wrist_image": f["data"][demo_name]["obs"]["eye_in_hand_rgb"][i][::-1],
                                 "mask": masks[i],
                                 "path": subtask_paths[i] if use_subtask_path else paths[i],
                                 "state": state,
