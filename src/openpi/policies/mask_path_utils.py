@@ -304,8 +304,8 @@ def get_mask_and_path_from_h5(
             process_path_obs(images[start_idx:end_idx], subtask_path_2d, path_add_img=False, path_add_channel=True)
         )
 
-    masked_imgs = np.array(masked_imgs)
-    path_imgs = np.array(path_imgs)
-    masked_path_imgs = np.array(masked_path_imgs)
+    masked_imgs = np.concatenate(masked_imgs, axis=0)
+    path_imgs = np.concatenate(path_imgs, axis=0)
+    masked_path_imgs = np.concatenate(masked_path_imgs, axis=0)
 
     return masked_imgs, path_imgs, masked_path_imgs, quests
