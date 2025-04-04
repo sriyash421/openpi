@@ -290,6 +290,7 @@ def get_mask_and_path_from_h5(
     masks = f_annotation["masked_frames"][()]
     masked_imgs = []
     for i in range(hi_start, hi_end):
-        masked_imgs.append(process_mask_obs(np.array([images[i]]), masks[i]))
+        # mask the original agentview_rgb with the mask
+        masked_imgs.append(images[i] * masks[i][:, :, None])
     masked_imgs = np.array(masked_imgs)
     return masked_imgs, full_path_2d, subtask_path_2d, quests
