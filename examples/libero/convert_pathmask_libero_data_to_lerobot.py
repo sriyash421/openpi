@@ -148,7 +148,7 @@ def main(
                     for i in range(num_steps):
                         gripper_state = f["data"][demo_name]["obs"]["gripper_states"][i]
                         ee_state = f["data"][demo_name]["obs"]["ee_states"][i]
-                        state = (np.asarray(np.concatenate((ee_state, gripper_state), axis=-1), np.float32),)
+                        state = np.asarray(np.concatenate((ee_state, gripper_state), axis=-1), np.float32)
 
                         dataset.add_frame(
                             {
