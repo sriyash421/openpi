@@ -146,8 +146,11 @@ def main(
                         == len(f["data"][demo_name]["actions"])
                     ), "Lengths of masked_img, path, subtask_path, quests, ee_pos, and action must match"
 
-                    assert masked_imgs[0].max() <= 255 and masked_imgs[0].min() == 0, "Masked image must be image"
-                    assert path_imgs[0].max() <= 255 and path_imgs[0].min() == 0, "Path image must be image"
+                    assert masked_imgs[0].max() > 1 and masked_imgs[0].min() == 0, "Masked image must be image"
+                    assert path_imgs[0].max() > 1 and path_imgs[0].min() == 0, "Path image must be image"
+                    assert (
+                        masked_path_imgs[0].max() > 1 and masked_path_imgs[0].min() == 0
+                    ), "Masked path image must be image"
 
                     for i in range(num_steps):
                         gripper_state = f["data"][demo_name]["obs"]["gripper_states"][i]
