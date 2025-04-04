@@ -23,7 +23,7 @@ uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /home/jeszha
 ```
 
 ### Option 2: Conversion with Path Masks and Subtasks
-For more advanced training with path masks and subtask instructions, you can use the following script. note that the data_dir expects the data dir of the OpenVLA processed hdf5 LIBERO data, not the tensorflow dataset.
+For more advanced training with path masks and subtask instructions, you can use the following script. note that the data_dir expects the data dir of the OpenVLA processed hdf5 LIBERO data, not the tensorflow dataset. Download from [here](https://huggingface.co/datasets/jesbu1/libero_90_openvla_processed).
 ```bash
 uv run examples/libero/convert_pathmask_libero_data_to_lerobot.py --data_dir /home1/jessez/scratch_data/libero_openvla_processed_datasets --path_and_mask_file_dir /home1/jessez/project_data/libero_90_processed_256 --use_subtask_path
 ```
