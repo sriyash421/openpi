@@ -103,7 +103,7 @@ def main(
         libero_h5_list = [file for file in os.listdir(Path(data_dir) / raw_dataset_name) if file.endswith(".hdf5")]
         for libero_h5_file in libero_h5_list:
             with h5py.File(Path(data_dir) / raw_dataset_name / libero_h5_file, "r", swmr=True) as f:
-                for demo_name in enumerate(f["data"].keys()):
+                for demo_name in f["data"]:
                     masks, paths, subtask_paths, quests = get_mask_and_path_from_h5(
                         annotation_path=Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5",
                         task_key=libero_h5_file.split(".")[0],
