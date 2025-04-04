@@ -182,23 +182,18 @@ def process_path_obs(
         sketch = add_path_2d_to_img_gradient(zero_img, path_scaled, line_size=path_line_size, circle_size=0)
     else:
         sketch = add_path_2d_to_img(zero_img, path_scaled, color=(255, 0, 0), line_size=path_line_size)
-    sketch = np.repeat(sketch[None], path_len, axis=0)
-
-    # add path as separate img observation
-    sketch_out = sketch
+    sketch = np.repeat(sketch[None], len(sample_img), axis=0)
 
     if path_add_channel:
         # add path as separate channel
         sample_img = np.concatenate((sample_img, sketch), axis=-1)
-        sketch_out = None
 
     elif path_add_img:
         # add path to image
         mask = sketch[..., 0] > 0
         sample_img[mask] = sketch[mask]
-        sketch_out = None
 
-    return sample_img, sketch_out
+    return sample_img
 
 
 def get_mask_and_path_from_h5(
@@ -295,8 +290,8 @@ def get_mask_and_path_from_h5(
     for split_idx in range(1, len(traj_split_indices)):
         start_idx = traj_split_indices[split_idx - 1]
         end_idx = traj_split_indices[split_idx]
-        subtask_path_2d = paths[start_idx:end_idx]
-        masked_imgs.append(images[start_idx:end_idx] * masks[start_idx:end_idx][:, :, None])
+        subtask_path_2d = np.array(paths[start_idx])
+        masked_imgs.append(images[start_idx:end_idx] * masks[start_idx:end_idx][...,  None])
         masked_path_imgs.append(
             process_path_obs(images[start_idx:end_idx], subtask_path_2d, path_add_img=True, path_add_channel=False)
         )
