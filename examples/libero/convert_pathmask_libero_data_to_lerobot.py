@@ -26,6 +26,7 @@ import h5py
 import numpy as np
 import tyro
 import os
+import json
 
 # TODO: iterate through the dataset_movement_and_masks.h5 file and extract the masks and paths.
 RAW_DATASET_NAMES = [
@@ -103,7 +104,10 @@ def main(data_dir: str, path_and_mask_file_dir: str, *, push_to_hub: bool = Fals
                             gripper_state = observation["gripper_states"]
                             ee_state = observation["ee_states"]
                             state = (np.asarray(np.concatenate((ee_state, gripper_state), axis=-1), np.float32),)
-                            # TODO: mask and path
+                            # TODO: draw path with opencv2 here, along with the subtrajectory versions.
+                            # TODO: save the significant/stopping points? or should we just construct the masks now?
+                            # TODO: what else to save?
+                            gripper_path = points_and_masks_h5[]
                             dataset.add_frame(
                                 {
                                     "image": observation["agentview_image"][
@@ -117,9 +121,10 @@ def main(data_dir: str, path_and_mask_file_dir: str, *, push_to_hub: bool = Fals
                                 }
                             )
                         # compute language instruction
-                        if "problem_info" in dataset_h5["data"].attrs:
-                            task = json.loads(dataset_h5["data"].attrs["problem_info"])["language_instruction"]
+                        if "problem_info" in f["data"].attrs:
+                            command = json.loads(f["data"].attrs["problem_info"])["language_instruction"]
                         else:
+                            # openvla's language instruction extraction method as it doesn't have problem_info
                             raw_file_string = os.path.basename(libero_h5_file).split("/")[-1]
                             words = raw_file_string[:-10].split("_")
                             command = ""
