@@ -295,9 +295,7 @@ def get_mask_and_path_from_h5(
         subtask_path_2d = np.array(paths[start_idx])
         masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx][..., None])
         masked_path_imgs.append(
-            process_path_obs(
-                masked_imgs[start_idx:end_idx].copy(), subtask_path_2d.copy(), path_add_img=True, path_add_channel=False
-            )
+            process_path_obs(masked_imgs[-1].copy(), subtask_path_2d.copy(), path_add_img=True, path_add_channel=False)
         )
         path_imgs.append(
             process_path_obs(
