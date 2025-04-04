@@ -104,13 +104,14 @@ def main(
         for libero_h5_file in libero_h5_list:
             with h5py.File(Path(data_dir) / raw_dataset_name / libero_h5_file, "r", swmr=True) as f:
                 for demo_name in f["data"]:
+                    num_steps = len(f["data"][demo_name]["obs"]["ee_pos"])
                     masks, paths, subtask_paths, quests = get_mask_and_path_from_h5(
                         annotation_path=Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5",
                         task_key=libero_h5_file.split(".")[0],
                         observation=f["data"][demo_name]["obs"],
                         demo_key=demo_name,
                         hi_start=0,
-                        hi_end=len(f["data"][demo_name]["obs"]),
+                        hi_end=num_steps,
                     )
 
                     # Compute the main language instruction
@@ -131,14 +132,13 @@ def main(
                     # Track subtask instructions to divide episodes
                     current_subtask = None
 
-                    obs_len = len(f["data"][demo_name]["obs"]["ee_pos"])
 
                     assert (
                         len(masks)
                         == len(paths)
                         == len(subtask_paths)
                         == len(quests)
-                        == obs_len
+                        == num_steps
                         == len(f["data"][demo_name]["action"])
                     ), "Lengths of mask, path, subtask_path, quests, ee_pos, and action must match"
 
@@ -168,7 +168,7 @@ def main(
                             new_subtask = quests[i]
 
                             # If subtask changed or this is the last frame, save the episode
-                            if (current_subtask is not None and new_subtask != current_subtask) or i == obs_len - 1:
+                            if (current_subtask is not None and new_subtask != current_subtask) or i == num_steps - 1:
                                 # Save episode with current subtask instruction
                                 dataset.save_episode(task=current_subtask)
                                 current_subtask = new_subtask
