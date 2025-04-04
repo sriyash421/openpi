@@ -275,15 +275,21 @@ def get_mask_and_path_from_h5(
     assert images.shape[0] == hi_end - hi_start, "Number of images must match number of timesteps"
 
     # get mask
-    masks = []
-    for i in range(hi_start, hi_end):
-        significant_points = f_annotation["significant_points"][i]
-        stopped_points = f_annotation["stopped_points"][i]
-        # movement_key = "movement_across_video" # "movement_across_subtrajectory"
-        # movement_across_video = f_annotation[movement_key]
-        mask = np.concatenate([significant_points, stopped_points], axis=1)
-        # mask the image with the mask
-        mask_img = process_mask_obs(np.array([images[i]]), mask)
+    # masks = []
+    # for i in range(hi_start, hi_end):
+    #    significant_points = f_annotation["significant_points"][i]
+    #    stopped_points = f_annotation["stopped_points"][i]
+    #    # movement_key = "movement_across_video" # "movement_across_subtrajectory"
+    #    # movement_across_video = f_annotation[movement_key]
+    #    mask = np.concatenate([significant_points, stopped_points], axis=1)
+    #    # mask the image with the mask
+    #    mask_img = process_mask_obs(np.array([images[i]]), mask)
 
-        masks.append(mask_img[0])
-    return masks, full_path_2d, subtask_path_2d, quests
+    #    masks.append(mask_img[0])
+    # for now, just return the masked_frames applied to the images
+    masks = f_annotation["masked_frames"][()]
+    masked_imgs = []
+    for i in range(hi_start, hi_end):
+        masked_imgs.append(process_mask_obs(np.array([images[i]]), masks[i]))
+    masked_imgs = np.array(masked_imgs)
+    return masked_imgs, full_path_2d, subtask_path_2d, quests
