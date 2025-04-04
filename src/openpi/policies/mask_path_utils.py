@@ -37,7 +37,7 @@ def smooth_path_rdp(points, tolerance=0.05):
         raise NotImplementedError("Only 2D simplification is supported")
 
 
-def add_path_2d_to_img(img, path, cmap=None, color=None, line_size=2):
+def add_path_2d_to_img(img, path, cmap=None, color=None, line_size=4):
     """
     Add 2D path to image.
     - img (np.ndarray): image
