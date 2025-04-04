@@ -1,0 +1,299 @@
+import cv2
+import h5py
+import os
+import matplotlib.pyplot as plt
+import numpy as np
+from shapely.geometry import LineString
+
+
+def add_mask_2d_to_img(img, points, mask_pixels=25):
+    img_zeros = np.zeros_like(img)
+    for point in points:
+        x, y = point
+        y_minus, y_plus = int(max(0, y - mask_pixels)), int(min(img.shape[0], y + mask_pixels))
+        x_minus, x_plus = int(max(0, x - mask_pixels)), int(min(img.shape[1], x + mask_pixels))
+        # example for masking out a square
+        img_zeros[y_minus:y_plus, x_minus:x_plus] = img[y_minus:y_plus, x_minus:x_plus]
+    return img_zeros
+
+
+def scale_path(path, min_in, max_in, min_out, max_out):
+    return (path - min_in) / (max_in - min_in) * (max_out - min_out) + min_out
+
+
+def smooth_path_rdp(points, tolerance=0.05):
+    """
+    Simplifies a line using the Ramer-Douglas-Peucker algorithm.
+
+    :param points: List of (x, y) tuples representing the line points
+    :param tolerance: The tolerance parameter to determine the degree of simplification
+    :return: List of (x, y) tuples representing the simplified line points
+    """
+    if len(points[0]) == 2:
+        line = LineString(points)
+        simplified_line = line.simplify(tolerance, preserve_topology=False)
+        return np.array(simplified_line.coords)
+    else:
+        raise NotImplementedError("Only 2D simplification is supported")
+
+
+def add_path_2d_to_img(img, path, cmap=None, color=None, line_size=2):
+    """
+    Add 2D path to image.
+    - img (np.ndarray): image
+    - path (np.ndarray): 2D path
+    """
+
+    # copy image
+    img_out = img.copy()
+
+    path_len = len(path)
+
+    # setup color(-map)
+    if cmap is not None:
+        plt_cmap = getattr(plt.cm, cmap)
+        norm = plt.Normalize(vmin=0, vmax=path_len - 1)
+    elif color is None:
+        color = (255, 0, 0)
+
+    # plot path
+    for i in range(path_len - 1):
+        # get color
+        if cmap is not None:
+            color = plt_cmap(norm(i))[:3]
+            color = tuple(int(c * 255) for c in color)
+
+        cv2.line(
+            img_out,
+            (int(path[i][0]), int(path[i][1])),
+            (int(path[i + 1][0]), int(path[i + 1][1])),
+            color,
+            line_size,
+        )
+
+    return img_out
+
+
+def add_path_2d_to_img_gradient(image, points, line_size=1, circle_size=0, plot_lines=True):
+    img_out = image.copy()
+
+    if np.all(points <= 1):
+        points = points * image.shape[1]
+
+    points = points.astype(int)
+    path_len = len(points)
+
+    # Generate gradient from dark red to bright red
+    reds = np.linspace(64, 255, path_len).astype(int)
+    colors = [tuple(int(r) for r in (r_val, 0, 0)) for r_val in reds]
+
+    for i in range(path_len - 1):
+        color = colors[i]
+        if plot_lines:
+            cv2.line(img_out, tuple(points[i]), tuple(points[i + 1]), color, line_size)
+        if circle_size > 0:
+            cv2.circle(
+                img_out,
+                tuple(points[i]),
+                max(1, circle_size),
+                color,
+                -1,
+                lineType=cv2.LINE_AA,
+            )
+
+    # Draw last point
+    if circle_size > 0:
+        cv2.circle(
+            img_out,
+            tuple(points[-1]),
+            max(1, circle_size),
+            colors[-1],
+            -1,
+            lineType=cv2.LINE_AA,
+        )
+
+    return img_out
+
+
+def process_mask_obs(
+    sample_img,
+    mask,
+    mask_num_points=15,
+    mask_num_points_std=1.5,
+    mask_noise_std=0.01,
+    mask_pixels=10,
+    kmeans=None,
+):
+    # sample_img -> BxHxWx3
+    height, width = sample_img.shape[-3:-1]
+
+    # add noise to mask
+    noise = np.random.normal(0, mask_noise_std, mask.shape)
+    mask_noise = mask + noise
+
+    # scale mask to img size
+    min_in, max_in = np.zeros(2), np.array([height, width])
+    min_out, max_out = np.zeros(2), np.ones(2)
+    mask_scaled = scale_path(mask_noise, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
+
+    all_points = []
+    for points_scaled in mask_scaled:
+        # add noise to mask_num_points
+        k = int(np.random.normal(mask_num_points, mask_num_points_std))
+
+        # filter unique points
+        p_time = np.unique(points_scaled.astype(np.uint16), axis=0)
+
+        # simplify mask
+        # p_time = reduce_mask_points_kmeans(p_time, k=k, kmeans=kmeans)
+
+        # p_time = re   duce_mask_points_fps(p_time, k=k)
+
+        # unfiform sample k points from p_time
+        # idcs = np.random.choice(
+        #     len(p_time), k, replace=len(p_time) < k
+        # )
+        # p_time = p_time[idcs]
+
+        all_points.append(p_time)
+
+    # apply mask
+    for t in range(len(sample_img)):
+        sample_img[t] = add_mask_2d_to_img(sample_img[t], all_points[t], mask_pixels=mask_pixels)
+
+    return sample_img
+
+
+def process_path_obs(
+    sample_img,
+    path,
+    path_line_size=1,
+    path_rdp_tolerance=2.0,
+    path_noise_std=0.01,
+    path_color_gradient=True,
+    path_add_channel=False,
+    path_add_img=False,
+):
+    height, width = sample_img.shape[-3:-1]
+
+    # add noise to path
+    path_len = len(path)
+    path = path[0]
+
+    # following HAMSTER
+    noise = np.random.normal(0, path_noise_std, path.shape[1:])
+    path_noise = path + noise[None]
+
+    # scale path to img size
+    min_in, max_in = np.zeros(2), np.array([height, width])
+    min_out, max_out = np.zeros(2), np.ones(2)
+    path_scaled = scale_path(path_noise, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
+
+    # simplify path
+    path_scaled = smooth_path_rdp(path_scaled, tolerance=path_rdp_tolerance)
+
+    # draw path
+    zero_img = np.zeros((height, width, 3), dtype=np.uint8)
+    if path_color_gradient:
+        # following HAMSTER
+        sketch = add_path_2d_to_img_gradient(zero_img, path_scaled, line_size=path_line_size, circle_size=0)
+    else:
+        sketch = add_path_2d_to_img(zero_img, path_scaled, color=(255, 0, 0), line_size=path_line_size)
+    sketch = np.repeat(sketch[None], path_len, axis=0)
+
+    # add path as separate img observation
+    sketch_out = sketch
+
+    if path_add_channel:
+        # add path as separate channel
+        sample_img = np.concatenate((sample_img, sketch), axis=-1)
+        sketch_out = None
+
+    elif path_add_img:
+        # add path to image
+        mask = sketch[..., 0] > 0
+        sample_img[mask] = sketch[mask]
+        sketch_out = None
+
+    return sample_img, sketch_out
+
+
+def get_mask_and_path_from_h5(
+    annotation_path: str,
+    task_key: str,
+    observation: dict,
+    demo_key: str,
+    hi_start: int,
+    hi_end: int,
+):
+    """
+    Helper function to load annotations (path, mask) from separate hdf5 file.
+    :param annotation_path: The path to the hdf5 file containing the annotations.
+    :param task_key: The key to the task in the hdf5 file.
+    :param demo_key: The key to the demo in the hdf5 file.
+    :param hi_start: The start index of the history trajectory.
+    :param hi_end: The end index of the history trajectory.
+    Returns:
+        mask_2d: A 2D mask of the significant points and stopped points in the trajectory.
+        full_path_2d: A 2D path of the gripper positions in the trajectory.
+        subtask_path_2d: A 2D path of the subtask gripper positions in the trajectory.
+        quests: A list of instructions for the subtask.
+    """
+
+    # load annotations
+    f_annotation = h5py.File(annotation_path, "r", swmr=True)[task_key][demo_key]["primary"]
+
+    # get sub-traj paths + instructions
+    paths = []
+    quests = []
+    for timestep in range(hi_start, hi_end):
+        # [0, ..., len(traj)-1]
+        traj_split_indices = f_annotation["traj_splits_indices"][:]
+        # get sub-traj end
+        end_idx = 1 if hi_start == 0 else np.where(traj_split_indices >= timestep)[0][0]
+        # get sub-traj start
+        start_idx = end_idx - 1
+        # compute sub-traj path
+        path = f_annotation["gripper_positions"][traj_split_indices[start_idx] : traj_split_indices[end_idx]]
+        # scale path
+        w, h = f_annotation["masked_frames"].shape[-2:]
+        min_in, max_in = np.zeros(2), np.array([w, h])
+        min_out, max_out = np.zeros(2), np.ones(2)
+        path_scaled = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
+        paths.append(path_scaled)
+
+        # get VLM annotation
+        quest = f_annotation["trajectory_labels"][start_idx].decode("utf-8")
+        quests.append(quest)
+
+    # HACK -> CoPilot generated
+    # pad paths to max_path_len using last point -> RDP should remove redundant points
+    max_path_len = max([len(p) for p in paths])
+    for i, p in enumerate(paths):
+        if len(p) < max_path_len:
+            paths[i] = np.concatenate([p, np.repeat(p[-1][None], max_path_len - len(p), axis=0)])
+        else:
+            paths[i] = p[:max_path_len]
+
+    subtask_path_2d = np.stack(paths, axis=0)
+    quests = np.array([[q] for q in quests])
+
+    # get full path
+    path = f_annotation["gripper_positions"]
+    w, h = f_annotation["masked_frames"].shape[-2:]
+    min_in, max_in = np.zeros(2), np.array([w, h])
+    min_out, max_out = np.zeros(2), np.ones(2)
+    path_scaled = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
+    full_path_2d = np.repeat(path_scaled[None], len(observation["ee_pos"]), axis=0)
+
+    # get mask
+    masks = []
+    for i in range(hi_start, hi_end):
+        significant_points = f_annotation["significant_points"][i]
+        stopped_points = f_annotation["stopped_points"][i]
+        # movement_key = "movement_across_video" # "movement_across_subtrajectory"
+        # movement_across_video = f_annotation[movement_key]
+        mask = np.concatenate([significant_points, stopped_points], axis=1)
+        mask_2d = scale_path(mask, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
+        masks.append(mask_2d)
+    return masks, full_path_2d, subtask_path_2d, quests
