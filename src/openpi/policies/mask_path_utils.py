@@ -155,14 +155,10 @@ def process_path_obs(
     path_rdp_tolerance=2.0,
     path_noise_std=0.01,
     path_color_gradient=True,
-    path_add_channel=False,
-    path_add_img=False,
 ):
     height, width = sample_img.shape[-3:-1]
 
     # add noise to path
-    path_len = len(path)
-
     # following HAMSTER
     noise = np.random.normal(0, path_noise_std, path.shape[1:])
     path_noise = path + noise[None]
@@ -184,14 +180,9 @@ def process_path_obs(
         sketch = add_path_2d_to_img(zero_img, path_scaled, color=(255, 0, 0), line_size=path_line_size)
     sketch = np.repeat(sketch[None], len(sample_img), axis=0)
 
-    if path_add_channel:
-        # add path as separate channel
-        sample_img = np.concatenate((sample_img, sketch), axis=-1)
-
-    elif path_add_img:
-        # add path to image
-        mask = sketch[..., 0] > 0
-        sample_img[mask] = sketch[mask]
+    # add path to image
+    mask = sketch[..., 0] > 0
+    sample_img[mask] = sketch[mask]
 
     return sample_img
 
@@ -294,14 +285,8 @@ def get_mask_and_path_from_h5(
             end_idx += 1
         subtask_path_2d = np.array(paths[start_idx])
         masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx][..., None])
-        masked_path_imgs.append(
-            process_path_obs(masked_imgs[-1].copy(), subtask_path_2d.copy(), path_add_img=True, path_add_channel=False)
-        )
-        path_imgs.append(
-            process_path_obs(
-                images[start_idx:end_idx].copy(), subtask_path_2d.copy(), path_add_img=False, path_add_channel=True
-            )
-        )
+        masked_path_imgs.append(process_path_obs(masked_imgs[-1].copy(), subtask_path_2d.copy()))
+        path_imgs.append(process_path_obs(images[start_idx:end_idx].copy(), subtask_path_2d.copy()))
 
     masked_imgs = np.concatenate(masked_imgs, axis=0)
     path_imgs = np.concatenate(path_imgs, axis=0)
