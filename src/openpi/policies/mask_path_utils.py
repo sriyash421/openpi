@@ -74,7 +74,7 @@ def add_path_2d_to_img(img, path, cmap=None, color=None, line_size=4):
     return img_out
 
 
-def add_path_2d_to_img_gradient(image, points, line_size=1, circle_size=0, plot_lines=True):
+def add_path_2d_to_img_gradient(image, points, line_size=3, circle_size=0, plot_lines=True):
     img_out = image.copy()
 
     if np.all(points <= 1):
@@ -151,7 +151,7 @@ def process_mask_obs(
 def process_path_obs(
     sample_img,
     path,
-    path_line_size=1,
+    path_line_size=3,
     path_rdp_tolerance=2.0,
     path_noise_std=0.01,
     path_color_gradient=True,
