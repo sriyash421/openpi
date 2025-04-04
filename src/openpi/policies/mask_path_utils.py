@@ -293,14 +293,16 @@ def get_mask_and_path_from_h5(
         if split_idx == len(traj_split_indices) - 1:
             end_idx += 1
         subtask_path_2d = np.array(paths[start_idx])
-        masked_imgs.append(images[start_idx:end_idx] * masks[start_idx:end_idx][...,  None])
+        masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx][..., None])
         masked_path_imgs.append(
             process_path_obs(
-                masked_imgs[start_idx:end_idx].copy(), subtask_path_2d, path_add_img=True, path_add_channel=False
+                masked_imgs[start_idx:end_idx].copy(), subtask_path_2d.copy(), path_add_img=True, path_add_channel=False
             )
         )
         path_imgs.append(
-            process_path_obs(images[start_idx:end_idx], subtask_path_2d, path_add_img=False, path_add_channel=True)
+            process_path_obs(
+                images[start_idx:end_idx].copy(), subtask_path_2d.copy(), path_add_img=False, path_add_channel=True
+            )
         )
 
     masked_imgs = np.concatenate(masked_imgs, axis=0)
