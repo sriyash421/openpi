@@ -64,7 +64,6 @@ def main(
             "image": {
                 "dtype": "image",
                 "shape": (256, 256, 3),
-                # "shape": (128, 128, 3),
                 "names": ["height", "width", "channel"],
             },
             "mask": {
@@ -80,7 +79,6 @@ def main(
             "wrist_image": {
                 "dtype": "image",
                 "shape": (256, 256, 3),
-                # "shape": (128, 128, 3),
                 "names": ["height", "width", "channel"],
             },
             "state": {
