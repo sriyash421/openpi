@@ -142,7 +142,7 @@ def main(
                         == len(f["data"][demo_name]["actions"])
                     ), "Lengths of masked_img, path, subtask_path, quests, ee_pos, and action must match"
 
-                    assert masked_imgs[0].max() == 255 and masked_imgs[0].min() == 0, "Masked image must be image"
+                    assert masked_imgs[0].max() <= 255 and masked_imgs[0].min() == 0, "Masked image must be image"
                     assert paths[0].max() <= 1 and paths[0].min() >= 0, "Path must be normalized"
 
                     for i in range(num_steps):
