@@ -256,7 +256,7 @@ def get_mask_and_path_from_h5(
     path_scaled = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
     full_path_2d = np.repeat(path_scaled[None], len(observation["ee_pos"]), axis=0)
 
-    images = observation["agentview_rgb"][()][::-1]
+    images = observation["agentview_rgb"][()][:, ::-1]
 
     assert images.shape[0] == hi_end - hi_start, "Number of images must match number of timesteps"
 
