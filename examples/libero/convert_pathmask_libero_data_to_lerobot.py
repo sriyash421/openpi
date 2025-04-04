@@ -66,10 +66,10 @@ def main(
                 "shape": (256, 256, 3),
                 "names": ["height", "width", "channel"],
             },
-            "mask": {
+            "masked_image": {
                 "dtype": "image",
-                "shape": (256, 256),
-                "names": ["height", "width"],
+                "shape": (256, 256, 3),
+                "names": ["height", "width", "channel"],
             },
             "path": {
                 "dtype": "float32",
@@ -105,7 +105,7 @@ def main(
             with h5py.File(Path(data_dir) / raw_dataset_name / libero_h5_file, "r", swmr=True) as f:
                 for demo_name in f["data"]:
                     num_steps = len(f["data"][demo_name]["obs"]["ee_pos"])
-                    masks, paths, subtask_paths, quests = get_mask_and_path_from_h5(
+                    masked_imgs, paths, subtask_paths, quests = get_mask_and_path_from_h5(
                         annotation_path=Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5",
                         task_key=libero_h5_file.split(".")[0],
                         observation=f["data"][demo_name]["obs"],
@@ -134,13 +134,16 @@ def main(
 
 
                     assert (
-                        len(masks)
+                        len(masked_imgs)
                         == len(paths)
                         == len(subtask_paths)
                         == len(quests)
                         == num_steps
                         == len(f["data"][demo_name]["actions"])
-                    ), "Lengths of mask, path, subtask_path, quests, ee_pos, and action must match"
+                    ), "Lengths of masked_img, path, subtask_path, quests, ee_pos, and action must match"
+
+                    assert masked_imgs[0].max() == 255 and masked_imgs[0].min() == 0, "Masked image must be image"
+                    assert paths[0].max() <= 1 and paths[0].min() >= 0, "Path must be normalized"
 
                     for i in range(num_steps):
                         gripper_state = f["data"][demo_name]["obs"]["gripper_states"][i]
@@ -153,7 +156,7 @@ def main(
                                     ::-1
                                 ],  # flip the image as it comes from LIBERO reversed
                                 "wrist_image": f["data"][demo_name]["obs"]["eye_in_hand_rgb"][i][::-1],
-                                "mask": masks[i],
+                                "masked_image": masked_imgs[i],
                                 "path": subtask_paths[i] if use_subtask_path else paths[i],
                                 "state": state,
                                 "actions": f["data"][demo_name]["actions"][i],

@@ -118,11 +118,8 @@ def add_path_2d_to_img_gradient(image, points, line_size=1, circle_size=0, plot_
 def process_mask_obs(
     sample_img,
     mask,
-    mask_num_points=15,
-    mask_num_points_std=1.5,
     mask_noise_std=0.01,
     mask_pixels=10,
-    kmeans=None,
 ):
     # sample_img -> BxHxWx3
     height, width = sample_img.shape[-3:-1]
@@ -138,22 +135,9 @@ def process_mask_obs(
 
     all_points = []
     for points_scaled in mask_scaled:
-        # add noise to mask_num_points
-        k = int(np.random.normal(mask_num_points, mask_num_points_std))
 
         # filter unique points
         p_time = np.unique(points_scaled.astype(np.uint16), axis=0)
-
-        # simplify mask
-        # p_time = reduce_mask_points_kmeans(p_time, k=k, kmeans=kmeans)
-
-        # p_time = re   duce_mask_points_fps(p_time, k=k)
-
-        # unfiform sample k points from p_time
-        # idcs = np.random.choice(
-        #     len(p_time), k, replace=len(p_time) < k
-        # )
-        # p_time = p_time[idcs]
 
         all_points.append(p_time)
 
@@ -286,6 +270,10 @@ def get_mask_and_path_from_h5(
     path_scaled = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
     full_path_2d = np.repeat(path_scaled[None], len(observation["ee_pos"]), axis=0)
 
+    images = observation["agentview_rgb"][()][::-1]
+
+    assert images.shape[0] == hi_end - hi_start, "Number of images must match number of timesteps"
+
     # get mask
     masks = []
     for i in range(hi_start, hi_end):
@@ -293,12 +281,9 @@ def get_mask_and_path_from_h5(
         stopped_points = f_annotation["stopped_points"][i]
         # movement_key = "movement_across_video" # "movement_across_subtrajectory"
         # movement_across_video = f_annotation[movement_key]
-        scaled_significant_points = scale_path(
-            significant_points, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out
-        )
-        scaled_stopped_points = scale_path(
-            stopped_points, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out
-        )
-        mask = np.concatenate([scaled_significant_points, scaled_stopped_points], axis=1)
-        masks.append(mask)
+        mask = np.concatenate([significant_points, stopped_points], axis=1)
+        # mask the image with the mask
+        mask_img = process_mask_obs([images[i]], mask)
+
+        masks.append(mask_img[0])
     return masks, full_path_2d, subtask_path_2d, quests
