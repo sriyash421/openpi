@@ -74,7 +74,7 @@ def main(
             "path": {
                 "dtype": "float32",
                 "shape": (2,),
-                "names": ["x", "y"],
+                "names": ["path"],
             },
             "wrist_image": {
                 "dtype": "image",
