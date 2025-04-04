@@ -14,12 +14,26 @@ uv pip install tensorflow tensorflow_datasets
 
 Follow the instructions in my openvla repo to install and generate the modified LIBERO dataset: [here](https://github.com/jesbu1/openvla).
 
-Then convert the modified LIBERO dataset to a LeRobot dataset.
-First, make sure you double check the directory in the script is correct.
-Then run the script:
+There are two ways to convert the LIBERO dataset to a LeRobot dataset:
+
+### Option 1: Basic Conversion
+Convert the basic modified LIBERO dataset to a LeRobot dataset:
 ```bash
 uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /home/jeszhang/tensorflow_datasets/
 ```
+
+### Option 2: Conversion with Path Masks and Subtasks
+For more advanced training with path masks and subtask instructions:
+```bash
+uv run examples/libero/convert_pathmask_libero_data_to_lerobot.py --data_dir /path/to/your/libero/data --path_and_mask_file_dir /path/to/dir_containing_h5points --use_subtask_path
+```
+
+This script supports several additional options:
+- `--use_subtask_instructions`: Divides episodes by subtask instructions instead of using full task instructions
+- `--use_subtask_path`: Uses subtask-specific paths instead of global paths (default: True)
+- `--push_to_hub`: Pushes the processed dataset to Hugging Face Hub
+
+The path mask conversion relies on annotation files containing masks, paths, and subtask information.
 
 I've already processed the training stats and norms in `assets/pi0_libero_low_mem_finetune/jesbu1/libero_90_lerobot/norm_stats.json`. If not running `pi0_libero_low_mem_finetune`, you can copy the `norm_stats.json` file to the `assets/CONFIG_NAME/jesbu1/libero_90_lerobot/` directory.
 
@@ -188,62 +202,4 @@ uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /path/to/you
 To fine-tune a base model on your own data, you need to define configs for data processing and training. We provide example configs with detailed comments for Libero below, which you can modify for your own dataset:
 
 - [`LiberoInputs` and `LiberoOutputs`](src/openpi/policies/libero_policy.py): Defines the data mapping from the Libero environment to the model and vice versa. Will be used for both, training and inference.
-- [`LeRobotLiberoDataConfig`](src/openpi/training/config.py): Defines how to process raw Libero data from LeRobot dataset for training.
-- [`TrainConfig`](src/openpi/training/config.py): Defines fine-tuning hyperparameters, data config, and weight loader.
-
-We provide example fine-tuning configs for both, [π₀](src/openpi/training/config.py) and [π₀-FAST](src/openpi/training/config.py) on Libero data.
-
-Before we can run training, we need to compute the normalization statistics for the training data. Run the script below with the name of your training config:
-
-```bash
-uv run scripts/compute_norm_stats.py --config-name pi0_fast_libero
-```
-
-Now we can kick off training with the following command (the `--overwrite` flag is used to overwrite existing checkpoints if you rerun fine-tuning with the same config):
-
-```bash
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_libero --exp-name=my_experiment --overwrite
-```
-
-The command will log training progress to the console and save checkpoints to the `checkpoints` directory. You can also monitor training progress on the Weights & Biases dashboard. For maximally using the GPU memory, set `XLA_PYTHON_CLIENT_MEM_FRACTION=0.9` before running training -- this enables JAX to use up to 90% of the GPU memory (vs. the default of 75%).
-
-**Note:** We provide functionality for *reloading* normalization statistics for state / action normalization from pre-training. This can be beneficial if you are fine-tuning to a new task on a robot that was part of our pre-training mixture. For more details on how to reload normalization statistics, see the [norm_stats.md](docs/norm_stats.md) file.
-
-### 3. Spinning up a policy server and running inference
-
-Once training is complete, we can run inference by spinning up a policy server and then querying it from a Libero evaluation script. Launching a model server is easy (we use the checkpoint for iteration 20,000 for this example, modify as needed):
-
-```bash
-uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_fast_libero --policy.dir=checkpoints/pi0_fast_libero/my_experiment/20000
-```
-
-This will spin up a server that listens on port 8000 and waits for observations to be sent to it. We can then run the Libero evaluation script to query the server. For instructions how to install Libero and run the evaluation script, see the [Libero README](examples/libero/README.md).
-
-If you want to embed a policy server call in your own robot runtime, we have a minimal example of how to do so in the [remote inference docs](docs/remote_inference.md).
-
-
-
-### More Examples
-
-We provide more examples for how to fine-tune and run inference with our models on the ALOHA platform in the following READMEs:
-- [ALOHA Simulator](examples/aloha_sim)
-- [ALOHA Real](examples/aloha_real)
-- [UR5](examples/ur5)
-
-
-
-## Troubleshooting
-
-We will collect common issues and their solutions here. If you encounter an issue, please check here first. If you can't find a solution, please file an issue on the repo (see [here](CONTRIBUTING.md) for guidelines).
-
-| Issue                                     | Resolution                                                                                                                                                                                   |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `uv sync` fails with dependency conflicts | Try removing the virtual environment directory (`rm -rf .venv`) and running `uv sync` again. If issues persist, check that you have the latest version of `uv` installed (`uv self update`). |
-| Training runs out of GPU memory           | Make sure you set `XLA_PYTHON_CLIENT_MEM_FRACTION=0.9` before running training to allow JAX to use more GPU memory. You can also try reducing the batch size in your training config.        |
-| Policy server connection errors           | Check that the server is running and listening on the expected port. Verify network connectivity and firewall settings between client and server.                                            |
-| Missing norm stats error when training    | Run `scripts/compute_norm_stats.py` with your config name before starting training.                                                                                                          |
-| Dataset download fails                    | Check your internet connection. If using `local_files_only=True`, verify the dataset exists locally. For HuggingFace datasets, ensure you're logged in (`huggingface-cli login`).            |
-| CUDA/GPU errors                           | Verify NVIDIA drivers and CUDA toolkit are installed correctly. For Docker, ensure nvidia-container-toolkit is installed. Check GPU compatibility.                                           |
-| Import errors when running examples       | Make sure you've installed all dependencies with `uv sync` and activated the virtual environment. Some examples may have additional requirements listed in their READMEs.                    |
-| Action dimensions mismatch                | Verify your data processing transforms match the expected input/output dimensions of your robot. Check the action space definitions in your policy classes.                                  |
-
+- [`

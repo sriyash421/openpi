@@ -46,7 +46,7 @@ def main(
     *,
     push_to_hub: bool = False,
     use_subtask_instructions: bool = False,
-    use_subtask_path: bool = True,
+    use_subtask_path: bool = False,
 ):
     # Clean up any existing dataset in the output directory
     output_path = LEROBOT_HOME / REPO_NAME
