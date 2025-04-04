@@ -283,7 +283,7 @@ def get_mask_and_path_from_h5(
         # movement_across_video = f_annotation[movement_key]
         mask = np.concatenate([significant_points, stopped_points], axis=1)
         # mask the image with the mask
-        mask_img = process_mask_obs([images[i]], mask)
+        mask_img = process_mask_obs(np.array([images[i]]), mask)
 
         masks.append(mask_img[0])
     return masks, full_path_2d, subtask_path_2d, quests
