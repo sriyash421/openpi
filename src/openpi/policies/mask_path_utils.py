@@ -226,7 +226,6 @@ def get_mask_and_path_from_h5(
         path_end_idx = traj_split_indices[end_idx]
         if path_end_idx == hi_end - 1:
             path_end_idx += 1
-        print(start_idx, path_end_idx)
         path = f_annotation["gripper_positions"][traj_split_indices[start_idx] : path_end_idx]
         # scale path
         w, h = f_annotation["masked_frames"].shape[-2:]
@@ -242,6 +241,7 @@ def get_mask_and_path_from_h5(
     # HACK -> CoPilot generated
     # pad paths to max_path_len using last point -> RDP should remove redundant points
     max_path_len = max([len(p) for p in paths])
+    breakpoint()
     for i, p in enumerate(paths):
         if len(p) < max_path_len:
             paths[i] = np.concatenate([p, np.repeat(p[-1][None], max_path_len - len(p), axis=0)])
