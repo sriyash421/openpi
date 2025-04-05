@@ -261,13 +261,11 @@ def get_mask_and_path_from_h5(
         # movement_key = "movement_across_video" # "movement_across_subtrajectory"
         # movement_across_video = f_annotation[movement_key]
         mask_points = np.concatenate([significant_points, stopped_points], axis=0)
-        # mask the image with the mask
-        empty_img = np.zeros_like(images[i])
-        mask = add_mask_2d_to_img(empty_img, mask_points)
+        unmasked_template = np.ones_like(images[i])
+        mask = add_mask_2d_to_img(unmasked_template, mask_points)
 
         masks.append(mask)
     masks = np.stack(masks, axis=0)
-    breakpoint()
     # for now, just return the masked_frames applied to the images
     #masks = f_annotation["masked_frames"][()]
     masked_imgs = []
