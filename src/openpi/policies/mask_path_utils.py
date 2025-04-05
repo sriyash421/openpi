@@ -293,6 +293,7 @@ def get_mask_and_path_from_h5(
         masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx][..., None])
         masked_path_imgs.append(process_path_obs(masked_imgs[-1].copy(), curr_path))
         path_imgs.append(process_path_obs(images[start_idx:end_idx].copy(), curr_path))
+    breakpoint()
 
     masked_imgs = np.concatenate(masked_imgs, axis=0)
     path_imgs = np.concatenate(path_imgs, axis=0)
