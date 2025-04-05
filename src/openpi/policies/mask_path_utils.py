@@ -261,6 +261,7 @@ def get_mask_and_path_from_h5(
         # movement_key = "movement_across_video" # "movement_across_subtrajectory"
         # movement_across_video = f_annotation[movement_key]
         mask_points = np.concatenate([significant_points, stopped_points], axis=1)
+        breakpoint()
         # mask the image with the mask
         empty_img = np.zeros_like(images[i])
         mask = add_mask_2d_to_img(empty_img, mask_points)
