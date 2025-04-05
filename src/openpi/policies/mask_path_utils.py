@@ -267,6 +267,7 @@ def get_mask_and_path_from_h5(
 
         masks.append(mask)
     masks = np.stack(masks, axis=0)
+    breakpoint()
     # for now, just return the masked_frames applied to the images
     #masks = f_annotation["masked_frames"][()]
     masked_imgs = []
