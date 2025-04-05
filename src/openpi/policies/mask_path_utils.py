@@ -231,6 +231,7 @@ def get_mask_and_path_from_h5(
             except:
                 print(f_annotation["trajectory_labels"])
                 print(f"Error decoding trajectory label with {split_idx}")
+                # TODO: actually address this issue
 
 
     # HACK -> CoPilot generated
@@ -243,7 +244,6 @@ def get_mask_and_path_from_h5(
             paths[i] = p[:max_path_len]
 
     subtask_path_2d = np.stack(paths, axis=0)
-    quests = np.array([[q] for q in quests])
     # subtask_start_end_points
 
     # get full path
