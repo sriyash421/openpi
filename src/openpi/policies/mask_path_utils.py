@@ -219,7 +219,7 @@ def get_mask_and_path_from_h5(
         # [0, ..., len(traj)-1]
         traj_split_indices = f_annotation["traj_splits_indices"][:]
         # get sub-traj end
-        end_idx = 1 if hi_start == 0 else np.where(traj_split_indices >= timestep)[0][0]
+        end_idx = np.where(traj_split_indices >= timestep)[0][0]
         # get sub-traj start
         start_idx = end_idx - 1
         # compute sub-traj path
@@ -238,7 +238,6 @@ def get_mask_and_path_from_h5(
         # get VLM annotation
         quest = f_annotation["trajectory_labels"][start_idx].decode("utf-8")
         quests.append(quest)
-    breakpoint()
 
     # HACK -> CoPilot generated
     # pad paths to max_path_len using last point -> RDP should remove redundant points
@@ -288,7 +287,6 @@ def get_mask_and_path_from_h5(
         end_idx = traj_split_indices[split_idx]
         if split_idx == len(traj_split_indices) - 1:
             end_idx += 1
-        breakpoint()
         curr_path = np.array(subtask_path_2d[start_idx]).copy()
         masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx][..., None])
         masked_path_imgs.append(process_path_obs(masked_imgs[-1].copy(), curr_path))
