@@ -215,32 +215,25 @@ def get_mask_and_path_from_h5(
     # get sub-traj paths + instructions
     paths = []
     quests = []
-    for timestep in range(hi_start, hi_end):
-        # [0, ..., len(traj)-1]
-        traj_split_indices = f_annotation["traj_splits_indices"][:]
-        # get sub-traj end
-        if timestep == 0:
-            end_idx = 1
-        else:
-            end_idx = np.where(traj_split_indices >= timestep)[0][0]
-        # get sub-traj start
-        start_idx = end_idx - 1
-        # compute sub-traj path
-        path_end_idx = traj_split_indices[end_idx]
-        if path_end_idx == hi_end - 1:
-            path_end_idx += 1
-        path = f_annotation["gripper_positions"][traj_split_indices[start_idx] : path_end_idx]
-        # scale path
-        w, h = f_annotation["masked_frames"].shape[-2:]
+    for split_idx in range(1, len(traj_split_indices)):
+        start_idx = traj_split_indices[split_idx - 1]
+        end_idx = traj_split_indices[split_idx]
+        if split_idx == len(traj_split_indices) - 1:
+            end_idx += 1
+        curr_path = np.array(subtask_path_2d[start_idx]).copy()
         min_in, max_in = np.zeros(2), np.array([w, h])
         min_out, max_out = np.zeros(2), np.ones(2)
-        path_scaled = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
-        paths.append(path_scaled)
+        path_scaled = scale_path(curr_path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
+        # repeat it the num frames times
+        path_scaled = np.repeat(path_scaled[None], end_idx - start_idx, axis=0)
+        # adjust paths for length mismatch from naive repeating
+        for i in range(end_idx - start_idx):
+            paths.append(path_scaled[i][i:])
+            quests.append(f_annotation["trajectory_labels"][start_idx].decode("utf-8"))
 
-        # get VLM annotation
-        quest = f_annotation["trajectory_labels"][start_idx].decode("utf-8")
-        quests.append(quest)
-    breakpoint()
+    paths = np.concatenate(paths, axis=0)
+    quests = np.concatenate(quests, axis=0)
+
 
     # HACK -> CoPilot generated
     # pad paths to max_path_len using last point -> RDP should remove redundant points
@@ -291,6 +284,7 @@ def get_mask_and_path_from_h5(
         if split_idx == len(traj_split_indices) - 1:
             end_idx += 1
         curr_path = np.array(subtask_path_2d[start_idx]).copy()
+        breakpoint()
         masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx][..., None])
         masked_path_imgs.append(process_path_obs(masked_imgs[-1].copy(), curr_path))
         path_imgs.append(process_path_obs(images[start_idx:end_idx].copy(), curr_path))
