@@ -219,7 +219,10 @@ def get_mask_and_path_from_h5(
         # [0, ..., len(traj)-1]
         traj_split_indices = f_annotation["traj_splits_indices"][:]
         # get sub-traj end
-        end_idx = np.where(traj_split_indices > timestep)[0][0]
+        if timestep == 0:
+            end_idx = 1
+        else:
+            end_idx = np.where(traj_split_indices >= timestep)[0][0]
         # get sub-traj start
         start_idx = end_idx - 1
         # compute sub-traj path
