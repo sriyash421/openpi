@@ -215,6 +215,7 @@ def get_mask_and_path_from_h5(
     # get sub-traj paths + instructions
     paths = []
     quests = []
+    traj_split_indices = f_annotation["traj_splits_indices"][:]
     for split_idx in range(1, len(traj_split_indices)):
         start_idx = traj_split_indices[split_idx - 1]
         end_idx = traj_split_indices[split_idx]
