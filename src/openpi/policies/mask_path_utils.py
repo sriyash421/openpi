@@ -192,16 +192,12 @@ def get_mask_and_path_from_h5(
     task_key: str,
     observation: dict,
     demo_key: str,
-    hi_start: int,
-    hi_end: int,
 ):
     """
     Helper function to load annotations (path, mask) from separate hdf5 file.
     :param annotation_path: The path to the hdf5 file containing the annotations.
     :param task_key: The key to the task in the hdf5 file.
     :param demo_key: The key to the demo in the hdf5 file.
-    :param hi_start: The start index of the history trajectory.
-    :param hi_end: The end index of the history trajectory.
     Returns:
         masked_imgs: A list of masked images.
         path_imgs: A list of path images.
@@ -256,22 +252,23 @@ def get_mask_and_path_from_h5(
 
     images = observation["agentview_rgb"][()][:, ::-1]
 
-    assert images.shape[0] == hi_end - hi_start, "Number of images must match number of timesteps"
 
     # get mask
-    # masks = []
-    # for i in range(hi_start, hi_end):
-    #    significant_points = f_annotation["significant_points"][i]
-    #    stopped_points = f_annotation["stopped_points"][i]
-    #    # movement_key = "movement_across_video" # "movement_across_subtrajectory"
-    #    # movement_across_video = f_annotation[movement_key]
-    #    mask = np.concatenate([significant_points, stopped_points], axis=1)
-    #    # mask the image with the mask
-    #    mask_img = process_mask_obs(np.array([images[i]]), mask)
+    masks = []
+    for i in range(len(images)):
+        significant_points = f_annotation["significant_points"][i]
+        stopped_points = f_annotation["stopped_points"][i]
+        # movement_key = "movement_across_video" # "movement_across_subtrajectory"
+        # movement_across_video = f_annotation[movement_key]
+        mask_points = np.concatenate([significant_points, stopped_points], axis=1)
+        # mask the image with the mask
+        empty_img = np.zeros_like(images[i])
+        mask = add_mask_2d_to_img(empty_img, mask_points)
 
-    #    masks.append(mask_img[0])
+        masks.append(mask)
+    masks = np.stack(masks, axis=0)
     # for now, just return the masked_frames applied to the images
-    masks = f_annotation["masked_frames"][()]
+    #masks = f_annotation["masked_frames"][()]
     masked_imgs = []
     path_imgs = []
     masked_path_imgs = []
@@ -282,8 +279,7 @@ def get_mask_and_path_from_h5(
         if split_idx == len(traj_split_indices) - 1:
             end_idx += 1
         curr_path = np.array(subtask_path_2d[start_idx]).copy()
-        breakpoint()
-        masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx][..., None])
+        masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx])
         masked_path_imgs.append(process_path_obs(masked_imgs[-1].copy(), curr_path))
         path_imgs.append(process_path_obs(images[start_idx:end_idx].copy(), curr_path))
 
