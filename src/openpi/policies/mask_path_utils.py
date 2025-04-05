@@ -135,7 +135,6 @@ def process_mask_obs(
 
     all_points = []
     for points_scaled in mask_scaled:
-
         # filter unique points
         p_time = np.unique(points_scaled.astype(np.uint16), axis=0)
 
@@ -192,16 +191,12 @@ def get_mask_and_path_from_h5(
     task_key: str,
     observation: dict,
     demo_key: str,
-    hi_start: int,
-    hi_end: int,
 ):
     """
     Helper function to load annotations (path, mask) from separate hdf5 file.
     :param annotation_path: The path to the hdf5 file containing the annotations.
     :param task_key: The key to the task in the hdf5 file.
     :param demo_key: The key to the demo in the hdf5 file.
-    :param hi_start: The start index of the history trajectory.
-    :param hi_end: The end index of the history trajectory.
     Returns:
         masked_imgs: A list of masked images.
         path_imgs: A list of path images.
@@ -211,35 +206,32 @@ def get_mask_and_path_from_h5(
 
     # load annotations
     f_annotation = h5py.File(annotation_path, "r", swmr=True)[task_key][demo_key]["primary"]
-
+    w, h = f_annotation["masked_frames"].shape[-2:]
     # get sub-traj paths + instructions
     paths = []
     quests = []
-    for timestep in range(hi_start, hi_end):
-        # [0, ..., len(traj)-1]
-        traj_split_indices = f_annotation["traj_splits_indices"][:]
-        # get sub-traj end
-        if timestep == 0:
-            end_idx = 1
-        else:
-            end_idx = np.where(traj_split_indices >= timestep)[0][0]
-        # get sub-traj start
-        start_idx = end_idx - 1
-        # compute sub-traj path
-        path_end_idx = traj_split_indices[end_idx]
-        if path_end_idx == hi_end - 1:
-            path_end_idx += 1
-        path = f_annotation["gripper_positions"][traj_split_indices[start_idx] : path_end_idx]
-        # scale path
-        w, h = f_annotation["masked_frames"].shape[-2:]
+    traj_split_indices = f_annotation["traj_splits_indices"][:]
+    for split_idx in range(1, len(traj_split_indices)):
+        start_idx = traj_split_indices[split_idx - 1]
+        end_idx = traj_split_indices[split_idx]
+        if split_idx == len(traj_split_indices) - 1:
+            end_idx += 1
+        curr_path = np.array(f_annotation["gripper_positions"][start_idx:end_idx]).copy()
         min_in, max_in = np.zeros(2), np.array([w, h])
         min_out, max_out = np.zeros(2), np.ones(2)
-        path_scaled = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
-        paths.append(path_scaled)
-
-        # get VLM annotation
-        quest = f_annotation["trajectory_labels"][start_idx].decode("utf-8")
-        quests.append(quest)
+        path_scaled = scale_path(curr_path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
+        # repeat it the num frames times
+        path_scaled = np.repeat(path_scaled[None], end_idx - start_idx, axis=0)
+        # adjust paths for length mismatch from naive repeating
+        for i in range(end_idx - start_idx):
+            paths.append(path_scaled[i][i:])
+            try:
+                quests.append(str(f_annotation["trajectory_labels"][split_idx - 1].decode("utf-8")[0]))
+            except:
+                print(f_annotation["trajectory_labels"])
+                print(f"Error decoding trajectory label with {split_idx}")
+                quests.append(None)
+                # TODO: actually address this issue
 
     # HACK -> CoPilot generated
     # pad paths to max_path_len using last point -> RDP should remove redundant points
@@ -251,7 +243,6 @@ def get_mask_and_path_from_h5(
             paths[i] = p[:max_path_len]
 
     subtask_path_2d = np.stack(paths, axis=0)
-    quests = np.array([[q] for q in quests])
     # subtask_start_end_points
 
     # get full path
@@ -264,22 +255,21 @@ def get_mask_and_path_from_h5(
 
     images = observation["agentview_rgb"][()][:, ::-1]
 
-    assert images.shape[0] == hi_end - hi_start, "Number of images must match number of timesteps"
-
     # get mask
-    # masks = []
-    # for i in range(hi_start, hi_end):
-    #    significant_points = f_annotation["significant_points"][i]
-    #    stopped_points = f_annotation["stopped_points"][i]
-    #    # movement_key = "movement_across_video" # "movement_across_subtrajectory"
-    #    # movement_across_video = f_annotation[movement_key]
-    #    mask = np.concatenate([significant_points, stopped_points], axis=1)
-    #    # mask the image with the mask
-    #    mask_img = process_mask_obs(np.array([images[i]]), mask)
+    masks = []
+    for i in range(len(images)):
+        significant_points = f_annotation["significant_points"][i]
+        stopped_points = f_annotation["stopped_points"][i]
+        # movement_key = "movement_across_video" # "movement_across_subtrajectory"
+        # movement_across_video = f_annotation[movement_key]
+        mask_points = np.concatenate([significant_points, stopped_points], axis=0)
+        unmasked_template = np.ones_like(images[i])
+        mask = add_mask_2d_to_img(unmasked_template, mask_points)
 
-    #    masks.append(mask_img[0])
+        masks.append(mask)
+    masks = np.stack(masks, axis=0)
     # for now, just return the masked_frames applied to the images
-    masks = f_annotation["masked_frames"][()]
+    # masks = f_annotation["masked_frames"][()]
     masked_imgs = []
     path_imgs = []
     masked_path_imgs = []
@@ -290,7 +280,7 @@ def get_mask_and_path_from_h5(
         if split_idx == len(traj_split_indices) - 1:
             end_idx += 1
         curr_path = np.array(subtask_path_2d[start_idx]).copy()
-        masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx][..., None])
+        masked_imgs.append(images[start_idx:end_idx].copy() * masks[start_idx:end_idx])
         masked_path_imgs.append(process_path_obs(masked_imgs[-1].copy(), curr_path))
         path_imgs.append(process_path_obs(images[start_idx:end_idx].copy(), curr_path))
 

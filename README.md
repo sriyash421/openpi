@@ -45,6 +45,13 @@ Then train:
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune --exp-name=EXP_NAME --overwrite
 ```
 
+You can also train with path masks by running the following:
+```bash
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_2gpu_path --exp-name=EXP_NAME --overwrite
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_2gpu_masked --exp-name=EXP_NAME --overwrite
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_2gpu_path_masked --exp-name=EXP_NAME --overwrite
+```
+
 ## Evaluation of LIBERO
 Once done training, you can evaluate the model by running the following command to initialize a policy server:
 ```bash
