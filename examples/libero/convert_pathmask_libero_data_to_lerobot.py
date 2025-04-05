@@ -114,8 +114,6 @@ def main(
                         task_key=libero_h5_file.split(".")[0],
                         observation=f["data"][demo_name]["obs"],
                         demo_key=demo_name,
-                        hi_start=0,
-                        hi_end=num_steps,
                     )
 
                     # Compute the main language instruction
