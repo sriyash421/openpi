@@ -219,7 +219,7 @@ def get_mask_and_path_from_h5(
         # [0, ..., len(traj)-1]
         traj_split_indices = f_annotation["traj_splits_indices"][:]
         # get sub-traj end
-        end_idx = np.where(traj_split_indices >= timestep)[0][0]
+        end_idx = np.where(traj_split_indices > timestep)[0][0]
         # get sub-traj start
         start_idx = end_idx - 1
         # compute sub-traj path
@@ -241,7 +241,6 @@ def get_mask_and_path_from_h5(
     # HACK -> CoPilot generated
     # pad paths to max_path_len using last point -> RDP should remove redundant points
     max_path_len = max([len(p) for p in paths])
-    breakpoint()
     for i, p in enumerate(paths):
         if len(p) < max_path_len:
             paths[i] = np.concatenate([p, np.repeat(p[-1][None], max_path_len - len(p), axis=0)])
