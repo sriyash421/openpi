@@ -230,9 +230,9 @@ def get_mask_and_path_from_h5(
         # adjust paths for length mismatch from naive repeating
         for i in range(end_idx - start_idx):
             paths.append(path_scaled[i][i:])
-            quests.append(f_annotation["trajectory_labels"][split_idx - 1].decode("utf-8"))
+            quests.append(str(f_annotation["trajectory_labels"][split_idx - 1].decode("utf-8")[0]))
 
-    paths = np.concatenate(paths, axis=0)
+    paths = np.stack(paths, axis=0)
 
 
     # HACK -> CoPilot generated
