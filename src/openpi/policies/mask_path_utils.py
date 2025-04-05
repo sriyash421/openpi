@@ -211,7 +211,7 @@ def get_mask_and_path_from_h5(
 
     # load annotations
     f_annotation = h5py.File(annotation_path, "r", swmr=True)[task_key][demo_key]["primary"]
-
+    w, h = f_annotation["masked_frames"].shape[-2:]
     # get sub-traj paths + instructions
     paths = []
     quests = []
