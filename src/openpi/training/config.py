@@ -580,7 +580,7 @@ _CONFIGS = [
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
             ),
-            obs_type="path_image",
+            obs_type="path",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
@@ -606,7 +606,7 @@ _CONFIGS = [
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
             ),
-            obs_type="path_image",
+            obs_type="path",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
@@ -632,7 +632,7 @@ _CONFIGS = [
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
             ),
-            obs_type="masked_image",
+            obs_type="masked",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
@@ -658,7 +658,7 @@ _CONFIGS = [
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
             ),
-            obs_type="masked_path_image",
+            obs_type="masked_path",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
