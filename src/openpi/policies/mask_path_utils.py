@@ -226,7 +226,11 @@ def get_mask_and_path_from_h5(
         # adjust paths for length mismatch from naive repeating
         for i in range(end_idx - start_idx):
             paths.append(path_scaled[i][i:])
-            quests.append(str(f_annotation["trajectory_labels"][split_idx - 1].decode("utf-8")[0]))
+            try:
+                quests.append(str(f_annotation["trajectory_labels"][split_idx - 1].decode("utf-8")[0]))
+            except:
+                print(f_annotation["trajectory_labels"])
+                print(f"Error decoding trajectory label with {split_idx}")
 
 
     # HACK -> CoPilot generated
