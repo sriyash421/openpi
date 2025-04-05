@@ -223,7 +223,10 @@ def get_mask_and_path_from_h5(
         # get sub-traj start
         start_idx = end_idx - 1
         # compute sub-traj path
-        path = f_annotation["gripper_positions"][traj_split_indices[start_idx] : traj_split_indices[end_idx]]
+        path_end_idx = traj_split_indices[end_idx]
+        if path_end_idx == hi_end - 1:
+            path_end_idx += 1
+        path = f_annotation["gripper_positions"][traj_split_indices[start_idx] : path_end_idx]
         # scale path
         w, h = f_annotation["masked_frames"].shape[-2:]
         min_in, max_in = np.zeros(2), np.array([w, h])
