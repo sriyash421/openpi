@@ -233,7 +233,6 @@ def get_mask_and_path_from_h5(
             quests.append(f_annotation["trajectory_labels"][split_idx - 1].decode("utf-8"))
 
     paths = np.concatenate(paths, axis=0)
-    quests = np.concatenate(quests, axis=0)
 
 
     # HACK -> CoPilot generated
