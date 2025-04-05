@@ -226,18 +226,19 @@ def get_mask_and_path_from_h5(
         path_end_idx = traj_split_indices[end_idx]
         if path_end_idx == hi_end - 1:
             path_end_idx += 1
+        print(start_idx, path_end_idx)
         path = f_annotation["gripper_positions"][traj_split_indices[start_idx] : path_end_idx]
         # scale path
         w, h = f_annotation["masked_frames"].shape[-2:]
         min_in, max_in = np.zeros(2), np.array([w, h])
         min_out, max_out = np.zeros(2), np.ones(2)
-        breakpoint()
         path_scaled = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
         paths.append(path_scaled)
 
         # get VLM annotation
         quest = f_annotation["trajectory_labels"][start_idx].decode("utf-8")
         quests.append(quest)
+    breakpoint()
 
     # HACK -> CoPilot generated
     # pad paths to max_path_len using last point -> RDP should remove redundant points
