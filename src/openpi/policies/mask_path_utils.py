@@ -231,6 +231,7 @@ def get_mask_and_path_from_h5(
             except:
                 print(f_annotation["trajectory_labels"])
                 print(f"Error decoding trajectory label with {split_idx}")
+                quests.append(None)
                 # TODO: actually address this issue
 
 

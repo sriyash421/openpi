@@ -177,7 +177,10 @@ def main(
                             # If subtask changed or this is the last frame, save the episode
                             if (current_subtask is not None and new_subtask != current_subtask) or i == num_steps - 1:
                                 # Save episode with current subtask instruction
-                                dataset.save_episode(task=current_subtask)
+                                if current_subtask is None:
+                                    dataset.save_episode(task=command)
+                                else:
+                                    dataset.save_episode(task=current_subtask)
                                 current_subtask = new_subtask
                             # Initialize current_subtask if this is the first frame
                             elif current_subtask is None:
