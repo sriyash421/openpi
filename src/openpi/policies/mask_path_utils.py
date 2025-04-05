@@ -228,6 +228,7 @@ def get_mask_and_path_from_h5(
         w, h = f_annotation["masked_frames"].shape[-2:]
         min_in, max_in = np.zeros(2), np.array([w, h])
         min_out, max_out = np.zeros(2), np.ones(2)
+        breakpoint()
         path_scaled = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
         paths.append(path_scaled)
 
