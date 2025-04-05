@@ -232,8 +232,6 @@ def get_mask_and_path_from_h5(
             paths.append(path_scaled[i][i:])
             quests.append(str(f_annotation["trajectory_labels"][split_idx - 1].decode("utf-8")[0]))
 
-    paths = np.stack(paths, axis=0)
-
 
     # HACK -> CoPilot generated
     # pad paths to max_path_len using last point -> RDP should remove redundant points
