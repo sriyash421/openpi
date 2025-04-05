@@ -109,12 +109,16 @@ def main(
             with h5py.File(Path(data_dir) / raw_dataset_name / libero_h5_file, "r", swmr=True) as f:
                 for demo_name in f["data"]:
                     num_steps = len(f["data"][demo_name]["obs"]["ee_pos"])
-                    masked_imgs, path_imgs, masked_path_imgs, quests = get_mask_and_path_from_h5(
-                        annotation_path=Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5",
-                        task_key=libero_h5_file.split(".")[0],
-                        observation=f["data"][demo_name]["obs"],
-                        demo_key=demo_name,
-                    )
+                    try:
+                        masked_imgs, path_imgs, masked_path_imgs, quests = get_mask_and_path_from_h5(
+                            annotation_path=Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5",
+                            task_key=libero_h5_file.split(".")[0],
+                            observation=f["data"][demo_name]["obs"],
+                            demo_key=demo_name,
+                        )
+                    except KeyError as e:
+                        print(f"KeyError for {demo_name} in {libero_h5_file}: {e}")
+                        continue
 
                     # Compute the main language instruction
                     if "problem_info" in f["data"].attrs:
@@ -133,7 +137,6 @@ def main(
 
                     # Track subtask instructions to divide episodes
                     current_subtask = None
-
 
                     assert (
                         len(masked_imgs)

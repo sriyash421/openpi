@@ -135,7 +135,6 @@ def process_mask_obs(
 
     all_points = []
     for points_scaled in mask_scaled:
-
         # filter unique points
         p_time = np.unique(points_scaled.astype(np.uint16), axis=0)
 
@@ -234,7 +233,6 @@ def get_mask_and_path_from_h5(
                 quests.append(None)
                 # TODO: actually address this issue
 
-
     # HACK -> CoPilot generated
     # pad paths to max_path_len using last point -> RDP should remove redundant points
     max_path_len = max([len(p) for p in paths])
@@ -257,7 +255,6 @@ def get_mask_and_path_from_h5(
 
     images = observation["agentview_rgb"][()][:, ::-1]
 
-
     # get mask
     masks = []
     for i in range(len(images)):
@@ -272,7 +269,7 @@ def get_mask_and_path_from_h5(
         masks.append(mask)
     masks = np.stack(masks, axis=0)
     # for now, just return the masked_frames applied to the images
-    #masks = f_annotation["masked_frames"][()]
+    # masks = f_annotation["masked_frames"][()]
     masked_imgs = []
     path_imgs = []
     masked_path_imgs = []
