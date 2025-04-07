@@ -374,7 +374,7 @@ class TrainConfig:
     batch_size: int = 96 # 64 uses 31GB of memory on 1 GPU when doing LoRA fine-tuning, 96 uses 41GB of memory on 1 GPU when doing LoRA fine-tuning.
     # Number of workers to use for the data loader. Increasing this number will speed up data loading but
     # will increase memory and CPU usage.
-    num_workers: int = 24
+    num_workers: int = 20
     # Number of train steps (batches) to run.
     num_train_steps: int = 30_000
 
@@ -611,8 +611,8 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
-        fsdp_devices=3,
-        batch_size=288,
+        fsdp_devices=2,
+        batch_size=164,
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
         # for the given model config for LoRA finetuning. Just make sure it matches the model config
@@ -663,8 +663,8 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
-        fsdp_devices=3,
-        batch_size=288,
+        fsdp_devices=2,
+        batch_size=164,
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
         # for the given model config for LoRA finetuning. Just make sure it matches the model config
