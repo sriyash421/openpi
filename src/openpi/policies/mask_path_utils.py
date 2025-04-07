@@ -134,16 +134,18 @@ def process_mask_obs(
     noise = np.random.normal(0, mask_noise_std, mask.shape)
     mask_noise = mask_scaled + noise
 
-    #
+    # simplify mask
     mask_noise = smooth_path_rdp(mask_noise, tolerance=mask_rdp_tolerance)
-
-    mask_pixels = int(height * 0.15)
 
     # scale mask to img size
     mask_scaled = scale_path(mask_noise, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
+    breakpoint()
 
     # filter unique points
     unique_mask = np.unique(mask_scaled.astype(np.uint16), axis=0)
+
+    # set size of the mask pixels, 15% of the height
+    mask_pixels = int(height * 0.15)
 
     # apply mask
     sample_img = add_mask_2d_to_img(sample_img, unique_mask, mask_pixels=mask_pixels)
