@@ -233,11 +233,10 @@ def get_mask_and_path_from_h5(
             try:
                 quests.append(str(f_annotation["trajectory_labels"][split_idx - 1].decode("utf-8")[0]))
             except:
-                if "trajectory_labels" in f_annotation:
-                    print(f_annotation["trajectory_labels"])
-                else:
-                    print("No trajectory labels found")
-                print(f"Error decoding trajectory label with {split_idx}")
+                # if "trajectory_labels" in f_annotation:
+                #    print(f_annotation["trajectory_labels"])
+                # else:
+                #    print("No trajectory labels found")
                 quests.append(None)
                 # TODO: actually address this issue
 
