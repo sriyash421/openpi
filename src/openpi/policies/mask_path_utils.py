@@ -138,7 +138,6 @@ def process_mask_obs(
 
     # scale mask to img size
     mask_scaled = scale_path(mask_noise, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
-    breakpoint()
 
     # filter unique points
     unique_mask = np.unique(mask_scaled.astype(np.uint16), axis=0)
