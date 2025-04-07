@@ -120,16 +120,17 @@ def process_mask_obs(
     mask,
     mask_noise_std=0.01,
     mask_pixels=10,
+    mask_rdp_tolerance=0.1,
 ):
-    # sample_img -> BxHxWx3
-    height, width = sample_img.shape[-3:-1]
+    # sample_img -> HxWx3
+    height, width = sample_img.shape[:2]
 
     # add noise to mask
     noise = np.random.normal(0, mask_noise_std, mask.shape)
     mask_noise = mask + noise
 
     #
-    mask_scaled = smooth_path_rdp(mask_scaled, tolerance=0.1)
+    mask_noise = smooth_path_rdp(mask_noise, tolerance=mask_rdp_tolerance)
 
     mask_pixels = int(height * 0.15)
 
@@ -138,16 +139,11 @@ def process_mask_obs(
     min_out, max_out = np.zeros(2), np.ones(2)
     mask_scaled = scale_path(mask_noise, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
 
-    all_points = []
-    for points_scaled in mask_scaled:
-        # filter unique points
-        p_time = np.unique(points_scaled.astype(np.uint16), axis=0)
-
-        all_points.append(p_time)
+    # filter unique points
+    unique_mask = np.unique(mask_scaled.astype(np.uint16), axis=0)
 
     # apply mask
-    for t in range(len(sample_img)):
-        sample_img[t] = add_mask_2d_to_img(sample_img[t], all_points[t], mask_pixels=mask_pixels)
+    sample_img = add_mask_2d_to_img(sample_img, unique_mask, mask_pixels=mask_pixels)
 
     return sample_img
 
@@ -270,7 +266,8 @@ def get_mask_and_path_from_h5(
         # movement_across_video = f_annotation[movement_key]
         mask_points = np.concatenate([significant_points, stopped_points], axis=0)
         unmasked_template = np.ones_like(images[i])
-        mask = add_mask_2d_to_img(unmasked_template, mask_points)
+        mask = process_mask_obs(unmasked_template, mask_points)
+        # mask = add_mask_2d_to_img(unmasked_template, mask_points)
 
         masks.append(mask)
     masks = np.stack(masks, axis=0)
