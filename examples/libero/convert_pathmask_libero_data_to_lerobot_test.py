@@ -36,7 +36,6 @@ RAW_DATASET_NAMES = [
     "libero_goal_openvla_processed",
     "libero_object_openvla_processed",
 ]  # For simplicity we will combine multiple Libero datasets into one training dataset
-assert len(RAW_DATASET_NAMES) == 1, "Only one dataset name is supported at a time"
 REPO_NAME = "jesbu1/libero_test_lerobot_pathmask_rdp"  # Name of the output dataset, also used for the Hugging Face Hub
 
 
@@ -103,6 +102,7 @@ def main(
     # Loop over raw Libero datasets and write episodes to the LeRobot dataset
     # You can modify this for your own data format
     for raw_dataset_name in RAW_DATASET_NAMES:
+        print(f"-------------------------Processing {raw_dataset_name}-------------------------")
         # open the directory containing the h5 files using raw_dataset_name
         libero_h5_list = [file for file in os.listdir(Path(data_dir) / raw_dataset_name) if file.endswith(".hdf5")]
         for libero_h5_file in libero_h5_list:
