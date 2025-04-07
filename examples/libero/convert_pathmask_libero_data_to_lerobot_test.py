@@ -142,10 +142,9 @@ def main(
                         len(masked_imgs)
                         == len(path_imgs)
                         == len(masked_path_imgs)
-                        == len(quests)
                         == num_steps
                         == len(f["data"][demo_name]["actions"])
-                    ), f"Lengths of masked_img, path, subtask_path, quests, ee_pos, and action must match: {len(masked_imgs)}, {len(path_imgs)}, {len(masked_path_imgs)}, {len(quests)}, {len(f['data'][demo_name]['obs']['ee_pos'])}, {len(f['data'][demo_name]['actions'])}"
+                    ), f"Lengths of masked_img, path, subtask_path, ee_pos, and action must match: {len(masked_imgs)}, {len(path_imgs)}, {len(masked_path_imgs)}, {len(f['data'][demo_name]['obs']['ee_pos'])}, {len(f['data'][demo_name]['actions'])}"
 
                     assert masked_imgs[0].max() > 1 and masked_imgs[0].min() == 0, "Masked image must be image"
                     assert path_imgs[0].max() > 1 and path_imgs[0].min() == 0, "Path image must be image"
@@ -174,6 +173,9 @@ def main(
 
                         # Determine current subtask instruction (if using subtask instructions)
                         if use_subtask_instructions and quests:
+                            assert (
+                                len(quests) == num_steps
+                            ), f"Lengths of quests and ee_pos must match: {len(quests)}, {num_steps}"
                             # Get the subtask for this frame directly
                             new_subtask = quests[i]
 
