@@ -36,7 +36,6 @@ RAW_DATASET_NAMES = [
     # "libero_goal_openvla_processed",
     # "libero_object_openvla_processed",
 ]  # For simplicity we will combine multiple Libero datasets into one training dataset
-assert len(RAW_DATASET_NAMES) == 1, "Only one dataset name is supported at a time"
 REPO_NAME = "jesbu1/libero_90_lerobot_pathmask_rdp"  # Name of the output dataset, also used for the Hugging Face Hub
 
 
