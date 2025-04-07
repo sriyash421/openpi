@@ -119,7 +119,6 @@ def process_mask_obs(
     sample_img,
     mask,
     mask_noise_std=0.01,
-    mask_pixels=10,
     mask_rdp_tolerance=0.1,
 ):
     # sample_img -> HxWx3
