@@ -9,7 +9,7 @@ from shapely.geometry import LineString
 def add_mask_2d_to_img(img, points, mask_pixels=25):
     img_zeros = np.zeros_like(img)
     for point in points:
-        x, y = point
+        x, y = point.astype(np.int16)
         y_minus, y_plus = int(max(0, y - mask_pixels)), int(min(img.shape[0], y + mask_pixels))
         x_minus, x_plus = int(max(0, x - mask_pixels)), int(min(img.shape[1], x + mask_pixels))
         # example for masking out a square
