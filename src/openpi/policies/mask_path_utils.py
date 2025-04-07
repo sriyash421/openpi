@@ -128,6 +128,11 @@ def process_mask_obs(
     noise = np.random.normal(0, mask_noise_std, mask.shape)
     mask_noise = mask + noise
 
+    #
+    mask_scaled = smooth_path_rdp(mask_scaled, tolerance=0.1)
+
+    mask_pixels = int(height * 0.15)
+
     # scale mask to img size
     min_in, max_in = np.zeros(2), np.array([height, width])
     min_out, max_out = np.zeros(2), np.ones(2)
@@ -151,7 +156,7 @@ def process_path_obs(
     sample_img,
     path,
     path_line_size=3,
-    path_rdp_tolerance=2.0,
+    path_rdp_tolerance=0.05,
     path_noise_std=0.01,
     path_color_gradient=True,
 ):
@@ -161,14 +166,15 @@ def process_path_obs(
     # following HAMSTER
     noise = np.random.normal(0, path_noise_std, path.shape[1:])
     path_noise = path + noise[None]
+    
+    # simplify path
+    path_noise = smooth_path_rdp(path_noise, tolerance=path_rdp_tolerance)
 
     # scale path to img size
     min_in, max_in = np.zeros(2), np.array([height, width])
     min_out, max_out = np.zeros(2), np.ones(2)
     path_scaled = scale_path(path_noise, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
 
-    # simplify path
-    path_scaled = smooth_path_rdp(path_scaled, tolerance=path_rdp_tolerance)
 
     # draw path
     zero_img = np.zeros((height, width, 3), dtype=np.uint8)
