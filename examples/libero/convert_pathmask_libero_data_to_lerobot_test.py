@@ -145,7 +145,7 @@ def main(
                         == len(quests)
                         == num_steps
                         == len(f["data"][demo_name]["actions"])
-                    ), "Lengths of masked_img, path, subtask_path, quests, ee_pos, and action must match"
+                    ), f"Lengths of masked_img, path, subtask_path, quests, ee_pos, and action must match: {len(masked_imgs)}, {len(path_imgs)}, {len(masked_path_imgs)}, {len(quests)}, {len(f['data'][demo_name]['obs']['ee_pos'])}, {len(f['data'][demo_name]['actions'])}"
 
                     assert masked_imgs[0].max() > 1 and masked_imgs[0].min() == 0, "Masked image must be image"
                     assert path_imgs[0].max() > 1 and path_imgs[0].min() == 0, "Path image must be image"
