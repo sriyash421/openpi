@@ -237,6 +237,13 @@ class Pi0(_model.BaseModel):
         ar_mask = jnp.array(ar_mask)
         return tokens, input_mask, ar_mask
 
+    def compute_extra_loss_info(self, preds: at.Float[at.Array, "*b ah"], targets: at.Float[at.Array, "*b ah"]) -> dict:
+        threshold = 0.01
+        proportion_less_than_threshold = jnp.mean(
+            jnp.sqrt(jnp.sum(jnp.square(preds[:, :3] - targets[:, :3])), axis=-1) < threshold
+        )
+        return {f"accuracy_l2_pos<{threshold}": proportion_less_than_threshold}
+
     @override
     def compute_loss(
         self, rng: at.KeyArrayLike, observation: _model.Observation, actions: _model.Actions, *, train: bool = False
@@ -263,7 +270,7 @@ class Pi0(_model.BaseModel):
         )
         v_t = self.action_out_proj(suffix_out[:, -self.action_horizon :])
 
-        return jnp.mean(jnp.square(v_t - u_t), axis=-1)
+        return jnp.mean(jnp.square(v_t - u_t), axis=-1), self.compute_extra_loss_info(v_t, u_t)
 
     @override
     def sample_actions(

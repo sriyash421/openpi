@@ -142,11 +142,13 @@ def train_step(
     model = nnx.merge(state.model_def, state.params)
     model.train()
 
+    loss_fn_extra_info = {}
     @at.typecheck
     def loss_fn(
         model: _model.BaseModel, rng: at.KeyArrayLike, observation: _model.Observation, actions: _model.Actions
     ):
-        chunked_loss = model.compute_loss(rng, observation, actions, train=True)
+        chunked_loss, extra_loss_info = model.compute_loss(rng, observation, actions, train=True)
+        loss_fn_extra_info.update(extra_loss_info)
         return jnp.mean(chunked_loss)
 
     train_rng = jax.random.fold_in(rng, state.step)
@@ -187,7 +189,31 @@ def train_step(
         "grad_norm": optax.global_norm(grads),
         "param_norm": optax.global_norm(kernel_params),
     }
+    info.update(loss_fn_extra_info)
     return new_state, info
+
+
+@at.typecheck
+def validation_step(
+    config: _config.TrainConfig,
+    rng: at.KeyArrayLike,
+    state: training_utils.TrainState,
+    batch: tuple[_model.Observation, _model.Actions],
+) -> dict[str, at.Array]:
+    model = nnx.merge(state.model_def, state.params)
+    model.eval()
+
+    @at.typecheck
+    def loss_fn(
+        model: _model.BaseModel, rng: at.KeyArrayLike, observation: _model.Observation, actions: _model.Actions
+    ):
+        chunked_loss, loss_info = model.compute_loss(rng, observation, actions, train=False)
+        return jnp.mean(chunked_loss), loss_info
+
+    observation, actions = batch
+    loss, loss_info = loss_fn(model, rng, observation, actions)
+
+    return {"val_loss": loss, **loss_info}
 
 
 def main(config: _config.TrainConfig):
@@ -226,6 +252,19 @@ def main(config: _config.TrainConfig):
     batch = next(data_iter)
     logging.info(f"Initialized data loader:\n{training_utils.array_tree_to_info(batch)}")
 
+    # Initialize validation data loader if validation dataset is provided
+    val_data_loader = None
+    if config.validation_data is not None:
+        val_data_loader = _data_loader.create_data_loader(
+            config,
+            data_config=config.validation_data,
+            sharding=data_sharding,
+            num_workers=config.num_workers,
+            shuffle=False,
+        )
+        val_batch = next(iter(val_data_loader))
+        logging.info(f"Initialized validation data loader:\n{training_utils.array_tree_to_info(val_batch)}")
+
     train_state, train_state_sharding = init_train_state(config, init_rng, mesh, resume=resuming)
     jax.block_until_ready(train_state)
     logging.info(f"Initialized train state:\n{training_utils.array_tree_to_info(train_state.params)}")
@@ -239,6 +278,15 @@ def main(config: _config.TrainConfig):
         out_shardings=(train_state_sharding, replicated_sharding),
         donate_argnums=(1,),
     )
+
+    # Compile validation step if validation is enabled
+    pval_step = None
+    if val_data_loader is not None:
+        pval_step = jax.jit(
+            functools.partial(validation_step, config),
+            in_shardings=(replicated_sharding, train_state_sharding, data_sharding),
+            out_shardings=replicated_sharding,
+        )
 
     start_step = int(train_state.step)
     pbar = tqdm.tqdm(
@@ -260,6 +308,21 @@ def main(config: _config.TrainConfig):
             pbar.write(f"Step {step}: {info_str}")
             wandb.log(reduced_info, step=step)
             infos = []
+
+        # Run validation if enabled and it's time
+        if val_data_loader is not None and step % config.validation_interval == 0:
+            val_infos = []
+            val_rng = jax.random.fold_in(train_rng, step)
+            for val_batch in val_data_loader:
+                with sharding.set_mesh(mesh):
+                    val_info = pval_step(val_rng, train_state, val_batch)
+                val_infos.append(val_info)
+            stacked_val_infos = common_utils.stack_forest(val_infos)
+            reduced_val_info = jax.device_get(jax.tree.map(jnp.mean, stacked_val_infos))
+            val_info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_val_info.items())
+            pbar.write(f"Validation at step {step}: {val_info_str}")
+            wandb.log(reduced_val_info, step=step)
+
         batch = next(data_iter)
 
         if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:

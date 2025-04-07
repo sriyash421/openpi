@@ -1,4 +1,5 @@
 import abc
+from typing import Union
 from collections.abc import Sequence
 import dataclasses
 import enum
@@ -264,7 +265,14 @@ class BaseModel(nnx.Module, abc.ABC):
         actions: Actions,
         *,
         train: bool = False,
-    ) -> at.Float[at.Array, "*b ah"]: ...
+    ) -> tuple[at.Float[at.Array, "*b ah"], dict]: ...
+
+    def compute_extra_loss_info(
+        self,
+        preds: at.Float[at.Array, "*b ah"],
+        targets: at.Float[at.Array, "*b ah"],
+    ) -> dict:
+        return {}
 
     @abc.abstractmethod
     def sample_actions(self, rng: at.KeyArrayLike, observation: Observation) -> Actions: ...

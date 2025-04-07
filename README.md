@@ -40,11 +40,31 @@ I've already processed the training stats and norms in `assets/pi0_libero_low_me
 
 You may need to change the `repo_id` in the `src/openpi/training/config.py` file for the `pi0_libero_low_mem_finetune` config to the `jesbu1/libero_90_lerobot` dataset and where it is on your machine. It should by default be in `/home/$USER/.cache/huggingface/lerobot/jesbu1/libero_90_lerobot/`. You can also change the `local_files_only` flag to `False` in the `src/openpi/training/config.py` file to use the local dataset.
 
+### Basic Training
 Then train:
 ```bash
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune --exp-name=EXP_NAME --overwrite
 ```
 
+### Training with Validation
+To train with validation, you can specify a validation dataset in the config. The validation dataset should be a separate LeRobot dataset that follows the same format as your training data. The validation will run every `validation_interval` steps (default 1000) and log the validation metrics to wandb.
+
+Example config modification:
+```python
+config = TrainConfig(
+    # ... other config ...
+    validation_data=LeRobotLiberoDataConfig(
+        repo_id="jesbu1/libero_90_lerobot_val",  # Your validation dataset
+        base_config=DataConfig(
+            local_files_only=True,
+            prompt_from_task=True,
+        ),
+    ),
+    validation_interval=1000,  # Run validation every 1000 steps
+)
+```
+
+### Training with Path Masks
 You can also train with path masks by running the following:
 ```bash
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_2gpu_path --exp-name=EXP_NAME --overwrite

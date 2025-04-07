@@ -362,6 +362,10 @@ class TrainConfig:
 
     # Determines the data to be trained on.
     data: DataConfigFactory = dataclasses.field(default_factory=FakeDataConfig)
+    # Optional validation dataset configuration. If None, no validation will be performed.
+    validation_data: DataConfigFactory | None = None
+    # How often (in steps) to run validation.
+    validation_interval: int = 1000
 
     # Base directory for config assets (e.g., norm stats).
     assets_base_dir: str = "./assets"
@@ -609,6 +613,13 @@ _CONFIGS = [
             ),
             obs_type="path",
         ),
+        validation_data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            base_config=DataConfig(
+                local_files_only=True,
+                prompt_from_task=True,
+            ),
+        ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
         fsdp_devices=2,
@@ -639,6 +650,13 @@ _CONFIGS = [
         num_train_steps=100_000,
         fsdp_devices=3,
         batch_size=288,
+        validation_data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            base_config=DataConfig(
+                local_files_only=True,
+                prompt_from_task=True,
+            ),
+        ),
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
         # for the given model config for LoRA finetuning. Just make sure it matches the model config
@@ -660,6 +678,13 @@ _CONFIGS = [
                 prompt_from_task=True,
             ),
             obs_type="path_masked",
+        ),
+        validation_data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            base_config=DataConfig(
+                local_files_only=True,
+                prompt_from_task=True,
+            ),
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
