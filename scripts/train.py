@@ -323,6 +323,7 @@ def main(config: _config.TrainConfig):
             val_rng = jax.random.fold_in(train_rng, step) # Use a different rng key for validation
             try:
                 for i in range(config.num_validation_steps):
+                    print(f"Validation step {i} of {config.num_validation_steps}")
                     try:
                         val_batch = next(val_data_iter) # Use the persistent iterator
                     except StopIteration:

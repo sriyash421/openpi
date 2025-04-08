@@ -570,6 +570,7 @@ _CONFIGS = [
             ),
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_validation_steps=10,
         num_train_steps=100_000,
         num_workers=8,
         fsdp_devices=1,
