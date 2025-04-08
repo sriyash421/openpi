@@ -568,6 +568,7 @@ _CONFIGS = [
                 local_files_only=True,
                 prompt_from_task=True,
             ),
+            obs_type="path",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_validation_steps=10,
@@ -603,6 +604,7 @@ _CONFIGS = [
                 local_files_only=True,
                 prompt_from_task=True,
             ),
+            obs_type="path",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
@@ -640,6 +642,7 @@ _CONFIGS = [
                 local_files_only=True,
                 prompt_from_task=True,
             ),
+            obs_type="masked",
         ),
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
@@ -669,6 +672,7 @@ _CONFIGS = [
                 local_files_only=True,
                 prompt_from_task=True,
             ),
+            obs_type="path_masked",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
@@ -703,6 +707,7 @@ _CONFIGS = [
                 local_files_only=False,  # Set to True for local-only datasets.
                 prompt_from_task=True,
             ),
+
         ),
         # Note that we load the pi0-FAST base model checkpoint here.
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
