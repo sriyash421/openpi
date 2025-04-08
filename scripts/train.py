@@ -312,6 +312,7 @@ def main(config: _config.TrainConfig):
 
         # Run validation if enabled and it's time
         if val_data_loader is not None and step % config.validation_interval == 0:
+            print("Running validation")
             val_infos = []
             val_rng = jax.random.fold_in(train_rng, step)
             for val_batch in val_data_loader:
