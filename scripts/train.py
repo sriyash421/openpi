@@ -255,9 +255,10 @@ def main(config: _config.TrainConfig):
     # Initialize validation data loader if validation dataset is provided
     val_data_loader = None
     if config.validation_data is not None:
+        # make a copy of the config but replace the data config with the validation data config
+        val_config = dataclasses.replace(config, data=config.validation_data)
         val_data_loader = _data_loader.create_data_loader(
-            config,
-            data_config=config.validation_data,
+            val_config,
             sharding=data_sharding,
             num_workers=config.num_workers,
             shuffle=False,
