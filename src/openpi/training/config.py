@@ -632,8 +632,8 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
-        fsdp_devices=3,
-        batch_size=288,
+        fsdp_devices=2,
+        batch_size=164,
         validation_data=LeRobotLiberoDataConfig(
             repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
             base_config=DataConfig(
