@@ -302,19 +302,23 @@ def main(config: _config.TrainConfig):
         with sharding.set_mesh(mesh):
             train_state, info = ptrain_step(train_rng, train_state, batch)
         infos.append(info)
+
+        log_data = {}
+
+        # Log training metrics
         if step % config.log_interval == 0:
             stacked_infos = common_utils.stack_forest(infos)
             reduced_info = jax.device_get(jax.tree.map(jnp.mean, stacked_infos))
             info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_info.items())
             pbar.write(f"Step {step}: {info_str}")
-            wandb.log(reduced_info, step=step)
-            infos = []
+            log_data.update(reduced_info) # Add train metrics
+            infos = [] # Reset training infos
 
-        # Run validation if enabled and it's time
+        # Run and log validation metrics
         if val_data_loader is not None and step % config.validation_interval == 0:
             print("Running validation")
             val_infos = []
-            val_rng = jax.random.fold_in(train_rng, step)
+            val_rng = jax.random.fold_in(train_rng, step) # Use a different rng for validation
             for val_batch in val_data_loader:
                 with sharding.set_mesh(mesh):
                     val_info = pval_step(val_rng, train_state, val_batch)
@@ -323,10 +327,17 @@ def main(config: _config.TrainConfig):
             reduced_val_info = jax.device_get(jax.tree.map(jnp.mean, stacked_val_infos))
             val_info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_val_info.items())
             pbar.write(f"Validation at step {step}: {val_info_str}")
-            wandb.log(reduced_val_info, step=step)
+            # Add validation metrics with "val/" prefix
+            log_data.update({f"val/{k}": v for k, v in reduced_val_info.items()})
 
+        # Log combined metrics if any were collected
+        if log_data:
+            wandb.log(log_data, step=step)
+
+        # Get next training batch
         batch = next(data_iter)
 
+        # Save checkpoint
         if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:
             _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
 
