@@ -254,6 +254,7 @@ def main(config: _config.TrainConfig):
 
     # Initialize validation data loader if validation dataset is provided
     val_data_loader = None
+    val_data_iter = None
     if config.validation_data is not None:
         # make a copy of the config but replace the data config with the validation data config
         val_config = dataclasses.replace(config, data=config.validation_data)
@@ -263,6 +264,7 @@ def main(config: _config.TrainConfig):
             num_workers=config.num_workers,
             shuffle=False,
         )
+        val_data_iter = iter(val_data_loader)
         val_batch = next(iter(val_data_loader))
         logging.info(f"Initialized validation data loader:\n{training_utils.array_tree_to_info(val_batch)}")
 
@@ -318,17 +320,34 @@ def main(config: _config.TrainConfig):
         if val_data_loader is not None and step % config.validation_interval == 0:
             print("Running validation")
             val_infos = []
-            val_rng = jax.random.fold_in(train_rng, step) # Use a different rng for validation
-            for val_batch in val_data_loader:
-                with sharding.set_mesh(mesh):
-                    val_info = pval_step(val_rng, train_state, val_batch)
-                val_infos.append(val_info)
-            stacked_val_infos = common_utils.stack_forest(val_infos)
-            reduced_val_info = jax.device_get(jax.tree.map(jnp.mean, stacked_val_infos))
-            val_info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_val_info.items())
-            pbar.write(f"Validation at step {step}: {val_info_str}")
-            # Add validation metrics with "val/" prefix
-            log_data.update({f"val/{k}": v for k, v in reduced_val_info.items()})
+            val_rng = jax.random.fold_in(train_rng, step) # Use a different rng key for validation
+            try:
+                for i in range(config.num_validation_steps):
+                    try:
+                        val_batch = next(val_data_iter) # Use the persistent iterator
+                    except StopIteration:
+                        # Validation dataset exhausted, reset iterator and get first batch
+                        logging.info("Validation dataset iterator reset.")
+                        val_data_iter = iter(val_data_loader)
+                        val_batch = next(val_data_iter)
+                    with sharding.set_mesh(mesh):
+                        val_info = pval_step(val_rng, train_state, val_batch)
+                    val_infos.append(val_info)
+            except StopIteration:
+                logging.warning(
+                    f"Validation dataset exhausted after fewer than {config.num_validation_steps} steps."
+                    f" Processed {len(val_infos)} batches."
+                )
+            
+            if val_infos: # Only log if we processed at least one batch
+                stacked_val_infos = common_utils.stack_forest(val_infos)
+                reduced_val_info = jax.device_get(jax.tree.map(jnp.mean, stacked_val_infos))
+                val_info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_val_info.items())
+                pbar.write(f"Validation at step {step}: {val_info_str}")
+                # Add validation metrics with "val/" prefix
+                log_data.update({f"val/{k}": v for k, v in reduced_val_info.items()})
+            else:
+                logging.warning("No validation batches were processed.")
 
         # Log combined metrics if any were collected
         if log_data:

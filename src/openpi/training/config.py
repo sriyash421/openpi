@@ -366,6 +366,8 @@ class TrainConfig:
     validation_data: DataConfigFactory | None = None
     # How often (in steps) to run validation.
     validation_interval: int = 1000
+    # Number of batches to process during each validation run.
+    num_validation_steps: int = 100
 
     # Base directory for config assets (e.g., norm stats).
     assets_base_dir: str = "./assets"
