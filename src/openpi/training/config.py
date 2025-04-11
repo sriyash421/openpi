@@ -258,6 +258,7 @@ class LeRobotLiberoDataConfig(DataConfigFactory):
     """
 
     obs_type: str = "regular"
+    use_proprio: bool = True
 
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
@@ -300,10 +301,22 @@ class LeRobotLiberoDataConfig(DataConfigFactory):
         # We defined these transforms in `libero_policy.py`. You can check the detailed comments there for
         # how to modify the transforms to match your dataset. Once you created your own transforms, you can
         # replace the transforms below with your own.
-        data_transforms = _transforms.Group(
-            inputs=[libero_policy.LiberoInputs(action_dim=model_config.action_dim, model_type=model_config.model_type)],
-            outputs=[libero_policy.LiberoOutputs()],
-        )
+        if self.use_proprio:
+            data_transforms = _transforms.Group(
+                inputs=[
+                    libero_policy.LiberoInputs(action_dim=model_config.action_dim, model_type=model_config.model_type)
+                ],
+                outputs=[libero_policy.LiberoOutputs()],
+            )
+        else:
+            data_transforms = _transforms.Group(
+                inputs=[
+                    libero_policy.NoProprioLiberoInputs(
+                        action_dim=model_config.action_dim, model_type=model_config.model_type
+                    )
+                ],
+                outputs=[libero_policy.LiberoOutputs()],
+            )
 
         # One additional data transform: pi0 models are trained on delta actions (relative to the first
         # state in each action chunk). IF your data has ``absolute`` actions (e.g. target joint angles)
