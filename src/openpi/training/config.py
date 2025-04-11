@@ -600,6 +600,44 @@ _CONFIGS = [
         ema_decay=None,
     ),
     TrainConfig(
+        name="pi0_libero_low_mem_finetune_path_debug_no_proprio",
+        # Here is an example of loading a pi0 model for LoRA fine-tuning.
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+            obs_type="path",
+            use_proprio=False,
+        ),
+        validation_data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            base_config=DataConfig(
+                local_files_only=True,
+                prompt_from_task=True,
+            ),
+            obs_type="path",
+            use_proprio=False,
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_validation_steps=10,
+        num_train_steps=100_000,
+        num_workers=8,
+        fsdp_devices=1,
+        batch_size=16,
+        # The freeze filter defines which parameters should be frozen during training.
+        # We have a convenience function in the model config that returns the default freeze filter
+        # for the given model config for LoRA finetuning. Just make sure it matches the model config
+        # you chose above.
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        # Turn off EMA for LoRA finetuning.
+        ema_decay=None,
+    ),
+    TrainConfig(
         name="pi0_libero_low_mem_finetune_path",
         # Here is an example of loading a pi0 model for LoRA fine-tuning.
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
