@@ -238,11 +238,9 @@ class Pi0(_model.BaseModel):
         return tokens, input_mask, ar_mask
 
     def compute_extra_loss_info(self, preds: at.Float[at.Array, "*b ah"], targets: at.Float[at.Array, "*b ah"]) -> dict:
-        threshold = 0.01
-        proportion_less_than_threshold = jnp.mean(
-            jnp.sqrt(jnp.sum(jnp.square(preds[:, :3] - targets[:, :3]), axis=-1)) < threshold
-        )
-        return {f"accuracy_l2_pos<{threshold}": proportion_less_than_threshold}
+        thresholds = [0.01, 0.05, 0.1]
+        difference = jnp.sqrt(jnp.sum(jnp.square(preds[..., :3] - targets[..., :3]), axis=-1))
+        return {f"accuracy_l2_pos<{threshold}": jnp.mean(difference < threshold) for threshold in thresholds}
 
     @override
     def compute_loss(
@@ -270,7 +268,10 @@ class Pi0(_model.BaseModel):
         )
         v_t = self.action_out_proj(suffix_out[:, -self.action_horizon :])
 
-        return jnp.mean(jnp.square(v_t - u_t), axis=-1), self.compute_extra_loss_info(v_t, u_t)
+        # get the predicted action, detached from the graph
+        pred_actions = (noise - v_t).at[:, :, 0].set(0)
+
+        return jnp.mean(jnp.square(v_t - u_t), axis=-1), self.compute_extra_loss_info(pred_actions, actions)
 
     @override
     def sample_actions(
