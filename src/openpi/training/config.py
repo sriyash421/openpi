@@ -380,7 +380,7 @@ class TrainConfig:
     # How often (in steps) to run validation.
     validation_interval: int = 1000
     # Number of batches to process during each validation run.
-    num_validation_steps: int = 100
+    num_validation_steps: int = 10
 
     # Base directory for config assets (e.g., norm stats).
     assets_base_dir: str = "./assets"
