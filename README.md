@@ -67,9 +67,13 @@ config = TrainConfig(
 ### Training with Path Masks
 You can also train with path masks by running the following:
 ```bash
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_2gpu_path --exp-name=EXP_NAME --overwrite
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_2gpu_masked --exp-name=EXP_NAME --overwrite
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_2gpu_path_masked --exp-name=EXP_NAME --overwrite
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_path --exp-name=EXP_NAME --overwrite
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_masked --exp-name=EXP_NAME --overwrite
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_path_masked --exp-name=EXP_NAME --overwrite
+
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_path_no_proprio --exp-name=EXP_NAME --overwrite
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_masked_no_proprio --exp-name=EXP_NAME --overwrite
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_libero_low_mem_finetune_path_masked_no_proprio --exp-name=EXP_NAME --overwrite
 ```
 
 ## Evaluation of LIBERO
