@@ -80,6 +80,8 @@ XLA_PYTHON_CLIENT_MEM_FRACTION=0.95  uv run scripts/train.py pi0_libero_low_mem_
 Once done training, you can evaluate the model by running the following command to initialize a policy server:
 ```bash
 CUDA_VISIBLE_DEVICES=1 uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_90_LoRA_finetune_8gpu/29999/ 
+
+uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/34000/
 ```
 
 In a separate terminal, run the following command to run the Libero evaluation script:
@@ -92,10 +94,11 @@ uv pip sync examples/libero/requirements.txt third_party/libero/requirements.txt
 uv pip install -e packages/openpi-client
 uv pip install -e third_party/libero
 uv pip install wandb
+uv pip install openai shapely # for pathmask
 export PYTHONPATH=$PYTHONPATH:$PWD/third_party/libero
 
 # Run the simulation
-python examples/libero/main.py --args.task_suite_name=libero_10
+python examples/libero/main.py --args.task_suite_name=libero_10 [--draw_path] [--draw_mask]
 python examples/libero/main.py --args.task_suite_name=libero_spatial
 python examples/libero/main.py --args.task_suite_name=libero_object
 python examples/libero/main.py --args.task_suite_name=libero_goal

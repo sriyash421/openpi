@@ -84,7 +84,7 @@ def eval_libero(args: Args) -> None:
         raise ValueError(f"Unknown task suite: {args.task_suite_name}")
 
     if args.use_wandb:
-        run_name = f"pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}"
+        run_name = f"pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}"
         wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name, config=args)
 
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
