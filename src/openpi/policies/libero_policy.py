@@ -5,7 +5,7 @@ import numpy as np
 
 from openpi import transforms
 from openpi.models import model as _model
-from openpi.policies.mask_path_utils import process_mask_obs, process_path_obs
+from openpi.policies.mask_path_utils import process_mask_obs, process_path_obs, send_request
 
 
 def make_libero_example() -> dict:

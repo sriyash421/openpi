@@ -15,6 +15,7 @@ from openpi_client import image_tools
 from openpi_client import websocket_client_policy as _websocket_client_policy
 import tqdm
 import tyro
+from openpi.policies.mask_path_utils import get_path_mask_from_vlm
 
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
 LIBERO_ENV_RESOLUTION = 256  # resolution used to render training data
@@ -29,6 +30,7 @@ class Args:
     port: int = 8000
     resize_size: int = 224
     replan_steps: int = 5
+    vlm_server_ip: str = "https://whippet-pet-singularly.ngrok.app"
 
     #################################################################################################################
     # LIBERO environment-specific parameters
@@ -38,6 +40,11 @@ class Args:
     )
     num_steps_wait: int = 10  # Number of steps to wait for objects to stabilize i n sim
     num_trials_per_task: int = 50  # Number of rollouts per task
+
+    draw_path: bool = True
+    draw_mask: bool = True
+
+    flip_image_horizontally: bool = False
 
     #################################################################################################################
     # Utils
@@ -135,6 +142,11 @@ def eval_libero(args: Args) -> None:
                     wrist_img = np.ascontiguousarray(
                         obs["robot0_eye_in_hand_image"][::-1]
                     )  # new preprocessing doesn't flip it horizontally
+                    if (
+                        args.flip_image_horizontally
+                    ):  # for models trained with the original OpenVLA processed data, not the pathmask new data
+                        img = img[:, ::-1]
+                        wrist_img = wrist_img[:, ::-1]
                     img = image_tools.convert_to_uint8(
                         image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
                     )
@@ -142,10 +154,18 @@ def eval_libero(args: Args) -> None:
                         image_tools.resize_with_pad(wrist_img, args.resize_size, args.resize_size)
                     )
 
-                    # Save preprocessed image for replay video
-                    replay_images.append(img)
 
                     if not action_plan:
+                        # get path and mask from VLM
+                        img = get_path_mask_from_vlm(
+                            img,
+                            "Center Crop",
+                            str(task_description),
+                            draw_path=args.draw_path,
+                            draw_mask=args.draw_mask,
+                            verbose=True,
+                            vlm_server_ip=args.vlm_server_ip,
+                        )
                         # Finished executing previous action chunk -- compute new chunk
                         # Prepare observations dict
                         element = {
@@ -169,6 +189,9 @@ def eval_libero(args: Args) -> None:
                         action_plan.extend(action_chunk[: args.replan_steps])
 
                     action = action_plan.popleft()
+
+                    # Save preprocessed image for replay video
+                    replay_images.append(img)
 
                     # Execute action in environment
                     obs, reward, done, info = env.step(action.tolist())
