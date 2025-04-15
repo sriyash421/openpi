@@ -162,21 +162,28 @@ def get_path_mask_from_vlm(
 ):
     # used for VLM inference during eval
     assert draw_path or draw_mask
-    prompt_type = "path_mask"
-    response_text = send_request(
-        image,
-        task_instr,
-        prompt_type,
-        crop_type,
-        server_ip=vlm_server_ip,
-        verbose=verbose,
-    )
-    path, mask = get_path_from_answer(response_text, prompt_type)
-    if draw_path:
-        drawn_rgb = draw_onto_image((path, mask), "path", image.copy())
-        image = drawn_rgb
-    if draw_mask:
-        masked_rgb = draw_onto_image((path, mask), "mask", image.copy())
-        image = masked_rgb
+    # try up to 3 times
+    for _ in range(3):
+        try:
+            prompt_type = "path_mask"
+            response_text = send_request(
+                image,
+                task_instr,
+                prompt_type,
+                crop_type,
+                server_ip=vlm_server_ip,
+                verbose=verbose,
+            )
+            path, mask = get_path_from_answer(response_text, prompt_type)
+            if draw_path:
+                drawn_rgb = draw_onto_image((path, mask), "path", image.copy())
+                image = drawn_rgb
+            if draw_mask:
+                masked_rgb = draw_onto_image((path, mask), "mask", image.copy())
+                image = masked_rgb
 
-    return image
+            return image
+        except Exception as e:
+            print(f"Error: {e}")
+            continue
+    raise Exception("Failed to get path and mask from VLM")

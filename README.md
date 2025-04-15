@@ -99,7 +99,7 @@ uv pip install openai shapely # for pathmask
 export PYTHONPATH=$PYTHONPATH:$PWD/third_party/libero
 
 # Run the simulation
-python examples/libero/main.py --args.task_suite_name=libero_10 [--draw_path] [--draw_mask]
+python examples/libero/main.py --args.task_suite_name=libero_10 [--args.draw_path] [--args.draw_mask]
 python examples/libero/main.py --args.task_suite_name=libero_spatial
 python examples/libero/main.py --args.task_suite_name=libero_object
 python examples/libero/main.py --args.task_suite_name=libero_goal
