@@ -9,7 +9,7 @@ GIT_LFS_SKIP_SMUDGE=1 uv sync
 ```
 Then:
 ```bash
-uv pip install tensorflow tensorflow_datasets shapely
+uv pip install tensorflow tensorflow_datasets shapely openai # openai is for the maskedvla evaluation
 ```
 
 Follow the instructions in my openvla repo to install and generate the modified LIBERO dataset: [here](https://github.com/jesbu1/openvla).
@@ -93,6 +93,7 @@ source examples/libero/.venv/bin/activate
 uv pip sync examples/libero/requirements.txt third_party/libero/requirements.txt --extra-index-url https://download.pytorch.org/whl/cu113 --index-strategy=unsafe-best-match
 uv pip install -e packages/openpi-client
 uv pip install -e third_party/libero
+uv pip install -e ../vila_utils # from https://github.com/memmelma/vila_utils
 uv pip install wandb
 uv pip install openai shapely # for pathmask
 export PYTHONPATH=$PYTHONPATH:$PWD/third_party/libero
