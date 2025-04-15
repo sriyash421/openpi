@@ -17,8 +17,7 @@ import tqdm
 import tyro
 import sys
 
-sys.path.append(".")
-from .eval_maskpath_utils import get_path_mask_from_vlm
+from examples.libero.eval_maskpath_utils import get_path_mask_from_vlm
 
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
 LIBERO_ENV_RESOLUTION = 256  # resolution used to render training data
