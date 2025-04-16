@@ -34,6 +34,7 @@ class Args:
     resize_size: int = 224
     replan_steps: int = 5
     vlm_server_ip: str = "http://0.0.0.0:8000"
+    vlm_query_frequency: int = 5  # call VLM once every how many action chunks
 
     #################################################################################################################
     # LIBERO environment-specific parameters
@@ -125,6 +126,11 @@ def eval_libero(args: Args) -> None:
             t = 0
             replay_images = []
 
+            # initialize vlm path and and query counter
+            path = None
+            mask = None
+            vlm_query_counter = 0
+
             logging.info(f"Starting episode {task_episodes+1}...")
             while t < max_steps + args.num_steps_wait:
                 try:
@@ -159,8 +165,14 @@ def eval_libero(args: Args) -> None:
 
 
                     if not action_plan:
-                        # get path and mask from VLM
-                        img = get_path_mask_from_vlm(
+                        # Finished executing previous action chunk -- compute new chunk
+
+                        # get path and mask from VLM if we've reached the query frequency
+                        if vlm_query_counter % args.vlm_query_frequency == 0:
+                            vlm_query_counter = 0
+                            # setting path and mask to None so that the VLM is called
+                            path, mask = None, None
+                        img, path, mask = get_path_mask_from_vlm(
                             img,
                             "Center Crop",
                             str(task_description),
@@ -168,8 +180,11 @@ def eval_libero(args: Args) -> None:
                             draw_mask=args.draw_mask,
                             verbose=True,
                             vlm_server_ip=args.vlm_server_ip,
+                            path=path,
+                            mask=mask,
                         )
-                        # Finished executing previous action chunk -- compute new chunk
+                        vlm_query_counter += 1
+
                         # Prepare observations dict
                         element = {
                             "observation/image": img,

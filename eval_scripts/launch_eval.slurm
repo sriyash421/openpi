@@ -14,6 +14,8 @@ EVAL_SET=${1:-10}  # Default to libero_10 if not specified (options: 10, spatial
 USE_PATH=${2:-0}   # Default to not using path
 USE_MASK=${3:-0}   # Default to not using mask
 
+VLM_QUERY_FREQUENCY=5 # how many times to call the VLM per action chunk
+
 source ~/.bashrc
 
 cd /home1/jessez/nvidia/VILA
@@ -55,7 +57,7 @@ else
 fi
 
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8000 --args.port 8001"
+EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8000 --args.port 8001 --args.vlm_query_frequency $VLM_QUERY_FREQUENCY"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
