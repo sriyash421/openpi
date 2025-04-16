@@ -3,11 +3,11 @@
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --mem=185G #185G to get ampere or newer gpus
 #SBATCH --partition=gpu
 #SBATCH --output=slurm_outputs/%x_%j.out
 #SBATCH --error=slurm_outputs/%x_%j.err
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 
 # Default parameter values
 EVAL_SET=${1:-10}  # Default to libero_10 if not specified (options: 10, spatial, object, goal)
@@ -18,12 +18,12 @@ source ~/.bashrc
 
 cd /home1/jessez/nvidia/VILA
 echo "Running VILA server"
-conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=0 python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_oxe_sim_path_mask/snapshots/3d08e92de1cd7517b1acbf72648ce3bbf48c19ae/checkpoint-5700 > vila_server.log 2>&1" &
+conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=0 python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_oxe_sim_path_mask/snapshots/3d08e92de1cd7517b1acbf72648ce3bbf48c19ae/checkpoint-5700" &
 
 # Wait for the model to load
 sleep 20
 
-SERVE_CMD="CUDA_VISIBLE_DEVICES=1 uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
+SERVE_CMD="CUDA_VISIBLE_DEVICES=0 uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
 elif [ "$USE_PATH" = "0" ] && [ "$USE_MASK" = "1" ]; then

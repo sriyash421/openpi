@@ -81,7 +81,7 @@ Once done training, you can evaluate the model by running the following command 
 ```bash
 CUDA_VISIBLE_DEVICES=1 uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_90_LoRA_finetune_8gpu/29999/ 
 
-uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/34000/
+uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/
 ```
 
 In a separate terminal, run the following command to run the Libero evaluation script:

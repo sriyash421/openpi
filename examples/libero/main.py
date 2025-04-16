@@ -33,7 +33,7 @@ class Args:
     port: int = 8000
     resize_size: int = 224
     replan_steps: int = 5
-    vlm_server_ip: str = "https://whippet-pet-singularly.ngrok.app"
+    vlm_server_ip: str = "http://0.0.0.0:8000"
 
     #################################################################################################################
     # LIBERO environment-specific parameters
