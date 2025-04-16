@@ -164,8 +164,9 @@ def get_path_mask_from_vlm(
 ):
     # used for VLM inference during eval
     assert draw_path or draw_mask
-    # try up to 3 times
-    for _ in range(3):
+    # try up to 5 times
+    temperature = 0.0
+    for _ in range(5):
         try:
             if path is None or mask is None:
                 prompt_type = "path_mask"
@@ -176,6 +177,7 @@ def get_path_mask_from_vlm(
                     crop_type,
                     server_ip=vlm_server_ip,
                     verbose=verbose,
+                    temperature=temperature,
                 )
                 path, mask = get_path_from_answer(response_text, prompt_type)
             if draw_path:
@@ -188,5 +190,6 @@ def get_path_mask_from_vlm(
             return image, path, mask
         except Exception as e:
             print(f"Error: {e}")
+            temperature += 0.1  # increase temperature for next attempt
             continue
     raise Exception("Failed to get path and mask from VLM")
