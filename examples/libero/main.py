@@ -58,8 +58,9 @@ class Args:
     seed: int = 7  # Random Seed (for reproducibility)
 
     use_wandb: bool = True # Whether to also log results in Weights & Biases
-    wandb_project: str = "p-masked-vla"              # Name of W&B project to log to (use default!)
-    wandb_entity: str = "clvr"                       # Name of entity to log under
+    wandb_project: str = "p-masked-vla"  # Name of W&B project to log to (use default!)
+    wandb_entity: str = "clvr"  # Name of entity to log under
+    wandb_name_suffix: str = ""
 
 
 def eval_libero(args: Args) -> None:
@@ -88,7 +89,7 @@ def eval_libero(args: Args) -> None:
         raise ValueError(f"Unknown task suite: {args.task_suite_name}")
 
     if args.use_wandb:
-        run_name = f"pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}"
+        run_name = f"pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}-{args.wandb_name_suffix}"
         wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name, config=args)
 
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)

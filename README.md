@@ -99,10 +99,15 @@ uv pip install openai shapely # for pathmask
 export PYTHONPATH=$PYTHONPATH:$PWD/third_party/libero
 
 # Run the simulation
-python examples/libero/main.py --args.task_suite_name=libero_10 [--args.draw_path] [--args.draw_mask]
-python examples/libero/main.py --args.task_suite_name=libero_spatial
-python examples/libero/main.py --args.task_suite_name=libero_object
-python examples/libero/main.py --args.task_suite_name=libero_goal
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
+
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5
 ```
 
 # openpi
