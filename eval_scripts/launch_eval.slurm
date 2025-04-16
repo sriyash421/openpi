@@ -35,6 +35,8 @@ fi
 echo "Running serving command: $SERVE_CMD"
 bash -c "$SERVE_CMD" &
 
+sleep 20
+
 cd /home1/jessez/nvidia/openpi
 
 # Determine task suite based on EVAL_SET
