@@ -82,6 +82,10 @@ Once done training, you can evaluate the model by running the following command 
 CUDA_VISIBLE_DEVICES=1 uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_90_LoRA_finetune_8gpu/29999/ 
 
 uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/
+
+uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune_path_no_proprio --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_no_proprio/pi0_libero_90_path_no_proprio_bs128/27000
+
+uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_libero_low_mem_finetune_masked_no_proprio --policy.dir=checkpoints/pi0_libero_low_mem_finetune_masked_no_proprio/pi0_libero_90_masked_no_proprio_bs128/28000
 ```
 
 In a separate terminal, run the following command to run the Libero evaluation script:
@@ -99,15 +103,26 @@ uv pip install openai shapely # for pathmask
 export PYTHONPATH=$PYTHONPATH:$PWD/third_party/libero
 
 # Run the simulation
-python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
-python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
-python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
-python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=10
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=10
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=10
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=10
 
-python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5 --args.wandb_name_suffix="no_proprio"
-python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5 --args.wandb_name_suffix="no_proprio"
-python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5 --args.wandb_name_suffix="no_proprio"
-python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5 --args.wandb_name_suffix="no_proprio"
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio"
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio"
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio"
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio"
+
+
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8003
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8003
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8003
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8003
+
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8005
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8005
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8005
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8005
 ```
 
 # openpi

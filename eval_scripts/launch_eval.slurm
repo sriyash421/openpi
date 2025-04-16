@@ -14,7 +14,7 @@ EVAL_SET=${1:-10}  # Default to libero_10 if not specified (options: 10, spatial
 USE_PATH=${2:-0}   # Default to not using path
 USE_MASK=${3:-0}   # Default to not using mask
 
-VLM_QUERY_FREQUENCY=5 # how many times to call the VLM per action chunk
+VLM_QUERY_FREQUENCY=10 # how many times to call the VLM per action chunk
 
 source ~/.bashrc
 
