@@ -31,7 +31,7 @@ elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
     SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_90_path_masked_bs164_rdp/30000/"
 fi
 
-$SERVE_CMD &
+bash -c "$SERVE_CMD" &
 
 cd /home1/jessez/nvidia/openpi
 
@@ -63,5 +63,7 @@ if [ "$USE_MASK" = "1" ]; then
 fi
 
 # Execute the command
+source examples/libero/.venv/bin/activate
+export PYTHONPATH=$PYTHONPATH:$PWD/third_party/libero
 echo "Running: $EVAL_CMD"
 $EVAL_CMD
