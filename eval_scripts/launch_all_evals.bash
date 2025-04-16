@@ -15,6 +15,10 @@ for eval_set in "${EVAL_SETS[@]}"; do
         for use_mask in "${MASK_OPTIONS[@]}"; do
             # Skip invalid combinations if needed
             # For example, if path and mask shouldn't be used together, add a condition here
+            if [[ $use_path -eq 0 && $use_mask -eq 0 ]]; then
+                echo "Skipping job: no path and no mask for eval_set $eval_set"
+                continue
+            fi
             
             # Create a descriptive job name
             path_str=""
