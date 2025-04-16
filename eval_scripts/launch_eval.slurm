@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=biyik_1165
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=20:00:00
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=185G #185G to get ampere or newer gpus
 #SBATCH --partition=gpu
@@ -31,7 +31,7 @@ if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
 elif [ "$USE_PATH" = "0" ] && [ "$USE_MASK" = "1" ]; then
     SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_masked/pi0_libero_90_masked_bs164_rdp/30000/"
 elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
-    SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_90_path_masked_bs164_rdp/30000/"
+    SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_90_path_masked_bs164_rdp/29000/"
 fi
 
 cd /home1/jessez/nvidia/openpi
