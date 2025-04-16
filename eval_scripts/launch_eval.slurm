@@ -23,7 +23,7 @@ conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=0 pytho
 # Wait for the model to load
 sleep 20
 
-SERVE_CMD="CUDA_VISIBLE_DEVICES=1 uv run scripts/serve_policy.py policy:checkpoint --port 8001"
+SERVE_CMD="CUDA_VISIBLE_DEVICES=1 uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
 elif [ "$USE_PATH" = "0" ] && [ "$USE_MASK" = "1" ]; then
@@ -32,12 +32,13 @@ elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
     SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_90_path_masked_bs164_rdp/30000/"
 fi
 
+cd /home1/jessez/nvidia/openpi
+
 echo "Running serving command: $SERVE_CMD"
 bash -c "$SERVE_CMD" &
 
 sleep 20
 
-cd /home1/jessez/nvidia/openpi
 
 # Determine task suite based on EVAL_SET
 if [ "$EVAL_SET" = "10" ]; then
