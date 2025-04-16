@@ -55,7 +55,7 @@ else
 fi
 
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8001 --args.port 8000"
+EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8000 --args.port 8001"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
