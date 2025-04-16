@@ -18,12 +18,12 @@ source ~/.bashrc
 
 cd /home1/jessez/nvidia/VILA
 echo "Running VILA server"
-conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=0 VILA_PORT=8001 python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_oxe_sim_path_mask/snapshots/3d08e92de1cd7517b1acbf72648ce3bbf48c19ae/checkpoint-5700" &
+conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=0 python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_oxe_sim_path_mask/snapshots/3d08e92de1cd7517b1acbf72648ce3bbf48c19ae/checkpoint-5700" &
 
 # Wait for the model to load
 sleep 20
 
-SERVE_CMD="CUDA_VISIBLE_DEVICES=1 uv run scripts/serve_policy.py policy:checkpoint"
+SERVE_CMD="CUDA_VISIBLE_DEVICES=1 uv run scripts/serve_policy.py policy:checkpoint --port 8001"
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/34000/"
 elif [ "$USE_PATH" = "0" ] && [ "$USE_MASK" = "1" ]; then
@@ -54,7 +54,7 @@ else
 fi
 
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://localhost:8001"
+EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8000 --port 8001"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
