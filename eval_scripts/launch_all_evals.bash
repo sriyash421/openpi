@@ -27,7 +27,7 @@ for eval_set in "${EVAL_SETS[@]}"; do
             echo "Launching job: $job_name with params: $eval_set $use_path $use_mask"
             
             # Submit the job with parameters
-            sbatch --job-name=$job_name eval_scripts/run_path_eval.slurm $eval_set $use_path $use_mask
+            sbatch --job-name=$job_name eval_scripts/launch_eval.slurm $eval_set $use_path $use_mask
             
             # Optional: add a small delay between job submissions
             sleep 1
