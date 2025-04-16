@@ -45,8 +45,8 @@ class Args:
     num_steps_wait: int = 10  # Number of steps to wait for objects to stabilize i n sim
     num_trials_per_task: int = 50  # Number of rollouts per task
 
-    draw_path: bool = True
-    draw_mask: bool = True
+    draw_path: bool = False
+    draw_mask: bool = False
 
     flip_image_horizontally: bool = False
 
