@@ -16,7 +16,7 @@ USE_MASK=${3:-0}   # Default to not using mask
 
 source ~/.bashrc
 
-cd /home/jessez/nvidia/VILA
+cd /home1/jessez/nvidia/VILA
 conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=0 VILA_PORT=8000 python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_oxe_sim_path_mask/snapshots/3d08e92de1cd7517b1acbf72648ce3bbf48c19ae/checkpoint-5700" &
 
 # Wait for the model to load
@@ -33,7 +33,7 @@ fi
 
 $SERVE_CMD &
 
-cd /home/jessez/nvidia/openpi
+cd /home1/jessez/nvidia/openpi
 
 # Determine task suite based on EVAL_SET
 if [ "$EVAL_SET" = "10" ]; then
