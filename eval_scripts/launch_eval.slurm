@@ -18,7 +18,7 @@ source ~/.bashrc
 
 cd /home1/jessez/nvidia/VILA
 echo "Running VILA server"
-conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=0 python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_oxe_sim_path_mask/snapshots/3d08e92de1cd7517b1acbf72648ce3bbf48c19ae/checkpoint-5700" &
+conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=0 python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_oxe_sim_path_mask/snapshots/3d08e92de1cd7517b1acbf72648ce3bbf48c19ae/checkpoint-5700 > vila_server.log 2>&1" &
 
 # Wait for the model to load
 sleep 20
