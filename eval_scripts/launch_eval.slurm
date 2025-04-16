@@ -29,7 +29,7 @@ SERVE_CMD="CUDA_VISIBLE_DEVICES=0 uv run scripts/serve_policy.py --port 8001 pol
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
 elif [ "$USE_PATH" = "0" ] && [ "$USE_MASK" = "1" ]; then
-    SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_masked/pi0_libero_90_masked_bs164_rdp/30000/"
+    SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_masked/pi0_libero_90_masked_bs164_rdp/29000/"
 elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
     SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_90_path_masked_bs164_rdp/29000/"
 fi
