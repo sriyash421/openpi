@@ -103,26 +103,26 @@ uv pip install openai shapely # for pathmask
 export PYTHONPATH=$PYTHONPATH:$PWD/third_party/libero
 
 # Run the simulation
-python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=10
-python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=10
-python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=10
-python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=10
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=20
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=20
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=20
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=20
 
-python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio"
-python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio"
-python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio"
-python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio"
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio"
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio"
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio"
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio"
 
 
-python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8003
-python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8003
-python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8003
-python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8003
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio" --args.port 8003
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio" --args.port 8003
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio" --args.port 8003
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio" --args.port 8003
 
-python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8005
-python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8005
-python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8005
-python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=10 --args.wandb_name_suffix="no_proprio" --args.port 8005
+python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio" --args.port 8005
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio" --args.port 8005
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio" --args.port 8005
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8004" --args.vlm_query_frequency=20 --args.wandb_name_suffix="no_proprio" --args.port 8005
 ```
 
 # openpi

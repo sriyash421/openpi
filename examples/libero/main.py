@@ -34,7 +34,7 @@ class Args:
     resize_size: int = 224
     replan_steps: int = 5
     vlm_server_ip: str = "http://0.0.0.0:8000"
-    vlm_query_frequency: int = 10  # call VLM once every how many action chunks
+    vlm_query_frequency: int = 20  # call VLM once every how many action chunks
 
     #################################################################################################################
     # LIBERO environment-specific parameters
@@ -276,7 +276,7 @@ def eval_libero(args: Args) -> None:
     logging.info(f"Total episodes: {total_episodes}")
 
     if args.use_wandb:
-        wandb.log({"success_rate": float(total_successes) / float(total_episodes)})
+        wandb.log({f"{args.task_suite_name}/success_rate": float(total_successes) / float(total_episodes)})
         wandb.finish()
 
 def _get_libero_env(task, resolution, seed):
