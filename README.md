@@ -104,10 +104,10 @@ python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw
 python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
 python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="https://whippet-pet-singularly.ngrok.app" --args.vlm_query_frequency=5
 
-python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5
+python examples/libero/main.py --args.task_suite_name=libero_10 --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5 --args.wandb_name_suffix="path_mask"
 python examples/libero/main.py --args.task_suite_name=libero_spatial --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5
-python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5
-python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5
+python examples/libero/main.py --args.task_suite_name=libero_object --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5 --args.wandb_name_suffix="path_mask"
+python examples/libero/main.py --args.task_suite_name=libero_goal --args.draw_path --args.draw_mask --args.vlm_server_ip="http://0.0.0.0:8002" --args.vlm_query_frequency=5 --args.wandb_name_suffix="path_mask"
 ```
 
 # openpi
