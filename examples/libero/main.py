@@ -34,7 +34,7 @@ class Args:
     resize_size: int = 224
     replan_steps: int = 5
     vlm_server_ip: str = "http://0.0.0.0:8000"
-    vlm_query_frequency: int = 5  # call VLM once every how many action chunks
+    vlm_query_frequency: int = 10  # call VLM once every how many action chunks
 
     #################################################################################################################
     # LIBERO environment-specific parameters
@@ -164,27 +164,27 @@ def eval_libero(args: Args) -> None:
                         image_tools.resize_with_pad(wrist_img, args.resize_size, args.resize_size)
                     )
 
-
                     if not action_plan:
                         # Finished executing previous action chunk -- compute new chunk
 
                         # get path and mask from VLM if we've reached the query frequency
-                        if vlm_query_counter % args.vlm_query_frequency == 0:
-                            vlm_query_counter = 0
-                            # setting path and mask to None so that the VLM is called
-                            path, mask = None, None
-                        img, path, mask = get_path_mask_from_vlm(
-                            img,
-                            "Center Crop",
-                            str(task_description),
-                            draw_path=args.draw_path,
-                            draw_mask=args.draw_mask,
-                            verbose=True,
-                            vlm_server_ip=args.vlm_server_ip,
-                            path=path,
-                            mask=mask,
-                        )
-                        vlm_query_counter += 1
+                        if args.draw_path or args.draw_mask:
+                            if vlm_query_counter % args.vlm_query_frequency == 0:
+                                vlm_query_counter = 0
+                                # setting path and mask to None so that the VLM is called
+                                path, mask = None, None
+                            img, path, mask = get_path_mask_from_vlm(
+                                img,
+                                "Center Crop",
+                                str(task_description),
+                                draw_path=args.draw_path,
+                                draw_mask=args.draw_mask,
+                                verbose=True,
+                                vlm_server_ip=args.vlm_server_ip,
+                                path=path,
+                                mask=mask,
+                            )
+                            vlm_query_counter += 1
 
                         # Prepare observations dict
                         element = {
@@ -206,6 +206,19 @@ def eval_libero(args: Args) -> None:
                             len(action_chunk) >= args.replan_steps
                         ), f"We want to replan every {args.replan_steps} steps, but policy only predicts {len(action_chunk)} steps."
                         action_plan.extend(action_chunk[: args.replan_steps])
+                    elif args.draw_path or args.draw_mask:
+                        # draw path and mask on image just for visualization when action chunk is still being used
+                        img, path, mask = get_path_mask_from_vlm(
+                            img,
+                            "Center Crop",
+                            str(task_description),
+                            draw_path=args.draw_path,
+                            draw_mask=args.draw_mask,
+                            verbose=True,
+                            vlm_server_ip=args.vlm_server_ip,
+                            path=path,
+                            mask=mask,
+                        )
 
                     action = action_plan.popleft()
 

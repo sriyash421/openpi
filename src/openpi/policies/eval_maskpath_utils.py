@@ -11,7 +11,7 @@ from vila_utils.utils.encode import scale_path
 
 # Constants
 SERVER_IP = "https://whippet-pet-singularly.ngrok.app"
-DOWNSAMPLE_RESOLUTION = 200
+DOWNSAMPLE_RESOLUTION = 256
 # PATH_MODEL_NAME = "vila_3b_oxe_no_droid"
 # PATH_MODEL_NAME_MASK = "vila_3b_oxe_no_droid_path_mask"
 PATH_MODEL_NAME = "vila_3b_oxe_sim_path"
