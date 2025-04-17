@@ -105,7 +105,11 @@ Once you have converted the USC WidowX data into the LeRobot format and uploaded
 2.  **Normalization Stats:**
     *   Training requires normalization statistics (`norm_stats.json`). The training script expects these to be located within the assets directory corresponding to the config and dataset ID.
     *   For the `pi0_usc_widowx_expert_data` config with `repo_id="jesbu1/usc_widowx_combined"`, the default expected path would be roughly `./assets/pi0_usc_widowx_expert_data/jesbu1/usc_widowx_combined/norm_stats.json` (relative to the project root, path depends on `assets_base_dir` and `asset_id` resolution).
-    *   If these stats don't exist, the `LeRobotDataset` loader might attempt to compute them on the first run if the dataset is local. Alternatively, you might need to compute them manually or configure the `AssetsConfig` within `LeRobotUSCWidowXDataConfig` to point to pre-computed stats if available elsewhere.
+    If the stats don't exist, create them with, e.g.:
+    ```bash
+    CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name=pi0_fast_usc_widowx_combined_play_data
+    ```
+    where `pi0_fast_usc_widowx_combined_play_data` is the config name for the combined play data but can be replaced with `pi0_usc_widowx_expert_data` for expert data.
 
 3.  **Run Training:**
     *   Execute the training script from the root of the `openpi` repository, specifying the config name and an experiment name:
