@@ -125,3 +125,51 @@ Once you have converted the USC WidowX data into the LeRobot format and uploaded
         ```
     *   Monitor the training progress via the console output and Weights & Biases (if enabled).
     *   Checkpoints will be saved under `./checkpoints/<config_name>/<exp_name>/` (e.g., `./checkpoints/pi0_usc_widowx_expert_data/my_usc_expert_finetune/`).
+
+## Running Inference
+
+Once you have a trained checkpoint (either fine-tuned or a pre-trained one like `pi0_base`), you can run inference on the real WidowX robot.
+
+1.  **Start the Policy Server:**
+    *   Run the `serve_policy.py` script, specifying the training config used and the path to the checkpoint directory.
+        ```bash
+        # Example using a fine-tuned checkpoint
+        uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_usc_widowx_expert_data --policy.dir=./checkpoints/pi0_usc_widowx_expert_data/my_usc_expert_finetune/<step_number>/
+
+        # Example using the base pi0 model directly (ensure config matches)
+        # uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_usc_widowx_expert_data --policy.dir=s3://openpi-assets/checkpoints/pi0_base/
+        ```
+    *   The server will load the model and wait for connections on `localhost:8000` by default.
+
+2.  **Run the Inference Client (`main.py`):**
+    *   In a separate terminal (with the `openpi` environment sourced), run the `examples/usc_widowx/main.py` script.
+    *   Provide the IP address of your WidowX robot controller and the task prompt.
+        ```bash
+        python examples/usc_widowx/main.py \
+            --policy-server-address localhost:8000 \
+            --robot-ip <your_robot_ip_here> \
+            --prompt "pick up the red block" \
+            --cameras external over_shoulder \
+            --save-dir ./trajectory_data/usc_widowx_runs
+        ```
+    *   **Arguments:**
+        *   `--policy-server-address`: Address of the running policy server.
+        *   `--robot-ip`: Network IP address of the computer running the WidowX ROS controller.
+        *   `--cameras`: List of camera names the policy expects (should match the training config/data).
+        *   `--prompt`: The natural language instruction for the task.
+        *   `--hz`: (Optional) Control frequency (default: 10).
+        *   `--save-dir`: (Optional) Directory to save recorded trajectory data (default: `./trajectory_data/usc_widowx`).
+
+3.  **How it Works:**
+    *   The `main.py` script connects to the specified policy server and the WidowX robot controller.
+    *   It enters a loop:
+        *   Gets the latest observation (images from specified cameras, robot state) from the robot.
+        *   Formats the observation dictionary (converting images to RGB, mapping keys) to match the structure expected by the policy's input transform (`USCWidowXInputs`).
+        *   Sends the formatted observation and prompt to the policy server via `policy_client.infer()`.
+        *   Receives an action chunk (a sequence of future actions) from the server.
+        *   Executes the *first* action in the received chunk on the robot using `widowx_client.step_action()`.
+        *   Waits briefly to maintain the target control frequency (`--hz`).
+    *   **Keyboard Control:**
+        *   Press `r` during a rollout to stop the current attempt and reset the robot for a new episode with the same prompt.
+        *   Press `q` to stop the current attempt. You will be prompted if the attempt was successful, and the trajectory data will be saved.
+    *   **Data Saving:** Trajectories (raw observations, executed actions, success status, notes) are saved using `widowx_envs.utils.raw_saver.RawSaver` in the specified `--save-dir`.
