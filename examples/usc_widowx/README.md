@@ -2,7 +2,7 @@
 
 This directory contains scripts to convert raw USC WidowX expert demonstration data into the LeRobot dataset format.
 
-The primary script is `convert_usc_data_to_lerobot.py`.
+The primary script is `convert_usc_data_to_lerobot.py`. It can convert a single task dataset or combine multiple task datasets into one LeRobot dataset.
 
 ## Data Structure Assumptions
 
@@ -32,35 +32,35 @@ The conversion script assumes your raw data is organized as follows:
 
 ## Local Conversion Example
 
-You can run the conversion for a single task locally using `uv run`. Make sure you have installed the project dependencies (`uv sync`).
+You can run the conversion locally using `uv run`. Make sure you have installed the project dependencies (`uv sync`).
 
-Here is an example for the `close_microwave` task, assuming your raw data is in `/home1/jessez/retrieval_widowx_datasets` and your Hugging Face Hub username/organization is `jesbu1`:
+### Combining Multiple Tasks
+
+To combine multiple task datasets (e.g., `close_microwave`, `push_button`) located in `/path/to/raw/usc/data` into a single LeRobot dataset named `jesbu1/usc_widowx_combined`:
 
 ```bash
 uv run examples/usc_widowx/convert_usc_data_to_lerobot.py \
-    --raw-dir "/home1/jessez/retrieval_widowx_datasets/close_microwave" \
-    --repo-id "jesbu1/usc_widowx_close_microwave" \
-    --task "close_microwave" \
+    --raw-dirs "/path/to/raw/usc/data/close_microwave" "/path/to/raw/usc/data/push_button" \
+    --repo-id "jesbu1/usc_widowx_combined" \
     --mode "video" \
     --push-to-hub
 ```
 
 **Arguments:**
-*   `--raw-dir`: Path to the specific task's raw data directory.
-*   `--repo-id`: The desired Hugging Face Hub repository ID for the converted dataset (`<org_or_user>/<dataset_name>`).
-*   `--task`: A label to store in the dataset metadata (usually the task name).
+*   `--raw-dirs`: One or more paths to the raw data directories for the tasks you want to include.
+*   `--repo-id`: The desired Hugging Face Hub repository ID for the **combined** dataset (`<org_or_user>/<combined_dataset_name>`).
 *   `--mode`: Conversion mode (`video` or `image`). Defaults to `video`.
 *   `--push-to-hub`: If present, uploads the dataset to the Hub after conversion.
 *   `--no-push-to-hub`: Explicitly disable uploading.
 
 ## Slurm Batch Conversion
 
-A Slurm script `convert_expert_demos.slurm` is provided to convert multiple tasks in parallel using a job array.
+A Slurm script `convert_expert_demos.slurm` is provided to convert **all tasks** found within a base directory into a **single combined** LeRobot dataset.
 
 1.  **Configure:** Edit the `convert_expert_demos.slurm` script:
-    *   Set the `RAW_DATA_BASE_DIR` variable to the parent directory containing all your task subdirectories.
+    *   Set the `RAW_DATA_BASE_DIR` variable to the parent directory containing all your task subdirectories (e.g., `/path/to/raw/usc/data`). The script will find and process all subdirectories within this path.
     *   Set the `HF_ORG` variable to your Hugging Face username or organization.
-    *   Adjust the `TASKS` array to match the task directories you want to process.
+    *   Set the `COMBINED_REPO_NAME` variable to the desired name for the output dataset on the Hub (e.g., `usc_widowx_combined`).
     *   Modify the `#SBATCH` directives (partition, time, memory, etc.) as needed for your cluster.
     *   Set `PUSH_TO_HUB=true` or `PUSH_TO_HUB=false`.
 2.  **Submit:**
@@ -68,4 +68,4 @@ A Slurm script `convert_expert_demos.slurm` is provided to convert multiple task
     sbatch examples/usc_widowx/convert_expert_demos.slurm
     ```
 
-This will launch one Slurm job for each task listed in the `TASKS` array, saving logs to a `logs/` directory (which will be created if it doesn't exist).
+This will launch a single Slurm job that processes all found task directories and creates one combined dataset (e.g., `<HF_ORG>/<COMBINED_REPO_NAME>`). Logs will be saved to a `logs/` directory (which will be created if it doesn't exist).

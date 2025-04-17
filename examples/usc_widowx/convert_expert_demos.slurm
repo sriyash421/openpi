@@ -1,61 +1,66 @@
 #!/bin/bash
 
 #SBATCH --account=biyik_1165                   # Account from launch_eval.slurm
-#SBATCH --job-name=usc_lerobot_convert          # Job name
-#SBATCH --output=logs/usc_convert_%A_%a.out    # Output log file
-#SBATCH --error=logs/usc_convert_%A_%a.err     # Error log file
+#SBATCH --job-name=usc_lerobot_convert_combined # Job name
+#SBATCH --output=logs/usc_convert_combined_%j.out # Output log file (%j for job ID)
+#SBATCH --error=logs/usc_convert_combined_%j.err  # Error log file (%j for job ID)
 #SBATCH --nodes=1                              # Nodes
 #SBATCH --time=1:00:00                         # Time limit
 #SBATCH --cpus-per-task=16                     # CPUs per task
 #SBATCH --mem=64G                              # Memory
 #SBATCH --partition=main,debug                 # Partition set to 'main' (no GPU)
-#SBATCH --array=1-5                            # Array tasks
 
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error when substituting.
 
 # --- User Configuration ---
 # Base directory containing task subdirectories (e.g., /path/to/raw/usc/data)
-# The script assumes subdirectories named exactly like the tasks below exist here.
+# The script will process ALL subdirectories found here as separate tasks.
 RAW_DATA_BASE_DIR="/home1/jessez/retrieval_widowx_datasets"  # <<<--- CHANGE THIS to the parent directory of your task data
 # Hugging Face Hub organization name (e.g., lerobot)
 HF_ORG="jesbu1"                            # <<<--- CHANGE THIS to your HF organization/username
+# Define the name for the combined dataset repository on the Hub
+COMBINED_REPO_NAME="usc_widowx_combined"  # <<<--- CHANGE THIS if you want a different name
 # Set to 'true' to push the dataset to the Hub after conversion, 'false' otherwise
 PUSH_TO_HUB=true
 # Conversion mode ('video' or 'image') - should match default in python script unless overridden
 CONVERSION_MODE="video"
 # --------------------------
 
-# List of tasks corresponding to the array index (1-based)
-declare -a TASKS
-TASKS[1]="close_microwave"
-TASKS[2]="pick_up_green_and_slide_block_right"
-TASKS[3]="push_button"
-TASKS[4]="reach_green_block_distractors"
-TASKS[5]="slide_pot_right"
+# Find all subdirectories in the RAW_DATA_BASE_DIR - these are assumed to be the task directories
+shopt -s nullglob
+TASK_DIRS=("${RAW_DATA_BASE_DIR}"/*/)
+shopt -u nullglob # Turn off nullglob
 
-# Get the task name for the current Slurm array task ID
-CURRENT_TASK_INDEX=${SLURM_ARRAY_TASK_ID}
-if [[ -z "${TASKS[$CURRENT_TASK_INDEX]+unset}" ]]; then
-  echo "Error: No task defined for array index ${CURRENT_TASK_INDEX}."
-  exit 1
+if [ ${#TASK_DIRS[@]} -eq 0 ]; then
+    echo "Error: No task subdirectories found in ${RAW_DATA_BASE_DIR}"
+    exit 1
 fi
-TASK_NAME=${TASKS[$CURRENT_TASK_INDEX]}
 
-# Define task-specific paths and repo ID
-TASK_RAW_DIR="${RAW_DATA_BASE_DIR}/${TASK_NAME}"
-REPO_ID="${HF_ORG}/usc_widowx_${TASK_NAME}" # Construct repo ID like <org>/usc_widowx_<task_name>
+# Construct the list of directories for the --raw-dirs argument
+# We need to remove the trailing slash added by the glob pattern
+RAW_DIRS_ARG=""
+TASK_NAMES=()
+for dir in "${TASK_DIRS[@]}"; do
+    # Remove trailing slash for the argument and extract task name
+    clean_dir=${dir%/}
+    task_name=$(basename "$clean_dir")
+    RAW_DIRS_ARG+=" \"${clean_dir}\"" # Add directory path in quotes
+    TASK_NAMES+=("$task_name") # Store task names for logging
+done
+
+# Define the single repository ID for the combined dataset
+REPO_ID="${HF_ORG}/${COMBINED_REPO_NAME}"
 
 echo "=========================================================="
-echo "Starting Slurm Task ${SLURM_ARRAY_TASK_ID}"
 echo "Time: $(date)"
 echo "Host: $(hostname)"
 echo "Job ID: ${SLURM_JOB_ID}"
-echo "Array Job ID: ${SLURM_ARRAY_JOB_ID}"
-echo "Array Task ID: ${SLURM_ARRAY_TASK_ID}"
 echo "----------------------------------------------------------"
-echo "Task Name:          ${TASK_NAME}"
-echo "Raw Data Directory: ${TASK_RAW_DIR}"
+echo "Processing tasks:"
+printf " - %s\n" "${TASK_NAMES[@]}"
+echo "Raw Data Base Dir:  ${RAW_DATA_BASE_DIR}"
+echo "Task Dirs Found:   $(echo ${RAW_DIRS_ARG})" # Show the argument string
 echo "Target LeRobot Repo ID: ${REPO_ID}"
 echo "Push to Hub:        ${PUSH_TO_HUB}"
 echo "Conversion Mode:    ${CONVERSION_MODE}"
@@ -72,9 +77,8 @@ mkdir -p logs
 echo "Running Python conversion script..."
 
 COMMAND="uv run examples/usc_widowx/convert_usc_data_to_lerobot.py \
-    --raw-dir \"${TASK_RAW_DIR}\" \
+    --raw-dirs ${RAW_DIRS_ARG} \
     --repo-id \"${REPO_ID}\" \
-    --task \"${TASK_NAME}\" \
     --mode \"${CONVERSION_MODE}\""
 
 # Add --push-to-hub flag if PUSH_TO_HUB is true
@@ -92,6 +96,6 @@ echo "----------------------------------------------------------"
 eval $COMMAND
 
 echo "=========================================================="
-echo "Finished Slurm Task ${SLURM_ARRAY_TASK_ID} for task '${TASK_NAME}'"
+echo "Finished Combined USC Data Conversion Job"
 echo "Time: $(date)"
 echo "=========================================================="
