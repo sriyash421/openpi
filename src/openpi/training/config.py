@@ -1003,44 +1003,30 @@ _CONFIGS = [
     #
     TrainConfig(
         name="pi0_usc_widowx_expert_data",
-        model=pi0.Pi0Config(), # Using standard Pi0 model
+        model=pi0.Pi0Config(),
         data=LeRobotUSCWidowXDataConfig(
-            repo_id="jesbu1/usc_widowx_combined", # <<<--- CHANGE THIS to your combined dataset repo ID
+            repo_id="jesbu1/usc_widowx_combined",
             is_play_data=False,
             model_type=ModelType.PI0,
-            base_config=DataConfig(
-                local_files_only=True, # Assuming local dataset for now
-            ),
-            
-            # Assets are not specified, norm stats will be computed or need manual setup.
+            base_config=DataConfig(local_files_only=True),
         ),
-        # Load weights from the base Pi0 model
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        # Default fine-tuning hyperparameters (adjust as needed)
         num_train_steps=30_000,
         batch_size=16,
         log_interval=50,
         save_interval=1000,
         keep_period=5000,
     ),
-    #
-    # Fine-tuning USC WidowX config
-    #
     TrainConfig(
         name="pi0_usc_widowx_combined_play_data",
-        model=pi0.Pi0Config(), # Using standard Pi0 model
+        model=pi0.Pi0Config(),
         data=LeRobotUSCWidowXDataConfig(
-            repo_id="jesbu1/usc_widowx_combined_play_data", # <<<--- CHANGE THIS to your combined dataset repo ID
+            repo_id="jesbu1/usc_widowx_combined_play_data",
             is_play_data=True,
             model_type=ModelType.PI0,
-            base_config=DataConfig(
-                local_files_only=True, # Assuming local dataset for now
-            ),
-            # Assets are not specified, norm stats will be computed or need manual setup.
+            base_config=DataConfig(local_files_only=True),
         ),
-        # Load weights from the base Pi0 model
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        # Default fine-tuning hyperparameters (adjust as needed)
         num_train_steps=30_000,
         batch_size=16,
         log_interval=50,
@@ -1052,17 +1038,29 @@ _CONFIGS = [
     #
     TrainConfig(
         name="pi0_fast_usc_widowx_expert_data",
-        # Use pi0-FAST model
         model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180),
         data=LeRobotUSCWidowXDataConfig(
-            repo_id="jesbu1/usc_widowx_combined", # <<<--- CHANGE THIS to your combined expert dataset repo ID
+            repo_id="jesbu1/usc_widowx_combined",
             is_play_data=False,
             model_type=ModelType.PI0_FAST,
-            base_config=DataConfig(
-                local_files_only=True,
-            ),
+            base_config=DataConfig(local_files_only=True),
         ),
-        # Load weights from the base pi0-FAST model
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        num_train_steps=30_000,
+        batch_size=16,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
+    ),
+    TrainConfig(
+        name="pi0_fast_usc_widowx_combined_play_data",
+        model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180),
+        data=LeRobotUSCWidowXDataConfig(
+            repo_id="jesbu1/usc_widowx_combined_play_data",
+            is_play_data=True,
+            model_type=ModelType.PI0_FAST,
+            base_config=DataConfig(local_files_only=True),
+        ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
         num_train_steps=30_000,
         batch_size=16,
@@ -1071,22 +1069,74 @@ _CONFIGS = [
         keep_period=5000,
     ),
     #
-    # Fine-tuning USC WidowX config - pi0-FAST play data
+    # Fine-tuning USC WidowX config - LoRA pi0
     #
     TrainConfig(
-        name="pi0_fast_usc_widowx_combined_play_data",
-        # Use pi0-FAST model
-        model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180),
+        name="pi0_lora_usc_widowx_expert_data",
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotUSCWidowXDataConfig(
-            repo_id="jesbu1/usc_widowx_combined_play_data", # <<<--- CHANGE THIS to your combined play dataset repo ID
+            repo_id="jesbu1/usc_widowx_combined",
+            is_play_data=False,
+            model_type=ModelType.PI0,
+            base_config=DataConfig(local_files_only=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        freeze_filter=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora").get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
+        batch_size=16,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
+    ),
+    TrainConfig(
+        name="pi0_lora_usc_widowx_combined_play_data",
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotUSCWidowXDataConfig(
+            repo_id="jesbu1/usc_widowx_combined_play_data",
+            is_play_data=True,
+            model_type=ModelType.PI0,
+            base_config=DataConfig(local_files_only=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        freeze_filter=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora").get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
+        batch_size=16,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
+    ),
+    TrainConfig(
+        name="pi0_fast_lora_usc_widowx_expert_data",
+        model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"),
+        data=LeRobotUSCWidowXDataConfig(
+            repo_id="jesbu1/usc_widowx_combined",
+            is_play_data=False,
+            model_type=ModelType.PI0_FAST,
+            base_config=DataConfig(local_files_only=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        freeze_filter=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora").get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
+        batch_size=16,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
+    ),
+    TrainConfig(
+        name="pi0_fast_lora_usc_widowx_combined_play_data",
+        model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"),
+        data=LeRobotUSCWidowXDataConfig(
+            repo_id="jesbu1/usc_widowx_combined_play_data",
             is_play_data=True,
             model_type=ModelType.PI0_FAST,
-            base_config=DataConfig(
-                local_files_only=True,
-            ),
+            base_config=DataConfig(local_files_only=True),
         ),
-        # Load weights from the base pi0-FAST model
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        freeze_filter=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora").get_freeze_filter(),
+        ema_decay=None,
         num_train_steps=30_000,
         batch_size=16,
         log_interval=50,

@@ -99,6 +99,7 @@ Once you have converted the USC WidowX data into the LeRobot format and uploaded
     *   Open `src/openpi/training/config.py`.
     *   Find the `TrainConfig` entry named `pi0_usc_widowx_expert_data` (for expert data) or `pi0_usc_widowx_combined_play_data` (for play data).
     *   Alternatively, find the corresponding `pi0-FAST` configurations: `pi0_fast_usc_widowx_expert_data` and `pi0_fast_usc_widowx_combined_play_data`.
+    *   For **LoRA** fine-tuning (recommended for lower memory GPUs), look for configurations with `_lora` in the name (e.g., `pi0_lora_usc_widowx_expert_data`, `pi0_fast_lora_usc_widowx_combined_play_data`).
     *   Ensure the `repo_id` inside the `LeRobotUSCWidowXDataConfig` matches the Hugging Face Hub repository ID of your converted dataset (e.g., `"jesbu1/usc_widowx_combined"`).
     *   Ensure `local_files_only=True` if your dataset is only local, or `False` if it should be synced from the Hub.
 
@@ -115,20 +116,32 @@ Once you have converted the USC WidowX data into the LeRobot format and uploaded
     *   Execute the training script from the root of the `openpi` repository, specifying the config name and an experiment name:
         ```bash
         # Example for expert data config
+        # Full fine-tuning:
         XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_usc_widowx_expert_data --exp_name=my_usc_expert_finetune --overwrite 
-
-        # Example for combined play data config
+        # LoRA fine-tuning:
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_lora_usc_widowx_expert_data --exp_name=my_usc_lora_expert_finetune --overwrite 
+ 
+         # Example for combined play data config
+        # Full fine-tuning:
         XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_usc_widowx_combined_play_data --exp_name=my_usc_play_finetune --overwrite 
-
-        # --- Examples using pi0-FAST model ---
-        # Expert data:
+        # LoRA fine-tuning:
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_lora_usc_widowx_combined_play_data --exp_name=my_usc_lora_play_finetune --overwrite 
+ 
+         # --- Examples using pi0-FAST model ---
+         # Expert data:
+        # Full fine-tuning:
         # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_usc_widowx_expert_data --exp_name=my_usc_fast_expert_finetune --overwrite
-        
-        # Combined play data:
+        # LoRA fine-tuning:
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_lora_usc_widowx_expert_data --exp_name=my_usc_fast_lora_expert_finetune --overwrite
+         
+         # Combined play data:
+        # Full fine-tuning:
         # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_usc_widowx_combined_play_data --project_name=hand-demos-openpi-training --exp_name=pi0_fast_usc_playdata_4-17 --overwrite
-        ```
-    *   Monitor the training progress via the console output and Weights & Biases (if enabled).
-    *   Checkpoints will be saved under `./checkpoints/<config_name>/<exp_name>/` (e.g., `./checkpoints/pi0_usc_widowx_expert_data/my_usc_expert_finetune/`).
+        # LoRA fine-tuning:
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_lora_usc_widowx_combined_play_data --project_name=hand-demos-openpi-training --exp_name=pi0_fast_lora_usc_playdata_4-17 --overwrite
+         ```
+     *   Monitor the training progress via the console output and Weights & Biases (if enabled).
+     *   Checkpoints will be saved under `./checkpoints/<config_name>/<exp_name>/` (e.g., `./checkpoints/pi0_usc_widowx_expert_data/my_usc_expert_finetune/`).
 
 ## Running Inference
 
