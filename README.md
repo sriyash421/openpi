@@ -226,7 +226,11 @@ action_chunk = policy.infer(example)["actions"]
 ```
 You can also test this out in the [example notebook](examples/inference.ipynb).
 
-We provide detailed step-by-step examples for running inference of our pre-trained checkpoints on [DROID](examples/droid/README.md) and [ALOHA](examples/aloha_real/README.md) robots.
+We provide detailed step-by-step examples for converting data, training, and running inference on various robots:
+* [DROID](examples/droid/README.md)
+* [ALOHA](examples/aloha_real/README.md)
+* [USC WidowX](examples/usc_widowx/README.md)
+* [Libero](examples/libero/README.md) (Data conversion and training only)
 
 **Remote Inference**: We provide [examples and code](docs/remote_inference.md) for running inference of our models **remotely**: the model can run on a different server and stream actions to the robot via a websocket connection. This makes it easy to use more powerful GPUs off-robot and keep robot and policy environments separate.
 

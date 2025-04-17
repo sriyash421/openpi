@@ -90,3 +90,30 @@ A Slurm script `convert_expert_demos.slurm` is provided to convert **all tasks**
     ```
 
 This will launch a single Slurm job that processes all found task directories and creates one combined dataset (e.g., `<HF_ORG>/<COMBINED_REPO_NAME>`). Logs will be saved to a `logs/` directory (which will be created if it doesn't exist).
+
+## Training
+
+Once you have converted the USC WidowX data into the LeRobot format and uploaded it to the Hugging Face Hub (or have it available locally), you can fine-tune a pre-trained model (e.g., pi0) on this data.
+
+1.  **Verify Configuration:**
+    *   Open `src/openpi/training/config.py`.
+    *   Find the `TrainConfig` entry named `pi0_usc_widowx_expert_data` (for expert data) or `pi0_usc_widowx_combined_play_data` (for play data).
+    *   Ensure the `repo_id` inside the `LeRobotUSCWidowXDataConfig` matches the Hugging Face Hub repository ID of your converted dataset (e.g., `"jesbu1/usc_widowx_combined"`).
+    *   Ensure `local_files_only=True` if your dataset is only local, or `False` if it should be synced from the Hub.
+
+2.  **Normalization Stats:**
+    *   Training requires normalization statistics (`norm_stats.json`). The training script expects these to be located within the assets directory corresponding to the config and dataset ID.
+    *   For the `pi0_usc_widowx_expert_data` config with `repo_id="jesbu1/usc_widowx_combined"`, the default expected path would be roughly `./assets/pi0_usc_widowx_expert_data/jesbu1/usc_widowx_combined/norm_stats.json` (relative to the project root, path depends on `assets_base_dir` and `asset_id` resolution).
+    *   If these stats don't exist, the `LeRobotDataset` loader might attempt to compute them on the first run if the dataset is local. Alternatively, you might need to compute them manually or configure the `AssetsConfig` within `LeRobotUSCWidowXDataConfig` to point to pre-computed stats if available elsewhere.
+
+3.  **Run Training:**
+    *   Execute the training script from the root of the `openpi` repository, specifying the config name and an experiment name:
+        ```bash
+        # Example for expert data config
+        python scripts/train.py --config=pi0_usc_widowx_expert_data --exp_name=my_usc_expert_finetune
+
+        # Example for combined play data config
+        # python scripts/train.py --config=pi0_usc_widowx_combined_play_data --exp_name=my_usc_play_finetune
+        ```
+    *   Monitor the training progress via the console output and Weights & Biases (if enabled).
+    *   Checkpoints will be saved under `./checkpoints/pi0_usc_widowx_expert_data/my_usc_expert_finetune/` (or similar, depending on the config name and experiment name).

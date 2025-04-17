@@ -20,6 +20,7 @@ import openpi.models.tokenizer as _tokenizer
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
+import openpi.policies.usc_widowx_policy as usc_widowx_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.optimizer as _optimizer
@@ -346,6 +347,62 @@ class LeRobotLiberoDataConfig(DataConfigFactory):
             repack_transforms=repack_transform,
             data_transforms=data_transforms,
             model_transforms=model_transforms,
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class LeRobotUSCWidowXDataConfig(DataConfigFactory):
+    """Data config for the combined USC WidowX dataset."""
+
+    # If true, will convert joint dimensions to deltas with respect to the current state before passing to the model.
+    # Gripper dimensions will remain in absolute values.
+    use_delta_joint_actions: bool = True
+    # If provided, will be injected into the input data if the "prompt" key is not present.
+    default_prompt: str | None = None
+
+    # Repack transforms to map dataset keys to model keys.
+    repack_transforms: tyro.conf.Suppress[_transforms.Group] = dataclasses.field(
+        default=_transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        # Map dataset camera names to keys under 'images'
+                        "images": {
+                            "external": "observation.images.external",
+                            "over_shoulder": "observation.images.over_shoulder",
+                        },
+                        "state": "observation.state",
+                        "actions": "action",
+                        "prompt": "task", # Assuming task name is used as prompt
+                    }
+                )
+            ]
+        )
+    )
+    # Action keys that will be used to read the action sequence from the dataset.
+    action_sequence_keys: Sequence[str] = ("action",)
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        # Use Aloha transforms as WidowX is similar (6-DOF + gripper)
+        # Set adapt_to_pi=False as this data is not from the internal PI runtime.
+        data_transforms = _transforms.Group(
+            # Use the dedicated USC WidowX transforms
+            inputs=[usc_widowx_policy.USCWidowXInputs(action_dim=model_config.action_dim, use_delta_actions=self.use_delta_joint_actions)],
+            outputs=[usc_widowx_policy.USCWidowXOutputs(action_dim=model_config.action_dim, use_delta_actions=self.use_delta_joint_actions)],
+        )
+        # Note: Delta action conversion is now handled inside USCWidowXInputs/Outputs if use_delta_joint_actions is True
+
+        # Standard model transforms (resizing, tokenization)
+        model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs),
+            repack_transforms=self.repack_transforms,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=self.action_sequence_keys,
+            prompt_from_task=True, # Use the task name from the dataset as the prompt
         )
 
 
@@ -942,6 +999,50 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=20_000,
+    ),
+    #
+    # Fine-tuning USC WidowX config
+    #
+    TrainConfig(
+        name="pi0_usc_widowx_expert_data",
+        model=pi0.Pi0Config(), # Using standard Pi0 model
+        data=LeRobotUSCWidowXDataConfig(
+            repo_id="jesbu1/usc_widowx_combined", # <<<--- CHANGE THIS to your combined dataset repo ID
+            base_config=DataConfig(
+                local_files_only=True, # Assuming local dataset for now
+            ),
+            # Assets are not specified, norm stats will be computed or need manual setup.
+        ),
+        # Load weights from the base Pi0 model
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        # Default fine-tuning hyperparameters (adjust as needed)
+        num_train_steps=30_000,
+        batch_size=16,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
+    ),
+    #
+    # Fine-tuning USC WidowX config
+    #
+    TrainConfig(
+        name="pi0_usc_widowx_combined_play_data",
+        model=pi0.Pi0Config(), # Using standard Pi0 model
+        data=LeRobotUSCWidowXDataConfig(
+            repo_id="jesbu1/usc_widowx_combined_play_data", # <<<--- CHANGE THIS to your combined dataset repo ID
+            base_config=DataConfig(
+                local_files_only=True, # Assuming local dataset for now
+            ),
+            # Assets are not specified, norm stats will be computed or need manual setup.
+        ),
+        # Load weights from the base Pi0 model
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        # Default fine-tuning hyperparameters (adjust as needed)
+        num_train_steps=30_000,
+        batch_size=16,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
     ),
     #
     # Debugging configs.
