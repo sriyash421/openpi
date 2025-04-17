@@ -36,21 +36,9 @@ def load_data_compressed(filepath: Path) -> Dict[str, np.ndarray]:
 
 def load_pickle_data(filepath: Path) -> Dict[str, np.ndarray]:
     """Load data from a pickle file."""
-    try:
-        with open(filepath, "rb") as f:
-            data = pickle.load(f)
-        # Ensure data values are numpy arrays if needed, or handle dicts directly
-        # This example assumes the structure matches the TFDS script's expectations
-        # where values might already be numpy arrays.
-        if not isinstance(data, dict):
-            raise TypeError(f"Expected pickled dictionary, got {type(data)} from {filepath}")
-        return data
-    except FileNotFoundError:
-        warnings.warn(f"Pickle file not found: {filepath}")
-        raise
-    except Exception as e:
-        warnings.warn(f"Failed to load pickle file {filepath}: {e}")
-        raise
+    with open(filepath, "rb") as f:
+        data = pickle.load(f)
+    return data
 
 
 # TODO(user): Adapt this if image loading is different.
@@ -104,13 +92,14 @@ def create_empty_dataset(
     dataset_config: DatasetConfig = DEFAULT_DATASET_CONFIG,
 ) -> LeRobotDataset:
     # TODO(user): Verify motor names and count for WidowX.
-    motors = [
+    state = [
         # Example names, replace with actual motor names used in your data
-        "joint1",
-        "joint2",
-        "joint3",
-        "joint4",
-        "joint5",
+        "x",
+        "y",
+        "z",
+        "x_angle",
+        "y_angle",
+        "z_angle",
         "gripper",
     ]
     cameras = [
@@ -123,18 +112,14 @@ def create_empty_dataset(
         # Corresponds to obs_dict['state'] in the TFDS script
         "observation.state": {
             "dtype": "float32",
-            "shape": (len(motors),),
-            "names": [
-                motors,
-            ],
+            "shape": (len(state),),
+            "names": state,
         },
         # Corresponds to policy_out['actions']
         "action": {
             "dtype": "float32",
-            "shape": (len(motors),),
-            "names": [
-                motors,
-            ],
+            "shape": (len(state),),
+            "names": state,
         },
     }
 
@@ -186,9 +171,12 @@ def load_raw_episode_data(
     obs_data = load_pickle_data(obs_file)
     action_data = load_pickle_data(action_file)
 
+    assert isinstance(action_data, list)
+    assert isinstance(obs_data, dict)
+
     # Ensure data is numpy before converting to tensor
     state_np = obs_data["state"]
-    action_np = action_data["actions"]
+    action_np = np.concatenate([step["actions"][None] for step in action_data], axis=0)
     if not isinstance(state_np, np.ndarray):
         raise TypeError(f"Expected 'state' in {obs_file} to be numpy array, got {type(state_np)}")
     if not isinstance(action_np, np.ndarray):
@@ -210,76 +198,47 @@ def load_raw_episode_data(
 
     imgs_per_cam = {}
     for camera in cameras:
-        # TODO(user): Adjust how image paths are determined.
         # Assuming images are in a subdirectory named after the camera.
-        image_dir = traj_path / camera
-        if not image_dir.is_dir():
-            # Fallback: check for compressed image file (like in TFDS script's output)
-            img_file = traj_path / f"{camera}_images.dat"
-            if img_file.exists():
-                img_data = load_data_compressed(img_file)  # Assumes it returns a single numpy array
-                imgs_per_cam[camera] = img_data
-                print(f"Loaded images from {img_file}")
-            else:
-                warnings.warn(
-                    f"Image directory {image_dir} or file {img_file} not found for camera {camera} in {traj_path}. Skipping camera."
-                )
-                continue
-        else:
-            try:
-                imgs_np = load_images(image_dir)
-                print(f"Loaded {imgs_np.shape[0]} images from directory {image_dir}")
+        image_dir = traj_path / f"{camera}_imgs"
+        imgs_np = load_images(image_dir)
+        print(f"Loaded {imgs_np.shape[0]} images from directory {image_dir}")
 
-                # Preprocess images: center crop and resize
-                if imgs_np.size == 0:
-                    warnings.warn(f"Empty image array loaded from {image_dir}. Skipping camera {camera}.")
-                    continue
+        # Preprocess images: center crop and resize
+        if imgs_np.size == 0:
+            warnings.warn(f"Empty image array loaded from {image_dir}. Skipping camera {camera}.")
+            continue
 
-                n, h, w, c = imgs_np.shape
-                if c != 3:
-                    warnings.warn(f"Expected 3 channels, got {c} in {image_dir}. Skipping camera {camera}.")
-                    continue
+        n, h, w, c = imgs_np.shape
+        if c != 3:
+            warnings.warn(f"Expected 3 channels, got {c} in {image_dir}. Skipping camera {camera}.")
+            continue
 
-                # Convert to tensor (N, C, H, W), normalize to [0, 1]
-                imgs_tensor = torch.from_numpy(imgs_np).permute(0, 3, 1, 2).float() / 255.0
+        # Convert to tensor (N, C, H, W), normalize to [0, 1]
+        imgs_tensor = torch.from_numpy(imgs_np).permute(0, 3, 1, 2).float() / 255.0
 
-                # Center crop to square
-                crop_size = min(h, w)
-                cropped_tensor = F.center_crop(imgs_tensor, output_size=[crop_size, crop_size])
+        # Center crop to square
+        crop_size = min(h, w)
+        cropped_tensor = F.center_crop(imgs_tensor, output_size=[crop_size, crop_size])
 
-                # Resize to target dimensions
-                resized_tensor = F.resize(
-                    cropped_tensor, size=[dataset_config.image_height, dataset_config.image_width], antialias=True
-                )
+        # Resize to target dimensions
+        resized_tensor = F.resize(
+            cropped_tensor, size=[dataset_config.image_height, dataset_config.image_width], antialias=True
+        )
 
-                # Store the processed tensor (N, C, H_out, W_out)
-                imgs_per_cam[camera] = resized_tensor
+        # Store the processed tensor (N, C, H_out, W_out)
+        imgs_per_cam[camera] = resized_tensor
 
-            except FileNotFoundError as e:
-                warnings.warn(f"Error loading images from {image_dir}: {e}. Skipping camera {camera}.")
-                continue
-            except Exception as e:
-                warnings.warn(
-                    f"Unexpected error processing images for camera {camera} in {traj_path}: {e}. Skipping camera."
-                )
-                continue
 
         # Verify image count
         if camera in imgs_per_cam and imgs_per_cam[camera].shape[0] != num_frames:
-            warnings.warn(
-                f"Image count ({imgs_per_cam[camera].shape[0]}) for camera {camera} does not match state/action count ({num_frames}) in {traj_path}. Skipping camera."
-            )
-            del imgs_per_cam[camera]
-
-    # TODO(user): Add any necessary image preprocessing (resizing, channel swapping)
-    # to match the shape defined in `create_empty_dataset`.
-    # Example resize:
-    # from torchvision.transforms.functional import resize
-    # for cam, imgs in imgs_per_cam.items():
-    #     # Assuming imgs are (N, H, W, C) numpy arrays
-    #     imgs_tensor = torch.from_numpy(imgs).permute(0, 3, 1, 2) # to (N, C, H, W)
-    #     resized_imgs = resize(imgs_tensor, [config.image_height, config.image_width])
-    #     imgs_per_cam[cam] = resized_imgs.numpy() # Keep as numpy or convert back later
+            # if it's 1 more than the number of frames, just remove the last frame
+            if imgs_per_cam[camera].shape[0] == num_frames + 1:
+                imgs_per_cam[camera] = imgs_per_cam[camera][:-1]
+            else:
+                warnings.warn(
+                    f"Image count ({imgs_per_cam[camera].shape[0]}) for camera {camera} does not match state/action count ({num_frames}) in {traj_path}. Skipping camera."
+                )
+                del imgs_per_cam[camera]
 
     return imgs_per_cam, state, action
 
@@ -298,60 +257,51 @@ def populate_dataset(
     # Get camera names from dataset features
     cameras = [key.split(".")[-1] for key in dataset.features if key.startswith("observation.images.")]
 
+    # Process the task string
+    task = task.replace("_", " ").capitalize()
+    print(f"Task: {task}")
+
+
     num_added_episodes = 0
     for ep_idx in tqdm.tqdm(episodes, desc="Processing trajectories"):
         traj_path = traj_paths[ep_idx]
         print(f"\nProcessing trajectory: {traj_path.name}")
-        try:
-            imgs_per_cam, state, action = load_raw_episode_data(traj_path, cameras, dataset_config)
-            num_frames = state.shape[0]
+        imgs_per_cam, state, action = load_raw_episode_data(traj_path, cameras, dataset_config)
+        num_frames = state.shape[0]
 
-            if num_frames == 0:
-                warnings.warn(f"Skipping empty trajectory: {traj_path.name}")
-                continue
-            assert (
-                num_frames == action.shape[0] == len(imgs_per_cam)
-            ), f"Mismatch in number of frames: {num_frames} != {action.shape[0]} != {len(imgs_per_cam)}"
-            for i in range(num_frames):
-                frame = {
-                    "observation.state": state[i],
-                    "action": action[i],
-                }
+        if num_frames == 0:
+            warnings.warn(f"Skipping empty trajectory: {traj_path.name}")
+            continue
+        assert (
+            num_frames == action.shape[0] == len(imgs_per_cam[cameras[0]])
+        ), f"Mismatch in number of frames: {num_frames} != {action.shape[0]} != {len(imgs_per_cam)}"
+        for i in range(num_frames):
+            frame = {
+                "observation.state": state[i],
+                "action": action[i],
+            }
 
-                all_cams_present = True
-                for camera in cameras:
-                    if camera not in imgs_per_cam:
-                        warnings.warn(
-                            f"Camera {camera} missing image data for frame {i} in {traj_path.name}. Skipping frame."
-                        )
-                        all_cams_present = False
-                        break  # Skip this frame if any required camera is missing
-                    # Ensure image is in CHW format for LeRobotDataset
-                    img = imgs_per_cam[camera][i]  # This is now a CHW tensor
+            all_cams_present = True
+            for camera in cameras:
+                if camera not in imgs_per_cam:
+                    warnings.warn(
+                        f"Camera {camera} missing image data for frame {i} in {traj_path.name}. Skipping frame."
+                    )
+                    all_cams_present = False
+                    break  # Skip this frame if any required camera is missing
+                # Ensure image is in CHW format for LeRobotDataset
+                img = imgs_per_cam[camera][i]  # This is now a CHW tensor
 
-                    # Assign the CHW tensor directly
-                    frame[f"observation.images.{camera}"] = img
+                # Assign the CHW tensor directly
+                frame[f"observation.images.{camera}"] = img
 
-                if not all_cams_present:
-                    continue  # Move to next frame
+            assert all_cams_present, f"Camera {camera} missing image data for frame {i} in {traj_path.name}. Skipping frame."
 
-                dataset.add_frame(frame)
+            dataset.add_frame(frame)
 
-            # Only save if frames were added
-            if dataset.episode_length > 0:
-                dataset.save_episode(task=task)
-                num_added_episodes += 1
-                print(f"Saved episode {num_added_episodes} from {traj_path.name} with {dataset.episode_length} frames.")
-            else:
-                warnings.warn(f"No valid frames added for trajectory {traj_path.name}.")
-                dataset.discard_episode()  # Clear any partial data for this episode
-
-        except FileNotFoundError as e:
-            warnings.warn(f"Skipping trajectory {traj_path.name} due to missing file: {e}")
-        except Exception as e:
-            warnings.warn(f"Skipping trajectory {traj_path.name} due to error: {e}")
-            # Ensure any partially added frames for this episode are discarded
-            dataset.discard_episode()
+        dataset.save_episode(task=task)
+        num_added_episodes += 1
+        print(f"Saved episode {num_added_episodes} from {traj_path.name} with {num_frames} frames.")
 
     print(f"Finished processing. Added {num_added_episodes} episodes.")
     return dataset
@@ -363,7 +313,7 @@ def port_usc_data(
     task: str = "default_task",  # Provide a meaningful default or require it
     raw_repo_id: Optional[str] = None,
     episodes: Optional[List[int]] = None,
-    push_to_hub: bool = True,
+    push_to_hub: bool = False,
     mode: Literal["video", "image"] = "video",  # Defaulting to video like Aloha example
     dataset_config: DatasetConfig = DEFAULT_DATASET_CONFIG,
 ):
@@ -405,7 +355,7 @@ def port_usc_data(
             dataset.push_to_hub()
             print(f"Successfully pushed {repo_id} to Hub.")
         else:
-            print(f"Dataset saved locally at {dataset.root_dir}. Skipping push to Hub.")
+            print(f"Dataset saved locally at {LEROBOT_HOME / repo_id}. Skipping push to Hub.")
     else:
         print("No episodes were successfully added to the dataset.")
 
