@@ -9,7 +9,7 @@ set -u # Treat unset variables as an error when substituting.
 # Base directory containing task subdirectories (e.g., /path/to/raw/usc/data)
 # The script will process ALL subdirectories found here as separate tasks.
 # ADD OPTION TO ONLY CONVERT play data dirs
-ONLY_PLAY_DATA=true
+ONLY_PLAY_DATA=false
 RAW_DATA_BASE_DIR="/home/jessez/retrieval_widowx_datasets"  # <<<--- CHANGE THIS to the parent directory of your task data
 # Hugging Face Hub organization name (e.g., lerobot)
 HF_ORG="jesbu1"                            # <<<--- CHANGE THIS to your HF organization/username
@@ -45,6 +45,10 @@ for dir in "${TASK_DIRS[@]}"; do
     task_name=$(basename "$clean_dir")
     if [ "$ONLY_PLAY_DATA" = true ]; then
         if [[ "$task_name" != "play"* ]]; then
+            continue
+        fi
+    elif [ "$ONLY_PLAY_DATA" = false ]; then
+        if [[ "$task_name" == "play"* ]]; then
             continue
         fi
     fi
