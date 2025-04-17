@@ -81,6 +81,7 @@ A Slurm script `convert_expert_demos.slurm` is provided to convert **all tasks**
     *   Set the `RAW_DATA_BASE_DIR` variable to the parent directory containing all your task subdirectories (e.g., `/path/to/raw/usc/data`). The script will find and process all subdirectories within this path.
     *   Set the `HF_ORG` variable to your Hugging Face username or organization.
     *   Set the `COMBINED_REPO_NAME` variable to the desired name for the output dataset on the Hub (e.g., `usc_widowx_combined`).
+    *   (Optional) Set `USE_PLAY_DATA_ONLY=true` if you only want to process task subdirectories whose names contain the word "play". Defaults to `false` (process all subdirectories).
     *   Modify the `#SBATCH` directives (partition, time, memory, etc.) as needed for your cluster.
     *   Set `PUSH_TO_HUB=true` or `PUSH_TO_HUB=false`.
 2.  **Submit:**

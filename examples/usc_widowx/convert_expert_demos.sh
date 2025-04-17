@@ -8,15 +8,21 @@ set -u # Treat unset variables as an error when substituting.
 # --- User Configuration ---
 # Base directory containing task subdirectories (e.g., /path/to/raw/usc/data)
 # The script will process ALL subdirectories found here as separate tasks.
-RAW_DATA_BASE_DIR="/home1/jessez/retrieval_widowx_datasets"  # <<<--- CHANGE THIS to the parent directory of your task data
+# ADD OPTION TO ONLY CONVERT play data dirs
+ONLY_PLAY_DATA=true
+RAW_DATA_BASE_DIR="/home/jessez/retrieval_widowx_datasets"  # <<<--- CHANGE THIS to the parent directory of your task data
 # Hugging Face Hub organization name (e.g., lerobot)
 HF_ORG="jesbu1"                            # <<<--- CHANGE THIS to your HF organization/username
 # Define the name for the combined dataset repository on the Hub
 COMBINED_REPO_NAME="usc_widowx_combined"  # <<<--- CHANGE THIS if you want a different name
+if [ "$ONLY_PLAY_DATA" = true ]; then
+    COMBINED_REPO_NAME="${COMBINED_REPO_NAME}_play_data"
+fi
 # Set to 'true' to push the dataset to the Hub after conversion, 'false' otherwise
 PUSH_TO_HUB=true
 # Conversion mode ('video' or 'image') - should match default in python script unless overridden
 CONVERSION_MODE="video"
+
 # --------------------------
 
 # Find all subdirectories in the RAW_DATA_BASE_DIR - these are assumed to be the task directories
@@ -37,6 +43,11 @@ for dir in "${TASK_DIRS[@]}"; do
     # Remove trailing slash for the argument and extract task name
     clean_dir=${dir%/}
     task_name=$(basename "$clean_dir")
+    if [ "$ONLY_PLAY_DATA" = true ]; then
+        if [[ "$task_name" != "play"* ]]; then
+            continue
+        fi
+    fi
     RAW_DIRS_ARG+=" "${clean_dir}"" # Add directory path in quotes
     TASK_NAMES+=("$task_name") # Store task names for logging
 done

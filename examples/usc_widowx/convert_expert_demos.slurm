@@ -23,6 +23,8 @@ HF_ORG="jesbu1"                            # <<<--- CHANGE THIS to your HF organ
 COMBINED_REPO_NAME="usc_widowx_combined"  # <<<--- CHANGE THIS if you want a different name
 # Set to 'true' to push the dataset to the Hub after conversion, 'false' otherwise
 PUSH_TO_HUB=true
+# Set to 'true' to ONLY process subdirectories containing "play" in their name
+USE_PLAY_DATA_ONLY=false # <<<--- SET TO true TO FILTER FOR PLAY DATA
 # Conversion mode ('video' or 'image') - should match default in python script unless overridden
 CONVERSION_MODE="video"
 # --------------------------
@@ -35,6 +37,28 @@ shopt -u nullglob # Turn off nullglob
 if [ ${#TASK_DIRS[@]} -eq 0 ]; then
     echo "Error: No task subdirectories found in ${RAW_DATA_BASE_DIR}"
     exit 1
+fi
+
+# Filter for play data directories if requested
+if [ "$USE_PLAY_DATA_ONLY" = true ]; then
+    echo "Filtering for directories containing 'play'..."
+    FILTERED_TASK_DIRS=()
+    for dir in "${TASK_DIRS[@]}"; do
+        task_name=$(basename "${dir%/}") # Extract directory name
+        if [[ "$task_name" == *play* ]]; then
+            FILTERED_TASK_DIRS+=("$dir")
+        fi
+    done
+
+    if [ ${#FILTERED_TASK_DIRS[@]} -eq 0 ]; then
+        echo "Error: No directories containing 'play' found in ${RAW_DATA_BASE_DIR}"
+        exit 1
+    fi
+    # Use the filtered list from now on
+    TASK_DIRS=("${FILTERED_TASK_DIRS[@]}")
+    echo "Found ${#TASK_DIRS[@]} directories containing 'play'."
+else
+    echo "Processing all found directories (USE_PLAY_DATA_ONLY=false)."
 fi
 
 # Construct the list of directories for the --raw-dirs argument
@@ -60,6 +84,7 @@ echo "----------------------------------------------------------"
 echo "Processing tasks:"
 printf " - %s\n" "${TASK_NAMES[@]}"
 echo "Raw Data Base Dir:  ${RAW_DATA_BASE_DIR}"
+echo "Use Play Data Only: ${USE_PLAY_DATA_ONLY}"
 echo "Task Dirs Found:   $(echo ${RAW_DIRS_ARG})" # Show the argument string
 echo "Target LeRobot Repo ID: ${REPO_ID}"
 echo "Push to Hub:        ${PUSH_TO_HUB}"
