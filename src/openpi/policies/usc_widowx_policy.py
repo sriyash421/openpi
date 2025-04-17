@@ -42,6 +42,7 @@ class USCWidowXInputs(transforms.DataTransformFn):
             raise ValueError(f"Missing required keys. Found: {sample.keys()}, Required: {required_keys}")
         
         # Create inputs dict. Do not change the keys in the dict below.
+        print(sample["images/external"].dtype, isinstance(sample["images/external"], np.ndarray))
         inputs = {
             "state": sample["state"],
             "image": {

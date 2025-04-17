@@ -115,17 +115,17 @@ Once you have converted the USC WidowX data into the LeRobot format and uploaded
     *   Execute the training script from the root of the `openpi` repository, specifying the config name and an experiment name:
         ```bash
         # Example for expert data config
-        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py --config=pi0_usc_widowx_expert_data --exp_name=my_usc_expert_finetune --overwrite 
+        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_usc_widowx_expert_data --exp_name=my_usc_expert_finetune --overwrite 
 
         # Example for combined play data config
-        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py --config=pi0_usc_widowx_combined_play_data --exp_name=my_usc_play_finetune --overwrite 
+        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_usc_widowx_combined_play_data --exp_name=my_usc_play_finetune --overwrite 
 
         # --- Examples using pi0-FAST model ---
         # Expert data:
-        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py --config=pi0_fast_usc_widowx_expert_data --exp_name=my_usc_fast_expert_finetune --overwrite
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_usc_widowx_expert_data --exp_name=my_usc_fast_expert_finetune --overwrite
         
         # Combined play data:
-        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py --config=pi0_fast_usc_widowx_combined_play_data --exp_name=my_usc_fast_play_finetune --overwrite
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_usc_widowx_combined_play_data --project_name=hand-demos-openpi-training --exp_name=pi0_fast_usc_debug --overwrite
         ```
     *   Monitor the training progress via the console output and Weights & Biases (if enabled).
     *   Checkpoints will be saved under `./checkpoints/<config_name>/<exp_name>/` (e.g., `./checkpoints/pi0_usc_widowx_expert_data/my_usc_expert_finetune/`).
