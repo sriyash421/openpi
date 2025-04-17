@@ -1,4 +1,5 @@
 import dataclasses
+import einops
 import numpy as np
 
 import flax.nnx as nnx
@@ -13,6 +14,24 @@ import openpi.transforms as transforms
 
 # Assumed action dimension for USC WidowX (6 joints + 1 gripper)
 ACTION_DIM = 7
+
+def _decode_usc_widowx(data: dict) -> dict:
+    state = np.asarray(data["state"])
+    actions = np.asarray(data["actions"])
+
+    def convert_image(img):
+        img = np.asarray(img)
+        # Convert to uint8 if using float images.
+        if np.issubdtype(img.dtype, np.floating):
+            img = (255 * img).astype(np.uint8)
+        # Convert from [channel, height, width] to [height, width, channel].
+        return einops.rearrange(img, "c h w -> h w c")
+    for k, v in data.items():
+        if "images" in k:
+            data[k] = convert_image(v)
+    data["state"] = state
+    data["actions"] = actions
+    return data
 
 
 @dataclasses.dataclass
@@ -42,7 +61,8 @@ class USCWidowXInputs(transforms.DataTransformFn):
             raise ValueError(f"Missing required keys. Found: {sample.keys()}, Required: {required_keys}")
         
         # Create inputs dict. Do not change the keys in the dict below.
-        print(sample["images/external"].dtype, isinstance(sample["images/external"], np.ndarray))
+        # convert images to numpy arrays
+        sample = _decode_usc_widowx(sample)
         inputs = {
             "state": sample["state"],
             "image": {
