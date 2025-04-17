@@ -34,7 +34,11 @@ The conversion script assumes your raw data is organized as follows:
 
 You can run the conversion locally using `uv run`. Make sure you have installed the project dependencies (`uv sync`).
 
-### Combining Multiple Tasks
+You can provide input data in two ways:
+
+### Option 1: Using Task Directories (`--raw-dirs`)
+
+This is useful when you want to process all trajectories within one or more task directories.
 
 To combine multiple task datasets (e.g., `close_microwave`, `push_button`) located in `/path/to/raw/usc/data` into a single LeRobot dataset named `jesbu1/usc_widowx_combined`:
 
@@ -46,12 +50,28 @@ uv run examples/usc_widowx/convert_usc_data_to_lerobot.py \
     --push-to-hub
 ```
 
+### Option 2: Using Specific Trajectory Paths (`--traj-paths`)
+
+This is useful when you want to process only specific trajectories from potentially different tasks.
+
+To combine specific trajectories (e.g., `traj0` from `close_microwave` and `traj5` from `push_button`) into a single dataset:
+
+```bash
+uv run examples/usc_widowx/convert_usc_data_to_lerobot.py \
+    --traj-paths "/path/to/raw/usc/data/close_microwave/traj0" "/path/to/raw/usc/data/push_button/traj5" \
+    --repo-id "jesbu1/usc_widowx_combined_subset" \
+    --mode "video" \
+    --push-to-hub
+```
+
 **Arguments:**
 *   `--raw-dirs`: One or more paths to the raw data directories for the tasks you want to include.
+*   `--traj-paths`: One or more paths to specific trajectory directories (e.g., `/path/to/task/traj0`).
+*   **Note**: You must provide *either* `--raw-dirs` *or* `--traj-paths`, but not both.
 *   `--repo-id`: The desired Hugging Face Hub repository ID for the **combined** dataset (`<org_or_user>/<combined_dataset_name>`).
+*   **Task Inference**: The task label for each episode is automatically inferred from the parent directory name of the trajectory (e.g., a trajectory in `/path/to/close_microwave/traj0` will get the task label "Close microwave").
 *   `--mode`: Conversion mode (`video` or `image`). Defaults to `video`.
 *   `--push-to-hub`: If present, uploads the dataset to the Hub after conversion.
-*   `--no-push-to-hub`: Explicitly disable uploading.
 
 ## Slurm Batch Conversion
 

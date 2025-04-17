@@ -2,7 +2,14 @@
 Script to convert multiple USC WidowX datasets (potentially with different tasks)
 into a single LeRobot dataset v2.0 format.
 
-Example usage: uv run examples/usc_widowx/convert_usc_data_to_lerobot.py --raw-dirs /path/to/task1 /path/to/task2 --repo-id <org>/<combined-dataset-name>
+Can accept either directories containing task data (inferring trajectories within)
+or explicit paths to individual trajectory directories.
+
+Example usage (by task directories):
+uv run examples/usc_widowx/convert_usc_data_to_lerobot.py --raw-dirs /path/to/task1 /path/to/task2 --repo-id <org>/<combined-dataset-name>
+
+Example usage (by specific trajectories):
+uv run examples/usc_widowx/convert_usc_data_to_lerobot.py --traj-paths /path/to/task1/traj0 /path/to/task2/traj5 --repo-id <org>/<combined-dataset-name>
 """
 
 import dataclasses
@@ -370,53 +377,115 @@ def populate_dataset(
     return dataset
 
 
+# TODO(USER): The logic below assumes that the parent directory of the trajectory path is the task name.
+# Adjust if your structure differs when providing explicit paths.
+def process_explicit_traj_paths(traj_paths: List[Path]) -> List[Tuple[Path, str]]:
+    """Validate explicit trajectory paths and infer task names from parent directories."""
+    all_traj_infos = []
+    for traj_path in traj_paths:
+        if not traj_path.is_dir():
+            warnings.warn(f"Provided trajectory path is not a directory, skipping: {traj_path}")
+            continue
+
+        # Basic check if it looks like a trajectory directory based on name
+        if not re.match(r"traj\d+", traj_path.name):
+             warnings.warn(f"Provided path {traj_path} doesn't match 'traj<number>' pattern. Including it anyway, but task name inference might be incorrect if not in a task parent directory.")
+
+        # Infer task name from the parent directory
+        task_name = traj_path.parent.name
+        task_name_processed = task_name.replace("_", " ").capitalize() # Process for better readability
+
+        print(f"Found trajectory: {traj_path} (Task: '{task_name_processed}')")
+        all_traj_infos.append((traj_path, task_name_processed))
+
+    if not all_traj_infos:
+        raise FileNotFoundError(f"No valid trajectory directories found in the provided list: {traj_paths}")
+
+    print(f"Processed {len(all_traj_infos)} explicitly provided trajectories.")
+    return all_traj_infos
+
+
 def port_usc_data(
-    raw_dirs: List[Path], # Changed from raw_dir: Path
     repo_id: str,
-    # task: str = "default_task", # Removed, inferred from dir name
-    raw_repo_id: Optional[str] = None, # Keep this for potential single download source? Maybe remove. Let's keep for now.
+    *,
+    # Group for input specification
+    raw_dirs: Optional[List[Path]] = None, # Specify parent directories containing task/trajectory folders
+    traj_paths: Optional[List[Path]] = None, # OR specify explicit paths to trajectory folders
+    # Other arguments
+    raw_repo_id: Optional[str] = None, # Optional: HF repo to download raw data from if local paths don't exist (primarily for --raw-dirs)
     episodes: Optional[List[int]] = None,
     push_to_hub: bool = False,
     mode: Literal["video", "image"] = "video",
     dataset_config: DatasetConfig = DEFAULT_DATASET_CONFIG,
 ):
-    """Main function to convert USC data from multiple directories and optionally push to Hub."""
+    """Main function to convert USC data from multiple sources and optionally push to Hub."""
+
+    # --- Input Validation ---
+    if (raw_dirs is None and traj_paths is None) or (raw_dirs is not None and traj_paths is not None):
+         raise ValueError("Please provide either --raw-dirs (parent directories) or --traj-paths (specific trajectory paths), but not both.")
+
     if (LEROBOT_HOME / repo_id).exists():
         print(f"Dataset already exists locally at {LEROBOT_HOME / repo_id}. Removing.")
         shutil.rmtree(LEROBOT_HOME / repo_id)
 
-    # Check if *any* of the raw_dirs exist. Downloading is complex with multiple dirs.
-    # Let's require directories to exist locally for now.
-    # TODO(user): Add support for downloading multiple raw_repo_ids if needed.
-    existing_raw_dirs = [d for d in raw_dirs if d.exists()]
-    if not existing_raw_dirs:
-         # If raw_repo_id is provided, attempt download to the *first* path in raw_dirs
-         # This assumes raw_repo_id contains all necessary data, which might not be true
-         # for the multi-directory case. Recommend pre-downloading for multi-dir.
-        if raw_repo_id:
-             target_download_dir = raw_dirs[0]
-             warnings.warn(f"None of the specified raw directories exist. Attempting to download from {raw_repo_id} into {target_download_dir}. This might not contain all required task data.")
-             print(f"Downloading from {raw_repo_id} to {target_download_dir}...")
-             # Create parent if it doesn't exist
-             target_download_dir.parent.mkdir(parents=True, exist_ok=True)
-             download_raw(target_download_dir, repo_id=raw_repo_id)
-             # Re-check existence after download
-             existing_raw_dirs = [d for d in raw_dirs if d.exists()]
-             if not existing_raw_dirs:
-                  raise FileNotFoundError(f"Raw data directory {target_download_dir} still not found after attempting download from {raw_repo_id}.")
-        else:
-             raise FileNotFoundError(f"None of the specified raw directories exist: {raw_dirs}, and no raw_repo_id provided for download.")
+    traj_infos: List[Tuple[Path, str]] = []
 
-    # Warn if some directories were provided but don't exist
-    missing_dirs = [d for d in raw_dirs if not d.exists()]
-    if missing_dirs:
-        warnings.warn(f"The following raw directories do not exist and will be skipped: {missing_dirs}")
+    if raw_dirs is not None:
+        print("Processing using --raw-dirs mode.")
+        # Check if *any* of the raw_dirs exist. Downloading is complex with multiple dirs.
+        # Let's require directories to exist locally for now.
+        # TODO(user): Add support for downloading multiple raw_repo_ids if needed.
+        existing_raw_dirs = [d for d in raw_dirs if d.exists()]
+        if not existing_raw_dirs:
+             # If raw_repo_id is provided, attempt download to the *first* path in raw_dirs
+             # This assumes raw_repo_id contains all necessary data, which might not be true
+             # for the multi-directory case. Recommend pre-downloading for multi-dir.
+            if raw_repo_id:
+                 target_download_dir = raw_dirs[0]
+                 warnings.warn(f"None of the specified raw directories exist. Attempting to download from {raw_repo_id} into {target_download_dir}. This might not contain all required task data.")
+                 print(f"Downloading from {raw_repo_id} to {target_download_dir}...")
+                 # Create parent if it doesn't exist
+                 target_download_dir.parent.mkdir(parents=True, exist_ok=True)
+                 download_raw(target_download_dir, repo_id=raw_repo_id)
+                 # Re-check existence after download
+                 existing_raw_dirs = [d for d in raw_dirs if d.exists()]
+                 if not existing_raw_dirs:
+                      raise FileNotFoundError(f"Raw data directory {target_download_dir} still not found after attempting download from {raw_repo_id}.")
+            else:
+                 raise FileNotFoundError(f"None of the specified raw directories exist: {raw_dirs}, and no raw_repo_id provided for download.")
+
+        # Warn if some directories were provided but don't exist
+        missing_dirs = [d for d in raw_dirs if not d.exists()]
+        if missing_dirs:
+            warnings.warn(f"The following raw directories do not exist and will be skipped: {missing_dirs}")
 
 
-    # Use only the existing directories
-    traj_infos = get_trajectory_paths(existing_raw_dirs)
+        # Use only the existing directories
+        if not existing_raw_dirs:
+             print("No existing raw directories found after download check. Exiting.")
+             return
+        traj_infos = get_trajectory_paths(existing_raw_dirs)
+
+    elif traj_paths is not None:
+         print("Processing using --traj-paths mode.")
+         # Downloading specific trajectory paths is not supported via raw_repo_id currently.
+         if raw_repo_id:
+              warnings.warn("--raw-repo-id is ignored when using --traj-paths. Ensure all specified trajectory paths exist locally.")
+
+         existing_traj_paths = [p for p in traj_paths if p.exists()]
+         missing_traj_paths = [p for p in traj_paths if not p.exists()]
+
+         if missing_traj_paths:
+              warnings.warn(f"The following trajectory paths do not exist and will be skipped: {missing_traj_paths}")
+
+         if not existing_traj_paths:
+              raise FileNotFoundError(f"None of the specified trajectory paths exist: {traj_paths}")
+
+         traj_infos = process_explicit_traj_paths(existing_traj_paths)
+
+
     if not traj_infos:
-        print(f"No valid trajectory paths found in the existing directories: {existing_raw_dirs}. Exiting.")
+        print(f"No valid trajectories found based on the provided input. Exiting.")
         return
 
     dataset = create_empty_dataset(
@@ -427,9 +496,8 @@ def port_usc_data(
     dataset = populate_dataset(
         dataset,
         traj_infos, # Pass the list of (path, task) tuples
-        # task=task, # Removed
         dataset_config=dataset_config,
-        episodes=episodes,
+        episodes=episodes, # Note: episode indices apply to the *combined* list of trajectories found/provided
     )
 
     if dataset.num_episodes > 0:
