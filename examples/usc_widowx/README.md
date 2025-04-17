@@ -98,6 +98,7 @@ Once you have converted the USC WidowX data into the LeRobot format and uploaded
 1.  **Verify Configuration:**
     *   Open `src/openpi/training/config.py`.
     *   Find the `TrainConfig` entry named `pi0_usc_widowx_expert_data` (for expert data) or `pi0_usc_widowx_combined_play_data` (for play data).
+    *   Alternatively, find the corresponding `pi0-FAST` configurations: `pi0_fast_usc_widowx_expert_data` and `pi0_fast_usc_widowx_combined_play_data`.
     *   Ensure the `repo_id` inside the `LeRobotUSCWidowXDataConfig` matches the Hugging Face Hub repository ID of your converted dataset (e.g., `"jesbu1/usc_widowx_combined"`).
     *   Ensure `local_files_only=True` if your dataset is only local, or `False` if it should be synced from the Hub.
 
@@ -110,10 +111,17 @@ Once you have converted the USC WidowX data into the LeRobot format and uploaded
     *   Execute the training script from the root of the `openpi` repository, specifying the config name and an experiment name:
         ```bash
         # Example for expert data config
-        python scripts/train.py --config=pi0_usc_widowx_expert_data --exp_name=my_usc_expert_finetune
+        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py --config=pi0_usc_widowx_expert_data --exp_name=my_usc_expert_finetune --overwrite 
 
         # Example for combined play data config
-        # python scripts/train.py --config=pi0_usc_widowx_combined_play_data --exp_name=my_usc_play_finetune
+        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py --config=pi0_usc_widowx_combined_play_data --exp_name=my_usc_play_finetune --overwrite 
+
+        # --- Examples using pi0-FAST model ---
+        # Expert data:
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py --config=pi0_fast_usc_widowx_expert_data --exp_name=my_usc_fast_expert_finetune --overwrite
+        
+        # Combined play data:
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py --config=pi0_fast_usc_widowx_combined_play_data --exp_name=my_usc_fast_play_finetune --overwrite
         ```
     *   Monitor the training progress via the console output and Weights & Biases (if enabled).
-    *   Checkpoints will be saved under `./checkpoints/pi0_usc_widowx_expert_data/my_usc_expert_finetune/` (or similar, depending on the config name and experiment name).
+    *   Checkpoints will be saved under `./checkpoints/<config_name>/<exp_name>/` (e.g., `./checkpoints/pi0_usc_widowx_expert_data/my_usc_expert_finetune/`).
