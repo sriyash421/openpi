@@ -82,6 +82,9 @@ class USCWidowXInputs(transforms.DataTransformFn):
             },
             "actions": sample["actions"],
         }
+        
+        if "prompt" in sample:
+            inputs["prompt"] = sample["prompt"]
 
 
         if self.use_delta_actions:
