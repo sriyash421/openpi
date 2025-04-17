@@ -1043,6 +1043,7 @@ _CONFIGS = [
         log_interval=50,
         save_interval=1000,
         keep_period=5000,
+        prompt_from_task=False,
     ),
     #
     # Fine-tuning USC WidowX config - pi0-FAST
@@ -1085,6 +1086,7 @@ _CONFIGS = [
         log_interval=50,
         save_interval=1000,
         keep_period=5000,
+        prompt_from_task=False,
     ),
     #
     # Debugging configs.
