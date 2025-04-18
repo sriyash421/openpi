@@ -68,6 +68,7 @@ def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
         print("Waiting for initial observation...")
         show_video(widowx_client, duration=2.5)
         wait_for_observation(widowx_client)
+        print("Initial observation received.")
         return widowx_client
     except Exception as e:
         print(f"Failed to initialize WidowX robot: {e}")
