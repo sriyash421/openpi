@@ -17,7 +17,10 @@ ACTION_DIM = 7
 
 def _decode_usc_widowx(data: dict) -> dict:
     state = np.asarray(data["state"])
-    actions = np.asarray(data["actions"])
+    if "actions" in data:
+        actions = np.asarray(data["actions"])
+    else:
+        actions = None
 
     def convert_image(img):
         img = np.asarray(img)
@@ -30,7 +33,8 @@ def _decode_usc_widowx(data: dict) -> dict:
         if "images" in k:
             data[k] = convert_image(v)
     data["state"] = state
-    data["actions"] = actions
+    if actions is not None:
+        data["actions"] = actions
     return data
 
 
@@ -56,7 +60,7 @@ class USCWidowXInputs(transforms.DataTransformFn):
             raise ValueError(f"Expected action_dim={ACTION_DIM}, got {self.action_dim}")
 
         # Ensure expected keys are present
-        required_keys = {"images/external", "images/over_shoulder", "state", "actions"}
+        required_keys = {"images/external", "images/over_shoulder", "state"}
         if not required_keys.issubset(sample.keys()):
             raise ValueError(f"Missing required keys. Found: {sample.keys()}, Required: {required_keys}")
         
@@ -80,19 +84,18 @@ class USCWidowXInputs(transforms.DataTransformFn):
                 # Mask any non-existent images with False (if ``mask_padding`` is True).
                 "right_wrist_0_rgb": np.False_ if mask_padding else np.True_,
             },
-            "actions": sample["actions"],
         }
-        
+        if "actions" in sample:
+            inputs["actions"] = sample["actions"]
         if "prompt" in sample:
             inputs["prompt"] = sample["prompt"]
 
-
-        if self.use_delta_actions:
+        if self.use_delta_actions and "actions" in sample:
             # Convert absolute joint actions (first 6 dims) to delta actions
             delta_actions = transforms.DeltaActions(
                 mask=transforms.make_bool_mask(6, -1) # Delta for joints, absolute for gripper
             )(sample)
-            sample["actions"] = delta_actions["actions"]
+            inputs["actions"] = delta_actions["actions"]
 
         # Ensure proprio and actions have the correct shape
         if sample["state"].shape[-1] != self.action_dim:
