@@ -246,25 +246,9 @@ def run_inference_loop(
 
                 # 3. Execute the first action in the chunk
                 action_to_execute = action
-                try:
-                    # step_action returns next_obs, reward, done, info - we only need next_obs
-                    step_result = widowx_client.step_action(action_to_execute)
-                    next_raw_obs = widowx_client.get_observation()
-
-                except Environment_Exception as e:
-                    print(f"Error executing action: {e}. Stopping rollout.")
-                    _stop_rollout = True  # Force stop
-                    break
-                except Exception as e:
-                    print(f"Unexpected error executing action: {e}. Stopping rollout.")
-                    _stop_rollout = True
-                    break
-
-                raw_obs = next_raw_obs  # Update observation for next iteration
-                if raw_obs is None:
-                    print("Failed to get observation after step. Stopping rollout.")
-                    _stop_rollout = True  # Force stop
-                    break
+                # step_action returns next_obs, reward, done, info - we only need next_obs
+                step_result = widowx_client.step_action(action_to_execute)
+                raw_obs = wait_for_observation(widowx_client)
 
                 num_steps += 1
 
@@ -285,28 +269,8 @@ def run_inference_loop(
         rollout_time = time.time() - start_time
         print(f"Rollout ended. Steps: {num_steps}, Duration: {rollout_time:.2f}s")
 
-        if _reset_rollout:
-            print("Reset requested.")
-            # Don't save data if reset was requested mid-rollout
-            return True # Indicate reset requested
-
-        # If stopped manually or finished naturally (add termination condition if needed)
-        success = False
-        notes = ""
-        if _stop_rollout:
-            print("Stop requested ('q' pressed).")
-            # Ask for success feedback only if stopped manually
-            success_input = input("Was the rollout successful? (y/n): ").lower()
-            success = (success_input == 'y')
-            if not success:
-                 notes = input("Enter failure notes (optional): ")
-        else:
-             # If loop ended without stop/reset (e.g., max steps reached - add logic if needed)
-             print("Rollout finished naturally. Assuming success.")
-             success = True
-             
         # Save data if the loop finished or was stopped (but not reset)
-        save_trajectory(saver, episode_idx, raw_obs_list, action_list, success=success, notes=notes)
+        save_trajectory(saver, episode_idx, raw_obs_list, action_list)
         return False # Indicate stop or normal finish
 
     except Exception as e:
@@ -320,13 +284,13 @@ def run_inference_loop(
         # Ensure listener thread joins
         listener.join()
 
-def save_trajectory(saver: RawSaver, episode_idx: int, raw_obs_list: List[Dict], action_list: List[np.ndarray], success: bool, notes: str = ""):
+def save_trajectory(saver: RawSaver, episode_idx: int, raw_obs_list: List[Dict], action_list: List[np.ndarray]):
     """Saves the collected trajectory data using RawSaver."""
     if not raw_obs_list or not action_list:
         print("No data collected, skipping save.")
         return
 
-    print(f"Saving trajectory {episode_idx}... Success: {success}, Notes: '{notes}'")
+    print(f"Saving trajectory {episode_idx}...")
     try:
         # Create obs_dict: keys are observation names, values are lists/arrays over time
         obs_dict = {}
@@ -354,10 +318,8 @@ def save_trajectory(saver: RawSaver, episode_idx: int, raw_obs_list: List[Dict],
 
         agent_data = {
             "actions": executed_actions,
-            "successful": success,
-            "notes": notes,
             # Optionally save the full action chunks if needed for analysis
-            # "action_chunks": np.stack(action_list) 
+            # "action_chunks": np.stack(action_list)
         }
         
         # RawSaver needs observation N+1. If the loop ended normally, we might have it.
