@@ -69,6 +69,7 @@ def start_keyboard_listener():
 def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
     """Initializes connection to the WidowX robot."""
     print(f"Connecting to WidowX controller @ {robot_ip}...")
+    breakpoint()
     # Adjust DefaultEnvParams if necessary for your setup
     env_params = WidowXConfigs.DefaultEnvParams.copy()
     # Example modification: set specific cameras if needed by controller init
@@ -78,7 +79,6 @@ def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
     print("Successfully connected to WidowX.")
     print("Waiting for initial observation...")
     wait_for_observation(widowx_client)
-    breakpoint()
     print("Initial observation received.")
     print("Resetting robot...")
     widowx_client.reset()
