@@ -78,6 +78,7 @@ def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
     print("Successfully connected to WidowX.")
     print("Waiting for initial observation...")
     wait_for_observation(widowx_client)
+    breakpoint()
     print("Initial observation received.")
     print("Resetting robot...")
     widowx_client.reset()
