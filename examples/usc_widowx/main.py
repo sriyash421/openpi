@@ -20,6 +20,7 @@ from pynput import keyboard
 
 # --- openpi specific imports ---
 from openpi_client import websocket_client_policy as _websocket_client_policy
+from openpi.utils import image_tools
 
 # --- widowx specific imports (assuming installed from widowx_envs or similar) ---
 # Need to ensure these imports are correct based on the actual widowx_envs structure
@@ -31,6 +32,8 @@ except ImportError as e:
     print(f"Error importing widowx_envs components: {e}")
     print("Please ensure widowx_envs is installed correctly.")
     exit(1)
+
+resolution = 256
 
 # --- Globals for keyboard listener ---
 key_pressed = None
@@ -108,7 +111,7 @@ def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
     # Example modification: set specific cameras if needed by controller init
     # env_params['camera_topics'] = [...]
     widowx_client = WidowXClient(host=robot_ip, port=robot_port)
-    widowx_client.init(WidowXConfigs.DefaultEnvParams, image_size=256)
+    widowx_client.init(WidowXConfigs.DefaultEnvParams, image_size=resolution)
     print("Successfully connected to WidowX.")
     print("Waiting for initial observation...")
     wait_for_observation(widowx_client)
@@ -154,7 +157,7 @@ def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str)
         img = raw_obs[img_key]
 
         # Policy expects keys like 'external', 'over_shoulder' directly under 'images'
-        obs_for_policy[f"images/{cam_name}"] = img
+        obs_for_policy[f"images/{cam_name}"] = image_tools.resize_with_pad(img, resolution, resolution)
 
     return obs_for_policy
 
