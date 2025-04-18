@@ -352,8 +352,8 @@ def main():
             
             try: # Add try within the loop to catch episode-specific errors
                 # Add a brief pause or wait for user confirmation
-                # input("Press Enter to start the episode...")
- 
+                input("Press Enter to start the episode...")
+
                 reset_requested = run_inference_loop(args, policy_client, widowx_client, saver, episode_idx)
 
                 if not reset_requested:
