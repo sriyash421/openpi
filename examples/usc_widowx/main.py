@@ -310,7 +310,7 @@ def main():
     parser.add_argument("--robot-ip", type=str, required=True, help="IP address of the WidowX robot controller.")
     parser.add_argument("--cameras", nargs='+', default=["external", "over_shoulder"], help="List of camera names to use (e.g., external over_shoulder). Should match policy expectations.")
     parser.add_argument("--prompt", type=str, required=True, help="Task prompt for the policy.")
-    parser.add_argument("--hz", type=int, default=10, help="Control frequency.")
+    parser.add_argument("--hz", type=int, default=5, help="Control frequency.")
     parser.add_argument("--save-dir", type=str, default="./trajectory_data/usc_widowx", help="Directory to save trajectory data.")
     args = parser.parse_args()
 
