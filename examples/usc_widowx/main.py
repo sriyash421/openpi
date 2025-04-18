@@ -20,7 +20,7 @@ from pynput import keyboard
 
 # --- openpi specific imports ---
 from openpi_client import websocket_client_policy as _websocket_client_policy
-from openpi.utils import image_tools
+from openpi_client import image_tools
 
 # --- widowx specific imports (assuming installed from widowx_envs or similar) ---
 # Need to ensure these imports are correct based on the actual widowx_envs structure
