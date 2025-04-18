@@ -1047,7 +1047,7 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
         num_train_steps=30_000,
-        batch_size=16,
+        batch_size=64,
         log_interval=50,
         save_interval=1000,
         keep_period=5000,
@@ -1063,7 +1063,8 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
         num_train_steps=30_000,
-        batch_size=16,
+        batch_size=64,
+        fsdp_devices=2,
         log_interval=50,
         save_interval=1000,
         keep_period=5000,
@@ -1081,7 +1082,9 @@ _CONFIGS = [
             base_config=DataConfig(local_files_only=True),
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        freeze_filter=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora").get_freeze_filter(),
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
         ema_decay=None,
         num_train_steps=30_000,
         batch_size=16,
@@ -1099,7 +1102,9 @@ _CONFIGS = [
             base_config=DataConfig(local_files_only=True),
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        freeze_filter=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora").get_freeze_filter(),
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
         ema_decay=None,
         num_train_steps=30_000,
         batch_size=16,
@@ -1109,7 +1114,9 @@ _CONFIGS = [
     ),
     TrainConfig(
         name="pi0_fast_lora_usc_widowx_expert_data",
-        model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"),
+        model=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
+        ),
         data=LeRobotUSCWidowXDataConfig(
             repo_id="jesbu1/usc_widowx_combined",
             is_play_data=False,
@@ -1117,7 +1124,9 @@ _CONFIGS = [
             base_config=DataConfig(local_files_only=True),
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        freeze_filter=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora").get_freeze_filter(),
+        freeze_filter=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
+        ).get_freeze_filter(),
         ema_decay=None,
         num_train_steps=30_000,
         batch_size=16,
@@ -1127,7 +1136,9 @@ _CONFIGS = [
     ),
     TrainConfig(
         name="pi0_fast_lora_usc_widowx_combined_play_data",
-        model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"),
+        model=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
+        ),
         data=LeRobotUSCWidowXDataConfig(
             repo_id="jesbu1/usc_widowx_combined_play_data",
             is_play_data=True,
@@ -1135,7 +1146,9 @@ _CONFIGS = [
             base_config=DataConfig(local_files_only=True),
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        freeze_filter=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora").get_freeze_filter(),
+        freeze_filter=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
+        ).get_freeze_filter(),
         ema_decay=None,
         num_train_steps=30_000,
         batch_size=16,

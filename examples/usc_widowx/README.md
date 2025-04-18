@@ -59,7 +59,7 @@ To combine specific trajectories (e.g., `traj0` from `close_microwave` and `traj
 ```bash
 uv run examples/usc_widowx/convert_usc_data_to_lerobot.py \
     --traj-paths "/path/to/raw/usc/data/close_microwave/traj0" "/path/to/raw/usc/data/push_button/traj5" \
-    --repo-id "jesbu1/usc_widowx_combined_subset" \
+    --repo-id "jesbu1/usc_widowx_combined" \
     --mode "video" \
     --push-to-hub
 ```
@@ -117,22 +117,22 @@ Once you have converted the USC WidowX data into the LeRobot format and uploaded
         ```bash
         # Example for expert data config
         # Full fine-tuning:
-        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_usc_widowx_expert_data --exp_name=my_usc_expert_finetune --overwrite 
+        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_usc_widowx_expert_data --exp_name=my_usc_expert_finetune --project_name=hand-demos-openpi-training --overwrite 
         # LoRA fine-tuning:
-        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_lora_usc_widowx_expert_data --exp_name=my_usc_lora_expert_finetune --overwrite 
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_lora_usc_widowx_expert_data --exp_name=my_usc_lora_expert_finetune --project_name=hand-demos-openpi-training --overwrite 
  
          # Example for combined play data config
         # Full fine-tuning:
-        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_usc_widowx_combined_play_data --exp_name=my_usc_play_finetune --overwrite 
+        XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_usc_widowx_combined_play_data --exp_name=my_usc_play_finetune --project_name=hand-demos-openpi-training --overwrite 
         # LoRA fine-tuning:
-        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_lora_usc_widowx_combined_play_data --exp_name=my_usc_lora_play_finetune --overwrite 
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_lora_usc_widowx_combined_play_data --exp_name=my_usc_lora_play_finetune --project_name=hand-demos-openpi-training --overwrite 
  
          # --- Examples using pi0-FAST model ---
          # Expert data:
         # Full fine-tuning:
-        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_usc_widowx_expert_data --exp_name=my_usc_fast_expert_finetune --overwrite
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_usc_widowx_expert_data --exp_name=my_usc_fast_expert_finetune --project_name=hand-demos-openpi-training --overwrite
         # LoRA fine-tuning:
-        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_lora_usc_widowx_expert_data --exp_name=my_usc_fast_lora_expert_finetune --overwrite
+        # XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_fast_lora_usc_widowx_expert_data --exp_name=my_usc_fast_lora_expert_finetune --project_name=hand-demos-openpi-training --overwrite
          
          # Combined play data:
         # Full fine-tuning:
