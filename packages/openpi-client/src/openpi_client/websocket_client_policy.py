@@ -16,9 +16,12 @@ class WebsocketClientPolicy(_base_policy.BasePolicy):
     See WebsocketPolicyServer for a corresponding server implementation.
     """
 
-    def __init__(self, address: str = "localhost:8000") -> None:
-        if not address.startswith(("ws://", "wss://", "http://", "https://")):
-            address = f"ws://{address}"
+    def __init__(self, host: str = "localhost", port: int = 8000, address: str | None = None) -> None:
+        if address is None:
+            address = f"ws://{host}:{port}"
+        else:
+            if not address.startswith(("ws://", "wss://", "http://", "https://")):
+                address = f"ws://{address}"
 
         parsed_url = urlparse(address)
 
