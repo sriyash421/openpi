@@ -68,28 +68,24 @@ def start_keyboard_listener():
 
 def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
     """Initializes connection to the WidowX robot."""
-    try:
-        print(f"Connecting to WidowX controller @ {robot_ip}...")
-        # Adjust DefaultEnvParams if necessary for your setup
-        env_params = WidowXConfigs.DefaultEnvParams.copy()
-        # Example modification: set specific cameras if needed by controller init
-        # env_params['camera_topics'] = [...]
-        widowx_client = WidowXClient(host=robot_ip, port=robot_port)
-        widowx_client.init(env_params, image_size=256)
-        print("Successfully connected to WidowX.")
-        print("Waiting for initial observation...")
-        wait_for_observation(widowx_client)
-        print("Initial observation received.")
-        print("Resetting robot...")
-        widowx_client.reset()
-        print("Robot reset.")
-        print("Showing video...")
-        show_video(widowx_client, duration=2.5)
-        print("Video shown. Robot ready")
-        return widowx_client
-    except Exception as e:
-        print(f"Failed to initialize WidowX robot: {e}")
-        raise
+    print(f"Connecting to WidowX controller @ {robot_ip}...")
+    # Adjust DefaultEnvParams if necessary for your setup
+    env_params = WidowXConfigs.DefaultEnvParams.copy()
+    # Example modification: set specific cameras if needed by controller init
+    # env_params['camera_topics'] = [...]
+    widowx_client = WidowXClient(host=robot_ip, port=robot_port)
+    widowx_client.init(env_params, image_size=256)
+    print("Successfully connected to WidowX.")
+    print("Waiting for initial observation...")
+    wait_for_observation(widowx_client)
+    print("Initial observation received.")
+    print("Resetting robot...")
+    widowx_client.reset()
+    print("Robot reset.")
+    print("Showing video...")
+    show_video(widowx_client, duration=2.5)
+    print("Video shown. Robot ready")
+    return widowx_client
 
 def wait_for_observation(client: WidowXClient, timeout: int = 60) -> Dict:
     """Wait for and return a valid observation from the robot."""
@@ -161,7 +157,6 @@ def run_inference_loop(
         widowx_client.reset()
         time.sleep(1.0)  # Allow time for reset
         raw_obs = wait_for_observation(widowx_client)
-        breakpoint()
         
         if raw_obs is None:
             print("Failed to get initial observation. Exiting rollout.")
