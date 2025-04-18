@@ -24,7 +24,7 @@ from openpi_client import websocket_client_policy as _websocket_client_policy
 # --- widowx specific imports (assuming installed from widowx_envs or similar) ---
 # Need to ensure these imports are correct based on the actual widowx_envs structure
 try:
-    from widowx_envs.widowx_env_service import WidowXClient, WidowXConfigs
+    from widowx_envs.widowx_env_service import WidowXClient, WidowXConfigs, show_video
     from widowx_envs.utils.exceptions import Environment_Exception
     from widowx_envs.utils.raw_saver import RawSaver # For saving trajectories
 except ImportError as e:
@@ -65,10 +65,30 @@ def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
         widowx_client = WidowXClient(host=robot_ip, port=robot_port)
         widowx_client.init(env_params) 
         print("Successfully connected to WidowX.")
+        print("Waiting for initial observation...")
+        show_video(widowx_client, duration=2.5)
+        wait_for_observation(widowx_client)
         return widowx_client
     except Exception as e:
         print(f"Failed to initialize WidowX robot: {e}")
         raise
+
+def wait_for_observation(client: WidowXClient, timeout: int = 60) -> Dict:
+    """Wait for and return a valid observation from the robot."""
+    start_time = time.time()
+    while True:
+        obs = client.get_observation()
+        if obs is not None:
+            print("✓ Received valid observation from robot")
+            return obs
+
+        elapsed = time.time() - start_time
+        if elapsed > timeout:
+            raise TimeoutError(f"No observation received from robot after {timeout}s")
+
+        time.sleep(1)
+        print(f"⏳ Waiting for robot observation... (elapsed: {elapsed:.1f}s)")
+
 
 def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str) -> Dict[str, Any]:
     """Formats raw observation from robot into the structure expected by the policy."""
@@ -121,9 +141,9 @@ def run_inference_loop(
         # raw_obs = obs_info[0] if obs_info else None # Adapt based on reset return value
         
         # If reset doesn't return obs, call get_observation separately
-        widowx_client.reset() 
-        time.sleep(1.0) # Allow time for reset
-        raw_obs = widowx_client.get_observation()
+        widowx_client.reset()
+        time.sleep(1.0)  # Allow time for reset
+        raw_obs = wait_for_observation(widowx_client)
         
         if raw_obs is None:
             print("Failed to get initial observation. Exiting rollout.")
@@ -175,13 +195,7 @@ def run_inference_loop(
             action_to_execute = action_chunk[0]
             try:
                 # step_action returns next_obs, reward, done, info - we only need next_obs
-                step_result = widowx_client.step_action(action_to_execute, blocking=True) # Use blocking=True for simplicity
-                if step_result is None:
-                     print("widowx_client.step_action returned None. Stopping rollout.")
-                     _stop_rollout = True
-                     break
-                # next_raw_obs = step_result[0] # If step_action returns obs directly
-                # For safety, call get_observation again to ensure latest state
+                step_result = widowx_client.step_action(action_to_execute)
                 next_raw_obs = widowx_client.get_observation()
 
             except Environment_Exception as e:
