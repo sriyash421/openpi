@@ -313,12 +313,8 @@ def main():
         default="https://whippet-pet-singularly.ngrok.app",
         help="Address (host:port) of the policy server.",
     )
-    parser.add_argument(
-        "--robot-ip", type=str, required=True, default="localhost", help="IP address of the WidowX robot controller."
-    )
-    parser.add_argument(
-        "--robot-port", type=int, required=True, default=5556, help="IP address of the WidowX robot controller."
-    )
+    parser.add_argument("--robot-ip", type=str, default="localhost", help="IP address of the WidowX robot controller.")
+    parser.add_argument("--robot-port", type=int, default=5556, help="IP address of the WidowX robot controller.")
     parser.add_argument("--cameras", nargs='+', default=["external", "over_shoulder"], help="List of camera names to use (e.g., external over_shoulder). Should match policy expectations.")
     parser.add_argument("--prompt", type=str, required=True, help="Task prompt for the policy.")
     parser.add_argument("--hz", type=int, default=5, help="Control frequency.")
