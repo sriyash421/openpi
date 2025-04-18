@@ -12,6 +12,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from urllib.parse import urlparse
 
 import cv2
 import numpy as np
@@ -324,32 +325,30 @@ def main():
     widowx_client = None
     try:
         print(f"Attempting to connect to policy server at {args.policy_server_address}...")
-        # # Parse the URL # Remove this block
-        # parsed_url = urlparse(args.policy_server_address)
-        # host = parsed_url.hostname
-        # port = parsed_url.port
-        #
-        # # If port is not specified in the URL, use default based on scheme
-        # if port is None:
-        #     if parsed_url.scheme == 'https':
-        #         port = 443
-        #     elif parsed_url.scheme == 'http':
-        #         port = 80
-        #     else:
-        #         # Default if scheme is missing or different (e.g., just 'localhost')
-        #         # Fallback to a common default or raise an error if needed
-        #         print("Warning: No port specified and scheme is not http/https. Assuming default 8000.")
-        #         port = 8000 # Or raise ValueError("Port must be specified or scheme must be http/https")
-        #
-        # if host is None:
-        #      raise ValueError(f"Could not extract hostname from policy server address: {args.policy_server_address}")
 
-        # Pass the full address directly, assuming the client handles scheme/parsing
-        policy_client = _websocket_client_policy.WebsocketClientPolicy(args.policy_server_address)  # Modify this line
+        # Re-introduce URL parsing
+        parsed_url = urlparse(args.policy_server_address)
+        host = parsed_url.hostname
+        port = parsed_url.port
+
+        # If port is not specified in the URL, use default based on scheme
+        if port is None:
+            if parsed_url.scheme == "https":
+                port = 443
+            elif parsed_url.scheme == "http":
+                port = 80
+            else:
+                print("Warning: No port specified and scheme is not http/https. Assuming default 8000.")
+                port = 8000
+
+        if host is None:
+            raise ValueError(f"Could not extract hostname from policy server address: {args.policy_server_address}")
+
+        # Initialize with parsed host and port
+        policy_client = _websocket_client_policy.WebsocketClientPolicy(host, port)
 
         # Optional: Add a ping or status check here if the client supports it
-        # print(f"Policy client initialized for host '{host}' on port {port}.") # Remove updated print
-        print("Policy client initialized.")  # Revert to original print
+        print(f"Policy client initialized for host '{host}' on port {port}.")
 
         widowx_client = init_robot(args.robot_ip)
 

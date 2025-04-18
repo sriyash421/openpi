@@ -1,6 +1,7 @@
 import logging
 import time
 from typing import Dict, Tuple
+from urllib.parse import urlparse
 
 import websockets.sync.client
 from typing_extensions import override
@@ -15,8 +16,35 @@ class WebsocketClientPolicy(_base_policy.BasePolicy):
     See WebsocketPolicyServer for a corresponding server implementation.
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8000) -> None:
-        self._uri = f"ws://{host}:{port}"
+    def __init__(self, address: str = "localhost:8000") -> None:
+        if not address.startswith(("ws://", "wss://", "http://", "https://")):
+            address = f"ws://{address}"
+
+        parsed_url = urlparse(address)
+
+        scheme = parsed_url.scheme
+        hostname = parsed_url.hostname
+        port = parsed_url.port
+
+        if hostname is None:
+            raise ValueError(f"Could not extract hostname from address: {address}")
+
+        ws_scheme = "ws"
+        if scheme in ["https", "wss"]:
+            ws_scheme = "wss"
+            if port is None:
+                port = 443
+        elif scheme in ["http", "ws"]:
+            ws_scheme = "ws"
+            if port is None:
+                port = 80
+        else:
+            if port is None:
+                print(f"Warning: Unknown scheme '{scheme}' or no scheme, defaulting to port 8000 for ws://")
+                port = 8000
+
+        self._uri = f"{ws_scheme}://{hostname}:{port}{parsed_url.path or ''}"
+
         self._packer = msgpack_numpy.Packer()
         self._ws, self._server_metadata = self._wait_for_server()
 
