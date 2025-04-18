@@ -238,7 +238,7 @@ class Pi0(_model.BaseModel):
         return tokens, input_mask, ar_mask
 
     def compute_extra_loss_info(self, preds: at.Float[at.Array, "*b ah"], targets: at.Float[at.Array, "*b ah"]) -> dict:
-        thresholds = [0.01, 0.05, 0.1]
+        thresholds = [0.05, 0.1, 0.2]
         difference = jnp.sqrt(jnp.sum(jnp.square(preds[..., :3] - targets[..., :3]), axis=-1))
         return {f"accuracy_l2_pos<{threshold}": jnp.mean(difference < threshold) for threshold in thresholds}
 
