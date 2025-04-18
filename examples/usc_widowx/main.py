@@ -161,6 +161,7 @@ def run_inference_loop(
         widowx_client.reset()
         time.sleep(1.0)  # Allow time for reset
         raw_obs = wait_for_observation(widowx_client)
+        breakpoint()
         
         if raw_obs is None:
             print("Failed to get initial observation. Exiting rollout.")
@@ -208,7 +209,6 @@ def run_inference_loop(
             except Exception as e:
                 print(f"Error during inference: {e}. Stopping rollout.")
                 return False, "Error during inference"
-            breakpoint()
             for i, action in enumerate(action_chunk):
                 if i == args.max_action_length:
                     break
@@ -370,74 +370,44 @@ def main():
     # --- Initialization ---
     policy_client = None
     widowx_client = None
-    try:
-        print(f"Attempting to connect to policy server at {args.policy_server_address}...")
+    print(f"Attempting to connect to policy server at {args.policy_server_address}...")
 
-        # Re-introduce URL parsing
-        parsed_url = urlparse(args.policy_server_address)
-        host = parsed_url.hostname
-        port = parsed_url.port
+    # Re-introduce URL parsing
+    parsed_url = urlparse(args.policy_server_address)
+    host = parsed_url.hostname
+    port = parsed_url.port
 
-        # Initialize with parsed host and port
-        policy_client = _websocket_client_policy.WebsocketClientPolicy(address=args.policy_server_address)
+    # Initialize with parsed host and port
+    policy_client = _websocket_client_policy.WebsocketClientPolicy(address=args.policy_server_address)
 
-        # Optional: Add a ping or status check here if the client supports it
-        print(f"Policy client initialized for host '{host}' on port {port}.")
+    # Optional: Add a ping or status check here if the client supports it
+    print(f"Policy client initialized for host '{host}' on port {port}.")
 
-        widowx_client = init_robot(args.robot_ip, args.robot_port)
+    widowx_client = init_robot(args.robot_ip, args.robot_port)
 
-        save_path = Path(args.save_dir)
-        save_path.mkdir(parents=True, exist_ok=True)
-        saver = RawSaver(str(save_path))
-        print(f"Saving trajectories to: {save_path.resolve()}")
+    save_path = Path(args.save_dir)
+    save_path.mkdir(parents=True, exist_ok=True)
+    saver = RawSaver(str(save_path))
+    print(f"Saving trajectories to: {save_path.resolve()}")
 
-        episode_idx = 0
-        while True:
-            print(f"\n--- Starting Episode {episode_idx} ---")
-            print(f"Prompt: {args.prompt}")
-            
-            try: # Add try within the loop to catch episode-specific errors
-                # Add a brief pause or wait for user confirmation
-                input("Press Enter to start the episode...")
+    episode_idx = 0
+    while True:
+        print(f"\n--- Starting Episode {episode_idx} ---")
+        print(f"Prompt: {args.prompt}")
 
-                reset_requested = run_inference_loop(args, policy_client, widowx_client, saver, episode_idx)
+        input("Press Enter to start the episode...")
 
-                if not reset_requested:
-                    # If stop was requested or loop finished normally, stop the script
-                    print("Exiting inference script.")
-                    break
-                else:
-                    # If reset was requested, increment episode index and continue
-                    episode_idx += 1
-                    print("\nResetting for next episode...")
-                    time.sleep(1.0) # Pause before starting next
-            except Exception as loop_err:
-                print(f"\nError during episode {episode_idx}: {loop_err}")
-                print("Attempting to continue to next episode after error...")
-                # Potentially add logic here to decide if the error is fatal
-                episode_idx += 1 
-                time.sleep(2.0) # Longer pause after error
+        reset_requested = run_inference_loop(args, policy_client, widowx_client, saver, episode_idx)
 
-    except KeyboardInterrupt:
-        print("\nCaught KeyboardInterrupt, stopping inference.")
-    except Exception as e:
-        print(f"\nAn unexpected error occurred in main: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        print("Cleaning up...")
-        # Ensure keyboard listener is stopped if running
-        # Note: Listener stop/join is handled in run_inference_loop's finally block
-
-        if widowx_client is not None:
-            try:
-                print("Stopping robot...")
-                widowx_client.stop()
-                print("Robot stopped.")
-            except Exception as e:
-                print(f"Error stopping robot: {e}")
-        # No explicit close for PolicyClient needed usually
-        # No explicit close needed for WebsocketClientPolicy either typically
+        if not reset_requested:
+            # If stop was requested or loop finished normally, stop the script
+            print("Exiting inference script.")
+            break
+        else:
+            # If reset was requested, increment episode index and continue
+            episode_idx += 1
+            print("\nResetting for next episode...")
+            time.sleep(1.0)  # Pause before starting next
 
 
 if __name__ == "__main__":
