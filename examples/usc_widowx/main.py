@@ -306,7 +306,12 @@ def save_trajectory(saver: RawSaver, episode_idx: int, raw_obs_list: List[Dict],
 
 def main():
     parser = argparse.ArgumentParser(description="Run inference on USC WidowX robot using OpenPI policy server.")
-    parser.add_argument("--policy-server-address", type=str, default="localhost:8000", help="Address (host:port) of the policy server.")
+    parser.add_argument(
+        "--policy-server-address",
+        type=str,
+        default="https://whippet-pet-singularly.ngrok.app",
+        help="Address (host:port) of the policy server.",
+    )
     parser.add_argument("--robot-ip", type=str, required=True, help="IP address of the WidowX robot controller.")
     parser.add_argument("--cameras", nargs='+', default=["external", "over_shoulder"], help="List of camera names to use (e.g., external over_shoulder). Should match policy expectations.")
     parser.add_argument("--prompt", type=str, required=True, help="Task prompt for the policy.")
