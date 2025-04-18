@@ -65,8 +65,8 @@ class WidowXConfigs:
     }
 
 camera_to_name_map = {
-    "/D435/color/image_raw": "external",
-    "/blue/image_raw": "over_shoulder",
+    "external": "/D435/color/image_raw",
+    "over_shoulder": "/blue/image_raw",
 }
 
 
@@ -145,6 +145,7 @@ def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str)
         "state": raw_obs["state"].tolist(), # Send state as list
         "prompt": prompt
     }
+    breakpoint()
     for cam_name in cameras:
         # Map camera name to the key used in raw_obs
         img_key = camera_to_name_map[cam_name]
@@ -219,7 +220,6 @@ def run_inference_loop(
 
             # 1. Format observation for policy
             try:
-                breakpoint()
                 obs_for_policy = format_observation(raw_obs, args.cameras, args.prompt)
             except ValueError as e:
                 print(f"Error formatting observation: {e}. Stopping rollout.")
