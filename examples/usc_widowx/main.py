@@ -35,6 +35,36 @@ except ImportError as e:
 # --- Globals for keyboard listener ---
 key_pressed = None
 
+class WidowXConfigs:
+    DefaultEnvParams = {
+        "fix_zangle": 0.1,
+        "move_duration": 0.2,
+        "adaptive_wait": True,
+        "move_to_rand_start_freq": 1,
+        "override_workspace_boundaries": [
+            [0.1, -0.15, -0.1, -1.57, 0],
+            [0.45, 0.25, 0.25, 1.57, 0],
+        ],
+        "catch_environment_except": False,
+        "start_state": [
+            0.11865137,
+            -0.01696823,
+            0.24405071,
+            -0.03702571,
+            -0.11837727,
+            0.03907566,
+            0.9994886,
+        ],
+        "skip_move_to_neutral": False,
+        "return_full_image": False,
+        "camera_topics": [
+            {"name": "/D435/color/image_raw"},
+            {"name": "/blue/image_raw"},
+            # {"name": "/yellow/image_raw"},
+        ],
+    }
+
+
 def on_press(key):
     """Callback for key press events"""
     global key_pressed
@@ -69,13 +99,11 @@ def start_keyboard_listener():
 def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
     """Initializes connection to the WidowX robot."""
     print(f"Connecting to WidowX controller @ {robot_ip}...")
-    breakpoint()
     # Adjust DefaultEnvParams if necessary for your setup
-    env_params = WidowXConfigs.DefaultEnvParams.copy()
     # Example modification: set specific cameras if needed by controller init
     # env_params['camera_topics'] = [...]
     widowx_client = WidowXClient(host=robot_ip, port=robot_port)
-    widowx_client.init(env_params, image_size=256)
+    widowx_client.init(WidowXConfigs.DefaultEnvParams, image_size=256)
     print("Successfully connected to WidowX.")
     print("Waiting for initial observation...")
     wait_for_observation(widowx_client)
