@@ -141,7 +141,6 @@ def wait_for_observation(client: WidowXClient, timeout: int = 60) -> Dict:
 def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str) -> Dict[str, Any]:
     """Formats raw observation from robot into the structure expected by the policy."""
     obs_for_policy = {
-        "images": {},
         "state": raw_obs["state"].tolist(),  # Send state as list
         "prompt": prompt,
     }
@@ -155,7 +154,7 @@ def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str)
         img = raw_obs[img_key]
 
         # Policy expects keys like 'external', 'over_shoulder' directly under 'images'
-        obs_for_policy["images"][cam_name] = img.tolist()  # Send image as list
+        obs_for_policy[f"images/{cam_name}"] = img.tolist()  # Send image as list
 
     return obs_for_policy
 
