@@ -226,7 +226,7 @@ class Pi0FAST(_model.BaseModel):
         token_pplx = jnp.sum(targets * logp, axis=-1)
         return -jnp.sum(token_pplx * loss_mask, axis=-1) / jnp.clip(
             jnp.sum(loss_mask, -1), 1
-        ), self.compute_extra_loss_info(token_pplx * loss_mask, targets)
+        ), self.compute_extra_loss_info(None, None)
 
     @override
     def sample_actions(
