@@ -18,7 +18,7 @@ import numpy as np
 from pynput import keyboard
 
 # --- openpi specific imports ---
-from openpi_client.client import PolicyClient
+from openpi_client import websocket_client_policy as _websocket_client_policy
 
 # --- widowx specific imports (assuming installed from widowx_envs or similar) ---
 # Need to ensure these imports are correct based on the actual widowx_envs structure
@@ -94,7 +94,7 @@ def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str)
 
 def run_inference_loop(
     args: argparse.Namespace,
-    policy_client: PolicyClient,
+    policy_client: _websocket_client_policy.WebsocketClientPolicy,
     widowx_client: WidowXClient,
     saver: RawSaver,
     episode_idx: int,
@@ -319,7 +319,9 @@ def main():
     widowx_client = None
     try:
         print(f"Attempting to connect to policy server at {args.policy_server_address}...")
-        policy_client = PolicyClient(args.policy_server_address)
+        host, port_str = args.policy_server_address.split(":")
+        port = int(port_str)
+        policy_client = _websocket_client_policy.WebsocketClientPolicy(host, port)
         # Optional: Add a ping or status check here if the client supports it
         print("Policy client initialized.")
         
@@ -376,6 +378,8 @@ def main():
             except Exception as e:
                 print(f"Error stopping robot: {e}")
         # No explicit close for PolicyClient needed usually
+        # No explicit close needed for WebsocketClientPolicy either typically
+
 
 if __name__ == "__main__":
     main() 
