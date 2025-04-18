@@ -310,7 +310,7 @@ def main():
     parser.add_argument(
         "--policy-server-address",
         type=str,
-        default="localhost:8000",
+        default="https://whippet-pet-singularly.ngrok.app",
         help="Address (host:port) of the policy server.",
     )
     parser.add_argument("--robot-ip", type=str, required=True, help="IP address of the WidowX robot controller.")
@@ -331,21 +331,8 @@ def main():
         host = parsed_url.hostname
         port = parsed_url.port
 
-        # If port is not specified in the URL, use default based on scheme
-        if port is None:
-            if parsed_url.scheme == "https":
-                port = 443
-            elif parsed_url.scheme == "http":
-                port = 80
-            else:
-                print("Warning: No port specified and scheme is not http/https. Assuming default 8000.")
-                port = 8000
-
-        if host is None:
-            raise ValueError(f"Could not extract hostname from policy server address: {args.policy_server_address}")
-
         # Initialize with parsed host and port
-        policy_client = _websocket_client_policy.WebsocketClientPolicy(host, port)
+        policy_client = _websocket_client_policy.WebsocketClientPolicy(address=args.policy_server_address)
 
         # Optional: Add a ping or status check here if the client supports it
         print(f"Policy client initialized for host '{host}' on port {port}.")
