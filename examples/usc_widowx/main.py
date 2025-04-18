@@ -310,7 +310,7 @@ def main():
     parser.add_argument(
         "--policy-server-address",
         type=str,
-        default="https://whippet-pet-singularly.ngrok.app",
+        default="localhost:8000",
         help="Address (host:port) of the policy server.",
     )
     parser.add_argument("--robot-ip", type=str, required=True, help="IP address of the WidowX robot controller.")
