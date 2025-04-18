@@ -208,7 +208,7 @@ def run_inference_loop(
             except Exception as e:
                 print(f"Error during inference: {e}. Stopping rollout.")
                 return False, "Error during inference"
-            for i, action in action_chunk:
+            for i, action in enumerate(action_chunk):
                 if i == args.max_action_length:
                     break
                 # Store raw observation and received action chunk *before* execution
