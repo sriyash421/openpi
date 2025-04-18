@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-""" Inference script for USC WidowX using openpi policy server.
+"""Inference script for USC WidowX using openpi policy server.
 
 Example usage:
-python examples/usc_widowx/main.py --policy-server-address localhost:8000 --robot-ip <robot_ip_address> --prompt "pick up the red block"
+python examples/usc_widowx/main.py --policy-server-address https://whippet-pet-singularly.ngrok.app --robot-ip localhost --robot-port 5556 --prompt "pick up the red block"
 """
 
 import argparse
@@ -54,15 +54,15 @@ def start_keyboard_listener() -> keyboard.Listener:
     listener.start()
     return listener
 
-def init_robot(robot_ip: str) -> WidowXClient:
+def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
     """Initializes connection to the WidowX robot."""
     try:
         print(f"Connecting to WidowX controller @ {robot_ip}...")
         # Adjust DefaultEnvParams if necessary for your setup
         env_params = WidowXConfigs.DefaultEnvParams.copy()
         # Example modification: set specific cameras if needed by controller init
-        # env_params['camera_topics'] = [...] 
-        widowx_client = WidowXClient(host=robot_ip)
+        # env_params['camera_topics'] = [...]
+        widowx_client = WidowXClient(host=robot_ip, port=robot_port)
         widowx_client.init(env_params) 
         print("Successfully connected to WidowX.")
         return widowx_client
@@ -313,7 +313,12 @@ def main():
         default="https://whippet-pet-singularly.ngrok.app",
         help="Address (host:port) of the policy server.",
     )
-    parser.add_argument("--robot-ip", type=str, required=True, help="IP address of the WidowX robot controller.")
+    parser.add_argument(
+        "--robot-ip", type=str, required=True, default="localhost", help="IP address of the WidowX robot controller."
+    )
+    parser.add_argument(
+        "--robot-port", type=int, required=True, default=5556, help="IP address of the WidowX robot controller."
+    )
     parser.add_argument("--cameras", nargs='+', default=["external", "over_shoulder"], help="List of camera names to use (e.g., external over_shoulder). Should match policy expectations.")
     parser.add_argument("--prompt", type=str, required=True, help="Task prompt for the policy.")
     parser.add_argument("--hz", type=int, default=5, help="Control frequency.")
@@ -337,7 +342,7 @@ def main():
         # Optional: Add a ping or status check here if the client supports it
         print(f"Policy client initialized for host '{host}' on port {port}.")
 
-        widowx_client = init_robot(args.robot_ip)
+        widowx_client = init_robot(args.robot_ip, args.robot_port)
 
         save_path = Path(args.save_dir)
         save_path.mkdir(parents=True, exist_ok=True)
