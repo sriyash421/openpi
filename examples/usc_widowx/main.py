@@ -65,8 +65,8 @@ class WidowXConfigs:
     }
 
 camera_to_name_map = {
-    "external": "/D435/color/image_raw",
-    "over_shoulder": "/blue/image_raw",
+    "external_img": "external",
+    "over_shoulder_img": "over_shoulder",
 }
 
 
@@ -142,23 +142,20 @@ def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str)
     """Formats raw observation from robot into the structure expected by the policy."""
     obs_for_policy = {
         "images": {},
-        "state": raw_obs["state"].tolist(), # Send state as list
-        "prompt": prompt
+        "state": raw_obs["state"].tolist(),  # Send state as list
+        "prompt": prompt,
     }
-    breakpoint()
     for cam_name in cameras:
         # Map camera name to the key used in raw_obs
-        img_key = camera_to_name_map[cam_name]
-        if img_key not in raw_obs:
-            raise ValueError(f"Camera image key '{img_key}' not found in raw observation. Available keys: {raw_obs.keys()}")
+        assert (
+            f"{cam_name}_img" in raw_obs
+        ), f"Camera image key '{cam_name}_img' not found in raw observation. Available keys: {raw_obs.keys()}"
+        img_key = f"{cam_name}_img"
 
-        img_bgr = raw_obs[img_key]
-        if img_bgr is None or img_bgr.size == 0:
-             raise ValueError(f"Received empty image for camera '{cam_name}' ({img_key}).")
-             
-        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        img = raw_obs[img_key]
+
         # Policy expects keys like 'external', 'over_shoulder' directly under 'images'
-        obs_for_policy["images"][cam_name] = img_rgb.tolist() # Send image as list
+        obs_for_policy["images"][cam_name] = img.tolist()  # Send image as list
 
     return obs_for_policy
 
@@ -240,7 +237,7 @@ def run_inference_loop(
                 print(f"Error during inference: {e}. Stopping rollout.")
                 return False, "Error during inference"
             for i, action in enumerate(action_chunk):
-                if i == args.max_action_length:
+                if i == args.max_action_length - 1:
                     break
                 # Store raw observation and received action chunk *before* execution
                 raw_obs_list.append(raw_obs)
