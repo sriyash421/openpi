@@ -33,24 +33,36 @@ except ImportError as e:
     exit(1)
 
 # --- Globals for keyboard listener ---
-_stop_rollout = False
-_reset_rollout = False
+key_pressed = None
 
 def on_press(key):
-    global _stop_rollout, _reset_rollout
+    """Callback for key press events"""
+    global key_pressed
     try:
-        if key.char == 'q':
-            print("'q' pressed. Stopping rollout after this step.")
-            _stop_rollout = True
-        elif key.char == 'r':
-            print("'r' pressed. Requesting reset after this step.")
-            _reset_rollout = True
+        if key.char.lower() in ["r", "s"]:
+            key_pressed = key.char.lower()
     except AttributeError:
-        pass # Ignore special keys
+        pass
 
-def start_keyboard_listener() -> keyboard.Listener:
+
+def on_release(key):
+    """Callback for key release events"""
+    global key_pressed
+    key_pressed = None
+
+
+def check_key_press():
+    """
+    Check for 'R' or 'S' key press without blocking.
+    Returns: 'r', 's', or None
+    """
+    global key_pressed
+    return key_pressed
+
+
+def start_keyboard_listener():
     print("Starting keyboard listener: Press 'q' to stop, 'r' to reset.")
-    listener = keyboard.Listener(on_press=on_press)
+    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
     listener.start()
     return listener
 
@@ -63,12 +75,17 @@ def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
         # Example modification: set specific cameras if needed by controller init
         # env_params['camera_topics'] = [...]
         widowx_client = WidowXClient(host=robot_ip, port=robot_port)
-        widowx_client.init(env_params) 
+        widowx_client.init(env_params, image_size=256)
         print("Successfully connected to WidowX.")
         print("Waiting for initial observation...")
-        show_video(widowx_client, duration=2.5)
         wait_for_observation(widowx_client)
         print("Initial observation received.")
+        print("Resetting robot...")
+        widowx_client.reset()
+        print("Robot reset.")
+        print("Showing video...")
+        show_video(widowx_client, duration=2.5)
+        print("Video shown. Robot ready")
         return widowx_client
     except Exception as e:
         print(f"Failed to initialize WidowX robot: {e}")
@@ -126,9 +143,8 @@ def run_inference_loop(
     Returns:
         bool: True if reset was requested, False otherwise (stop or normal finish).
     """
-    global _stop_rollout, _reset_rollout
-    _stop_rollout = False
-    _reset_rollout = False
+    global key_pressed
+    key_pressed = None
 
     listener = start_keyboard_listener()
 
@@ -158,22 +174,28 @@ def run_inference_loop(
             loop_start_time = time.time()
             
             # Check keyboard flags first
-            if _stop_rollout or _reset_rollout:
+            if key_pressed == "s":
                  break
+            # Check for key press
+            key = check_key_press()
+            if key == "r":
+                print("\nReset requested by user")
+                widowx_client.reset()
+                wait_for_observation(widowx_client)
+                return False, "Reset requested by user"
+            elif key == "s":
+                print("\nSave and continue requested by user")
+                return True, "Saved mid-trajectory by user"
 
             # 1. Format observation for policy
             try:
                 obs_for_policy = format_observation(raw_obs, args.cameras, args.prompt)
             except ValueError as e:
                 print(f"Error formatting observation: {e}. Stopping rollout.")
-                _stop_rollout = True # Force stop if observation is bad
-                break
-            except Exception as e:
-                 print(f"Unexpected error formatting observation: {e}. Stopping rollout.")
-                 _stop_rollout = True
-                 break
+                return False, "Error formatting observation"
 
             # 2. Get action from policy server
+            action_chunk = None
             try:
                 inference_start_time = time.time()
                 result = policy_client.infer(obs_for_policy)
@@ -185,48 +207,50 @@ def run_inference_loop(
                     # Decide how to handle - skip step? stop? For now, continue but log.
             except Exception as e:
                 print(f"Error during inference: {e}. Stopping rollout.")
-                _stop_rollout = True # Force stop
-                break 
+                return False, "Error during inference"
+            for i, action in action_chunk:
+                if i == args.max_action_length:
+                    break
+                # Store raw observation and received action chunk *before* execution
+                raw_obs_list.append(raw_obs)
 
-            # Store raw observation and received action chunk *before* execution
-            raw_obs_list.append(raw_obs)
-            action_list.append(action_chunk)
+                # 3. Execute the first action in the chunk
+                action_to_execute = action
+                try:
+                    # step_action returns next_obs, reward, done, info - we only need next_obs
+                    step_result = widowx_client.step_action(action_to_execute)
+                    next_raw_obs = widowx_client.get_observation()
 
-            # 3. Execute the first action in the chunk
-            action_to_execute = action_chunk[0]
-            try:
-                # step_action returns next_obs, reward, done, info - we only need next_obs
-                step_result = widowx_client.step_action(action_to_execute)
-                next_raw_obs = widowx_client.get_observation()
+                except Environment_Exception as e:
+                    print(f"Error executing action: {e}. Stopping rollout.")
+                    _stop_rollout = True  # Force stop
+                    break
+                except Exception as e:
+                    print(f"Unexpected error executing action: {e}. Stopping rollout.")
+                    _stop_rollout = True
+                    break
 
-            except Environment_Exception as e:
-                print(f"Error executing action: {e}. Stopping rollout.")
-                _stop_rollout = True # Force stop
-                break
-            except Exception as e:
-                 print(f"Unexpected error executing action: {e}. Stopping rollout.")
-                 _stop_rollout = True
-                 break
+                raw_obs = next_raw_obs  # Update observation for next iteration
+                if raw_obs is None:
+                    print("Failed to get observation after step. Stopping rollout.")
+                    _stop_rollout = True  # Force stop
+                    break
 
-            raw_obs = next_raw_obs # Update observation for next iteration
-            if raw_obs is None:
-                print("Failed to get observation after step. Stopping rollout.")
-                _stop_rollout = True # Force stop
-                break
+                num_steps += 1
 
-            num_steps += 1
+                # 4. Maintain control frequency
+                loop_time = time.time() - loop_start_time
+                sleep_time = (1.0 / args.hz) - loop_time
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+                else:
+                    # Log if we are falling behind
+                    if num_steps % 10 == 0:
+                        print(
+                            f"Warning: Loop running slower than {args.hz} Hz. Target: {1.0/args.hz:.4f}s, Actual: {loop_time:.4f}s, Inference: {inference_time:.4f}s"
+                        )
 
-            # 4. Maintain control frequency
-            loop_time = time.time() - loop_start_time
-            sleep_time = (1.0 / args.hz) - loop_time
-            if sleep_time > 0:
-                time.sleep(sleep_time)
-            else:
-                # Log if we are falling behind
-                if num_steps % 10 == 0:
-                     print(f"Warning: Loop running slower than {args.hz} Hz. Target: {1.0/args.hz:.4f}s, Actual: {loop_time:.4f}s, Inference: {inference_time:.4f}s")
-
-        # --- End of loop --- #
+            # --- End of loop --- #
 
         rollout_time = time.time() - start_time
         print(f"Rollout ended. Steps: {num_steps}, Duration: {rollout_time:.2f}s")
@@ -332,6 +356,12 @@ def main():
     parser.add_argument("--robot-port", type=int, default=5556, help="IP address of the WidowX robot controller.")
     parser.add_argument("--cameras", nargs='+', default=["external", "over_shoulder"], help="List of camera names to use (e.g., external over_shoulder). Should match policy expectations.")
     parser.add_argument("--prompt", type=str, required=True, help="Task prompt for the policy.")
+    parser.add_argument(
+        "--max-action-length",
+        type=int,
+        default=10,
+        help="Maximum number of actions to execute regardless of action chunk size from policy. Can use to query policy more often.",
+    )
     parser.add_argument("--hz", type=int, default=5, help="Control frequency.")
     parser.add_argument("--save-dir", type=str, default="./trajectory_data/usc_widowx", help="Directory to save trajectory data.")
     args = parser.parse_args()
