@@ -96,11 +96,6 @@ class USCWidowXInputs(transforms.DataTransformFn):
         if "prompt" in sample:
             inputs["prompt"] = sample["prompt"]
 
-        # Ensure proprio and actions have the correct shape
-        if sample["state"].shape[-1] != self.action_dim:
-             raise ValueError(f"Expected state shape (*, {self.action_dim}), got {sample['state'].shape}")
-        if "actions" in sample and sample["actions"].shape[-1] != self.action_dim:
-             raise ValueError(f"Expected actions shape (*, {self.action_dim}), got {sample['actions'].shape}")
 
 
         return inputs
