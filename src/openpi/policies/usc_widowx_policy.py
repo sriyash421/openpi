@@ -92,7 +92,7 @@ class USCWidowXInputs(transforms.DataTransformFn):
             del inputs["image"]["base_1_rgb"]
             del inputs["image_mask"]["base_1_rgb"]
         if "actions" in sample:
-            inputs["actions"] = sample["actions"]
+            inputs["actions"] = transforms.pad_to_dim(sample["actions"], self.action_dim)
         if "prompt" in sample:
             inputs["prompt"] = sample["prompt"]
 
