@@ -26,7 +26,7 @@ def _decode_usc_widowx(data: dict) -> dict:
         img = np.asarray(img)
         # Convert to uint8 if using float images.
         if np.issubdtype(img.dtype, np.floating):
-            if np.max(img) > 1:
+            if np.max(img) <= 1:
                 img = (255 * img).astype(np.uint8)
         # Convert from [channel, height, width] to [height, width, channel] if needed.
         if img.shape[0] == 3:
