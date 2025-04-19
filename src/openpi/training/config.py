@@ -356,7 +356,6 @@ class LeRobotUSCWidowXDataConfig(DataConfigFactory):
 
     # If true, will convert joint dimensions to deltas with respect to the current state before passing to the model.
     # Gripper dimensions will remain in absolute values.
-    use_delta_joint_actions: bool = True
     model_type: ModelType = ModelType.PI0
     is_play_data: bool = False
     default_prompt: str = ""
@@ -369,8 +368,12 @@ class LeRobotUSCWidowXDataConfig(DataConfigFactory):
         # Set adapt_to_pi=False as this data is not from the internal PI runtime.
         data_transforms = _transforms.Group(
             # Use the dedicated USC WidowX transforms
-            inputs=[usc_widowx_policy.USCWidowXInputs(action_dim=model_config.action_dim, use_delta_actions=self.use_delta_joint_actions, model_type=self.model_type)],
-            outputs=[usc_widowx_policy.USCWidowXOutputs(action_dim=model_config.action_dim, use_delta_actions=self.use_delta_joint_actions)],
+            inputs=[
+                usc_widowx_policy.USCWidowXInputs(
+                    action_dim=model_config.action_dim, use_delta_actions=False, model_type=self.model_type
+                )
+            ],
+            outputs=[usc_widowx_policy.USCWidowXOutputs(action_dim=model_config.action_dim, use_delta_actions=False)],
         )
         repack_dict = {
             "images/over_shoulder": "observation.images.over_shoulder",

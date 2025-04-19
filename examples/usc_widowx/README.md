@@ -159,6 +159,16 @@ Once you have a trained checkpoint (either fine-tuned or a pre-trained one like 
     *   The server will load the model and wait for connections on `localhost:8000` by default.
 
 2.  **Run the Inference Client (`main.py`):**
+    *   Install the robot controller env on the machine running the WidowX ROS controller:
+        ```bash
+        uv venv --python 3.10 examples/usc_widowx/.venv
+        source examples/usc_widowx/.venv/bin/activate
+        uv pip install -e ~/bridge_data_robot/widowx_envs
+        uv pip install -e packages/openpi-client
+        uv pip install opencv-python pynput funcsigs
+        uv pip install -e ~/edgeml
+        uv pip install numpy==1.22
+        ```
     *   In a separate terminal (with the `openpi` environment sourced), run the `examples/usc_widowx/main.py` script.
     *   Provide the IP address of your WidowX robot controller and the task prompt.
         ```bash
