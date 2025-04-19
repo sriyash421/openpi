@@ -13,7 +13,6 @@ import openpi.shared.array_typing as at
 import openpi.transforms as transforms
 
 # Assumed action dimension for USC WidowX (6 joints + 1 gripper)
-ACTION_DIM = 7
 
 def _decode_usc_widowx(data: dict) -> dict:
     state = np.asarray(data["state"])
@@ -50,7 +49,7 @@ class USCWidowXInputs(transforms.DataTransformFn):
     The 'actions' are expected to be a 7-dim vector (6 joint actions + 1 gripper action).
     """
 
-    action_dim: int = ACTION_DIM
+    action_dim: int
     use_delta_actions: bool = False # already in delta space
     # Determines which model will be used.
     model_type: _model.ModelType = _model.ModelType.PI0
@@ -59,8 +58,6 @@ class USCWidowXInputs(transforms.DataTransformFn):
     def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
         # We only mask padding for pi0 model, not pi0-FAST. Do not change this for your own dataset.
         mask_padding = self.model_type == _model.ModelType.PI0
-        if self.action_dim != ACTION_DIM:
-            raise ValueError(f"Expected action_dim={ACTION_DIM}, got {self.action_dim}")
 
         # Ensure expected keys are present
         required_keys = {"images/external", "images/over_shoulder", "state"}
@@ -71,7 +68,7 @@ class USCWidowXInputs(transforms.DataTransformFn):
         # convert images to numpy arrays
         sample = _decode_usc_widowx(sample)
         inputs = {
-            "state": sample["state"],
+            "state": transforms.pad_to_dim(sample["state"], self.action_dim),
             "image": {
                 "base_0_rgb": sample["images/external"],
                 "base_1_rgb": sample["images/over_shoulder"],
@@ -88,17 +85,16 @@ class USCWidowXInputs(transforms.DataTransformFn):
                 "right_wrist_0_rgb": np.False_ if mask_padding else np.True_,
             },
         }
+        if self.model_type == _model.ModelType.PI0:
+            # no base_1_rgb for pi0
+            inputs["image"]["right_wrist_0_rgb"] = inputs["image"]["base_1_rgb"]
+            inputs["image_mask"]["right_wrist_0_rgb"] = inputs["image_mask"]["base_1_rgb"]
+            del inputs["image"]["base_1_rgb"]
+            del inputs["image_mask"]["base_1_rgb"]
         if "actions" in sample:
             inputs["actions"] = sample["actions"]
         if "prompt" in sample:
             inputs["prompt"] = sample["prompt"]
-
-        if self.use_delta_actions and "actions" in sample:
-            # Convert absolute joint actions (first 6 dims) to delta actions
-            delta_actions = transforms.DeltaActions(
-                mask=transforms.make_bool_mask(6, -1) # Delta for joints, absolute for gripper
-            )(sample)
-            inputs["actions"] = delta_actions["actions"]
 
         # Ensure proprio and actions have the correct shape
         if sample["state"].shape[-1] != self.action_dim:
@@ -114,26 +110,8 @@ class USCWidowXInputs(transforms.DataTransformFn):
 class USCWidowXOutputs(transforms.DataTransformFn):
     """Converts model outputs back to USC WidowX action space."""
 
-    action_dim: int = ACTION_DIM
+    action_dim: int
     use_delta_actions: bool = False
-
     @override
     def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
-        if self.action_dim != ACTION_DIM:
-            raise ValueError(f"Expected action_dim={ACTION_DIM}, got {self.action_dim}")
-
-        if "actions" not in sample:
-            raise ValueError("Missing 'actions' key in output sample.")
-
-        if self.use_delta_actions:
-            # Convert delta joint actions back to absolute actions
-            abs_actions = transforms.AbsoluteActions(
-                 mask=transforms.make_bool_mask(6, -1) # Delta for joints, absolute for gripper
-            )(sample)
-            sample["actions"] = abs_actions["actions"]
-
-        # Ensure actions have the correct shape
-        if sample["actions"].shape[-1] != self.action_dim:
-             raise ValueError(f"Expected actions shape (*, {self.action_dim}), got {sample['actions'].shape}")
-
-        return sample 
+        return {"actions": np.asarray(sample["actions"][:, :7])}
