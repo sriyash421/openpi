@@ -115,7 +115,7 @@ class USCWidowXOutputs(transforms.DataTransformFn):
     """Converts model outputs back to USC WidowX action space."""
 
     action_dim: int = ACTION_DIM
-    use_delta_actions: bool = True
+    use_delta_actions: bool = False
 
     @override
     def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
