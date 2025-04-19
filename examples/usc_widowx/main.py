@@ -245,7 +245,7 @@ def run_inference_loop(
                 raw_obs_list.append(raw_obs)
 
                 # 3. Execute the first action in the chunk
-                action_to_execute = action.tolist()
+                action_to_execute = action
                 # step_action returns next_obs, reward, done, info - we only need next_obs
                 step_result = widowx_client.step_action(action_to_execute)
 

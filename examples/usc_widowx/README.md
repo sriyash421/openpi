@@ -167,6 +167,7 @@ Once you have a trained checkpoint (either fine-tuned or a pre-trained one like 
         uv pip install -e packages/openpi-client
         uv pip install opencv-python pynput funcsigs
         uv pip install -e ~/edgeml
+        uv pip install numpy==1.22
         ```
     *   In a separate terminal (with the `openpi` environment sourced), run the `examples/usc_widowx/main.py` script.
     *   Provide the IP address of your WidowX robot controller and the task prompt.
