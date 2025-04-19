@@ -248,7 +248,6 @@ def run_inference_loop(
                 action_to_execute = action
                 # step_action returns next_obs, reward, done, info - we only need next_obs
                 step_result = widowx_client.step_action(action_to_execute)
-                raw_obs = wait_for_observation(widowx_client)
 
                 num_steps += 1
 
@@ -263,6 +262,7 @@ def run_inference_loop(
                         print(
                             f"Warning: Loop running slower than {args.hz} Hz. Target: {1.0/args.hz:.4f}s, Actual: {loop_time:.4f}s, Inference: {inference_time:.4f}s"
                         )
+            raw_obs = wait_for_observation(widowx_client)
 
             # --- End of loop --- #
 
