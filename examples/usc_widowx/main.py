@@ -245,6 +245,9 @@ def run_inference_loop(
 
                 # 3. Execute the first action in the chunk
                 action_to_execute = action
+                # change gripper to discrete 0-1
+                action_to_execute[6] = int(action_to_execute[6] > 0)
+
                 # step_action returns next_obs, reward, done, info - we only need next_obs
                 step_result = widowx_client.step_action(action_to_execute)
 
