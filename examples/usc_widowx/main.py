@@ -119,6 +119,7 @@ def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
     print("Resetting robot...")
     widowx_client.reset()
     print("Robot reset.")
+    wait_for_observation(widowx_client)
     print("Showing video...")
     show_video(widowx_client, duration=2.5)
     print("Video shown. Robot ready")
@@ -200,23 +201,7 @@ def run_inference_loop(
         num_steps = 0
         start_time = time.time()
 
-        while True: # Loop until stop, reset, or error
-            loop_start_time = time.time()
-            
-            # Check keyboard flags first
-            if key_pressed == "s":
-                 break
-            # Check for key press
-            key = check_key_press()
-            if key == "r":
-                print("\nReset requested by user")
-                widowx_client.reset()
-                wait_for_observation(widowx_client)
-                return False, "Reset requested by user"
-            elif key == "s":
-                print("\nSave and continue requested by user")
-                return True, "Saved mid-trajectory by user"
-
+        while True:  # Loop until stop, reset, or error
             # 1. Format observation for policy
             try:
                 obs_for_policy = format_observation(raw_obs, args.cameras, args.prompt)
@@ -239,6 +224,21 @@ def run_inference_loop(
                 print(f"Error during inference: {e}. Stopping rollout.")
                 return False, "Error during inference"
             for i, action in enumerate(action_chunk):
+                # Check for key press
+                key_pressed = check_key_press()
+                # Check keyboard flags first
+                if key_pressed == "q":
+                    print("\nStopping requested by user")
+                    break
+                if key_pressed == "s":
+                    break
+                if key_pressed == "r":
+                    print("\nReset requested by user")
+                    widowx_client.reset()
+                    wait_for_observation(widowx_client)
+                elif key_pressed == "s":
+                    break
+                loop_start_time = time.time()
                 if i == args.max_action_length - 1:
                     break
                 # Store raw observation and received action chunk *before* execution
@@ -246,8 +246,12 @@ def run_inference_loop(
 
                 # 3. Execute the first action in the chunk
                 action_to_execute = action
+                # change gripper to discrete 0-1
+                action_to_execute[6] = int(action_to_execute[6] > 0)
+
                 # step_action returns next_obs, reward, done, info - we only need next_obs
                 step_result = widowx_client.step_action(action_to_execute)
+                raw_obs = wait_for_observation(widowx_client)
 
                 num_steps += 1
 
@@ -257,27 +261,35 @@ def run_inference_loop(
                 if sleep_time > 0:
                     time.sleep(sleep_time)
                 else:
-                    # Log if we are falling behind
                     if num_steps % 10 == 0:
                         print(
                             f"Warning: Loop running slower than {args.hz} Hz. Target: {1.0/args.hz:.4f}s, Actual: {loop_time:.4f}s, Inference: {inference_time:.4f}s"
                         )
-            raw_obs = wait_for_observation(widowx_client)
-
-            # --- End of loop --- #
+            if key_pressed == "r":
+                print("\nReset requested by user")
+                widowx_client.reset()
+                wait_for_observation(widowx_client)
+                return True, "Reset requested by user"
+            elif key_pressed == "s":
+                print("\nSave and continue requested by user")
+                return True, "Saved mid-trajectory by user"
+            elif key_pressed == "q":
+                print("\nStopping requested by user")
+                break
+        # --- End of loop --- #
 
         rollout_time = time.time() - start_time
         print(f"Rollout ended. Steps: {num_steps}, Duration: {rollout_time:.2f}s")
 
         # Save data if the loop finished or was stopped (but not reset)
         save_trajectory(saver, episode_idx, raw_obs_list, action_list)
-        return False # Indicate stop or normal finish
+        return False  # Indicate stop or normal finish
 
     except Exception as e:
-         print(f"An error occurred during the inference loop: {e}")
-         # Attempt to save any data collected before the error
-         save_trajectory(saver, episode_idx, raw_obs_list, action_list, success=False, notes=f"Error: {str(e)}")
-         return False # Indicate abnormal stop
+        print(f"An error occurred during the inference loop: {e}")
+        # Attempt to save any data collected before the error
+        save_trajectory(saver, episode_idx, raw_obs_list, action_list, success=False, notes=f"Error: {str(e)}")
+        return False  # Indicate abnormal stop
     finally:
         print("Stopping keyboard listener.")
         listener.stop()
@@ -390,16 +402,10 @@ def main():
 
         reset_requested = run_inference_loop(args, policy_client, widowx_client, saver, episode_idx)
 
-        if not reset_requested:
-            # If stop was requested or loop finished normally, stop the script
-            print("Exiting inference script.")
-            break
-        else:
-            # If reset was requested, increment episode index and continue
+        if reset_requested:
             episode_idx += 1
             print("\nResetting for next episode...")
             time.sleep(1.0)  # Pause before starting next
-
 
 if __name__ == "__main__":
     main() 
