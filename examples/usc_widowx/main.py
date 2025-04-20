@@ -119,6 +119,7 @@ def init_robot(robot_ip: str, robot_port: int = 5556) -> WidowXClient:
     print("Resetting robot...")
     widowx_client.reset()
     print("Robot reset.")
+    wait_for_observation(widowx_client)
     print("Showing video...")
     show_video(widowx_client, duration=2.5)
     print("Video shown. Robot ready")
@@ -226,6 +227,9 @@ def run_inference_loop(
                 # Check for key press
                 key_pressed = check_key_press()
                 # Check keyboard flags first
+                if key_pressed == "q":
+                    print("\nStopping requested by user")
+                    break
                 if key_pressed == "s":
                     break
                 if key_pressed == "r":
@@ -262,22 +266,32 @@ def run_inference_loop(
                         print(
                             f"Warning: Loop running slower than {args.hz} Hz. Target: {1.0/args.hz:.4f}s, Actual: {loop_time:.4f}s, Inference: {inference_time:.4f}s"
                         )
+            if key_pressed == "r":
+                print("\nReset requested by user")
+                widowx_client.reset()
+                wait_for_observation(widowx_client)
+                return False, "Reset requested by user"
+            elif key_pressed == "s":
+                print("\nSave and continue requested by user")
+                return True, "Saved mid-trajectory by user"
+            elif key_pressed == "q":
+                print("\nStopping requested by user")
+                break
             raw_obs = wait_for_observation(widowx_client)
-
-            # --- End of loop --- #
+        # --- End of loop --- #
 
         rollout_time = time.time() - start_time
         print(f"Rollout ended. Steps: {num_steps}, Duration: {rollout_time:.2f}s")
 
         # Save data if the loop finished or was stopped (but not reset)
         save_trajectory(saver, episode_idx, raw_obs_list, action_list)
-        return False # Indicate stop or normal finish
+        return False  # Indicate stop or normal finish
 
     except Exception as e:
-         print(f"An error occurred during the inference loop: {e}")
-         # Attempt to save any data collected before the error
-         save_trajectory(saver, episode_idx, raw_obs_list, action_list, success=False, notes=f"Error: {str(e)}")
-         return False # Indicate abnormal stop
+        print(f"An error occurred during the inference loop: {e}")
+        # Attempt to save any data collected before the error
+        save_trajectory(saver, episode_idx, raw_obs_list, action_list, success=False, notes=f"Error: {str(e)}")
+        return False  # Indicate abnormal stop
     finally:
         print("Stopping keyboard listener.")
         listener.stop()
