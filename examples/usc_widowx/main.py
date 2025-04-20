@@ -273,7 +273,6 @@ def run_inference_loop(
                 return False, "Reset requested by user"
             elif key_pressed == "s":
                 print("\nSave and continue requested by user")
-                return True, "Saved mid-trajectory by user"
             elif key_pressed == "q":
                 print("\nStopping requested by user")
                 break
