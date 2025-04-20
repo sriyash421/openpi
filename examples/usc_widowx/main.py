@@ -200,9 +200,7 @@ def run_inference_loop(
         num_steps = 0
         start_time = time.time()
 
-        while True: # Loop until stop, reset, or error
-            loop_start_time = time.time()
-            
+        while True:  # Loop until stop, reset, or error
             # Check keyboard flags first
             if key_pressed == "s":
                  break
@@ -239,6 +237,7 @@ def run_inference_loop(
                 print(f"Error during inference: {e}. Stopping rollout.")
                 return False, "Error during inference"
             for i, action in enumerate(action_chunk):
+                loop_start_time = time.time()
                 if i == args.max_action_length - 1:
                     break
                 # Store raw observation and received action chunk *before* execution
@@ -257,7 +256,6 @@ def run_inference_loop(
                 if sleep_time > 0:
                     time.sleep(sleep_time)
                 else:
-                    # Log if we are falling behind
                     if num_steps % 10 == 0:
                         print(
                             f"Warning: Loop running slower than {args.hz} Hz. Target: {1.0/args.hz:.4f}s, Actual: {loop_time:.4f}s, Inference: {inference_time:.4f}s"

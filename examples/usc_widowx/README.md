@@ -151,7 +151,7 @@ Once you have a trained checkpoint (either fine-tuned or a pre-trained one like 
     *   Run the `serve_policy.py` script, specifying the training config used and the path to the checkpoint directory.
         ```bash
         # Example using a fine-tuned checkpoint
-        uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_usc_widowx_expert_data --policy.dir=./checkpoints/pi0_usc_widowx_expert_data/my_usc_expert_finetune/<step_number>/
+        uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_fast_lora_usc_widowx_expert_data --policy.dir=./checkpoints/pi0_fast_lora_usc_widowx_expert_data/pi0_fast_usc_lora_expert_fixdelta_bs16/<step_number>/
 
         # Example using the base pi0 model directly (ensure config matches)
         # uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi0_usc_widowx_expert_data --policy.dir=s3://openpi-assets/checkpoints/pi0_base/
