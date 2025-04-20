@@ -236,10 +236,8 @@ def run_inference_loop(
                     print("\nReset requested by user")
                     widowx_client.reset()
                     wait_for_observation(widowx_client)
-                    return False, "Reset requested by user"
                 elif key_pressed == "s":
-                    print("\nSave and continue requested by user")
-                    return True, "Saved mid-trajectory by user"
+                    break
                 loop_start_time = time.time()
                 if i == args.max_action_length - 1:
                     break
@@ -253,6 +251,7 @@ def run_inference_loop(
 
                 # step_action returns next_obs, reward, done, info - we only need next_obs
                 step_result = widowx_client.step_action(action_to_execute)
+                raw_obs = wait_for_observation(widowx_client)
 
                 num_steps += 1
 
@@ -270,13 +269,13 @@ def run_inference_loop(
                 print("\nReset requested by user")
                 widowx_client.reset()
                 wait_for_observation(widowx_client)
-                return False, "Reset requested by user"
+                return True, "Reset requested by user"
             elif key_pressed == "s":
                 print("\nSave and continue requested by user")
+                return True, "Saved mid-trajectory by user"
             elif key_pressed == "q":
                 print("\nStopping requested by user")
                 break
-            raw_obs = wait_for_observation(widowx_client)
         # --- End of loop --- #
 
         rollout_time = time.time() - start_time
@@ -403,16 +402,10 @@ def main():
 
         reset_requested = run_inference_loop(args, policy_client, widowx_client, saver, episode_idx)
 
-        if not reset_requested:
-            # If stop was requested or loop finished normally, stop the script
-            print("Exiting inference script.")
-            break
-        else:
-            # If reset was requested, increment episode index and continue
+        if reset_requested:
             episode_idx += 1
             print("\nResetting for next episode...")
             time.sleep(1.0)  # Pause before starting next
-
 
 if __name__ == "__main__":
     main() 
