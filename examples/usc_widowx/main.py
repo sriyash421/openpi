@@ -201,20 +201,6 @@ def run_inference_loop(
         start_time = time.time()
 
         while True:  # Loop until stop, reset, or error
-            # Check keyboard flags first
-            if key_pressed == "s":
-                 break
-            # Check for key press
-            key = check_key_press()
-            if key == "r":
-                print("\nReset requested by user")
-                widowx_client.reset()
-                wait_for_observation(widowx_client)
-                return False, "Reset requested by user"
-            elif key == "s":
-                print("\nSave and continue requested by user")
-                return True, "Saved mid-trajectory by user"
-
             # 1. Format observation for policy
             try:
                 obs_for_policy = format_observation(raw_obs, args.cameras, args.prompt)
@@ -237,6 +223,19 @@ def run_inference_loop(
                 print(f"Error during inference: {e}. Stopping rollout.")
                 return False, "Error during inference"
             for i, action in enumerate(action_chunk):
+                # Check for key press
+                key_pressed = check_key_press()
+                # Check keyboard flags first
+                if key_pressed == "s":
+                    break
+                if key_pressed == "r":
+                    print("\nReset requested by user")
+                    widowx_client.reset()
+                    wait_for_observation(widowx_client)
+                    return False, "Reset requested by user"
+                elif key_pressed == "s":
+                    print("\nSave and continue requested by user")
+                    return True, "Saved mid-trajectory by user"
                 loop_start_time = time.time()
                 if i == args.max_action_length - 1:
                     break
