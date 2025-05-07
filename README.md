@@ -31,6 +31,7 @@ uv run examples/libero/convert_pathmask_libero_data_to_lerobot.py --data_dir /ho
 This script supports several additional options:
 - `--use_subtask_instructions`: Divides episodes by subtask instructions instead of using full task instructions
 - `--push_to_hub`: Pushes the processed dataset to Hugging Face Hub
+- `--return_full_path_mask`: Uses full trajectory paths and masks instead of the subtask path masks
 
 The path mask conversion relies on annotation files containing masks, paths, and subtask information.
 
