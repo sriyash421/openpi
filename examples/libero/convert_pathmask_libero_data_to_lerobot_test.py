@@ -47,13 +47,13 @@ def main(
     use_subtask_instructions: bool = False,
     return_full_path_mask: bool = False,
 ):
+    repo_name = REPO_NAME
+    if return_full_path_mask:
+        repo_name = repo_name + "_full_path_mask"
     # Clean up any existing dataset in the output directory
-    output_path = LEROBOT_HOME / REPO_NAME
+    output_path = LEROBOT_HOME / repo_name
     if output_path.exists():
         shutil.rmtree(output_path)
-
-    if return_full_path_mask:
-        REPO_NAME = REPO_NAME + "_full_path_mask"
 
     # Create LeRobot dataset, define features to store
     # OpenPi assumes that proprio is stored in `state` and actions in `action`
