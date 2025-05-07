@@ -59,7 +59,7 @@ def main(
     # OpenPi assumes that proprio is stored in `state` and actions in `action`
     # LeRobot assumes that dtype of image data is `image`
     dataset = LeRobotDataset.create(
-        repo_id=REPO_NAME,
+        repo_id=repo_name,
         robot_type="panda",
         fps=10,
         features={
