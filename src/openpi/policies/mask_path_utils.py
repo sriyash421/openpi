@@ -284,6 +284,9 @@ def get_mask_and_path_from_h5(
     masked_imgs = []
     path_imgs = []
     masked_path_imgs = []
+    # if images is longer length then cut the mask to the length of the images
+    masks = masks[: len(images)]
+    subtask_path_2d = subtask_path_2d[: len(images)]
 
     for split_idx in range(1, len(traj_split_indices)):
         start_idx = traj_split_indices[split_idx - 1]
