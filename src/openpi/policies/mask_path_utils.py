@@ -195,12 +195,14 @@ def get_mask_and_path_from_h5(
     task_key: str,
     observation: dict,
     demo_key: str,
+    return_full_path_mask: bool,
 ):
     """
     Helper function to load annotations (path, mask) from separate hdf5 file.
     :param annotation_path: The path to the hdf5 file containing the annotations.
     :param task_key: The key to the task in the hdf5 file.
     :param demo_key: The key to the demo in the hdf5 file.
+    :param return_full_path_mask: Whether to return the full paths and full masks. No subtrajectories.
     Returns:
         masked_imgs: A list of masked images.
         path_imgs: A list of path images.
@@ -277,6 +279,10 @@ def get_mask_and_path_from_h5(
     masks = np.stack(masks, axis=0)
     # for now, just return the masked_frames applied to the images
     # masks = f_annotation["masked_frames"][()]
+    if return_full_path_mask:
+        # get full path mask
+        masks = f_annotation["masked_frames"][()]
+        subtask_path_2d = full_path_2d
     masked_imgs = []
     path_imgs = []
     masked_path_imgs = []
