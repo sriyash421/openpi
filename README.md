@@ -25,7 +25,7 @@ uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /home/jeszha
 ### Option 2: Conversion with Path Masks and Subtasks
 For more advanced training with path masks and subtask instructions, you can use the following script. note that the data_dir expects the data dir of the OpenVLA processed hdf5 LIBERO data, not the tensorflow dataset. Download from [here](https://huggingface.co/datasets/jesbu1/libero_90_openvla_processed).
 ```bash
-uv run examples/libero/convert_pathmask_libero_data_to_lerobot.py --data_dir /home1/jessez/scratch_data/libero_openvla_processed_datasets --path_and_mask_file_dir /home1/jessez/project_data/libero_90_processed_256 
+uv run examples/libero/convert_pathmask_libero_data_to_lerobot.py --data_dir /home1/jessez/scratch_data/libero_openvla_processed_datasets --path_and_mask_file_dir /home1/jessez/project2_data/libero_90_processed_256 
 ```
 
 This script supports several additional options:
@@ -260,4 +260,3 @@ uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /path/to/you
 To fine-tune a base model on your own data, you need to define configs for data processing and training. We provide example configs with detailed comments for Libero below, which you can modify for your own dataset:
 
 - [`LiberoInputs` and `LiberoOutputs`](src/openpi/policies/libero_policy.py): Defines the data mapping from the Libero environment to the model and vice versa. Will be used for both, training and inference.
-- [`
