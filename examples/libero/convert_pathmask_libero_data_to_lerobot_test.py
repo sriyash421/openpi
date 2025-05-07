@@ -124,6 +124,9 @@ def main(
                     except KeyError as e:
                         print(f"KeyError for {demo_name} in {libero_h5_file}: {e}")
                         continue
+                    except ValueError as e:
+                        print(f"ValueError for {demo_name} in {libero_h5_file}: {e}")
+                        continue
 
                     # Compute the main language instruction
                     if "problem_info" in f["data"].attrs:
