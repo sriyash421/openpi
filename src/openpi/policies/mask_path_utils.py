@@ -216,6 +216,9 @@ def get_mask_and_path_from_h5(
     # get sub-traj paths + instructions
     paths = []
     quests = []
+    w, h = f_annotation["masked_frames"].shape[-2:]
+    min_in, max_in = np.zeros(2), np.array([w, h])
+    min_out, max_out = np.zeros(2), np.ones(2)
     traj_split_indices = f_annotation["traj_splits_indices"][:]
     for split_idx in range(1, len(traj_split_indices)):
         start_idx = traj_split_indices[split_idx - 1]
@@ -223,8 +226,6 @@ def get_mask_and_path_from_h5(
         if split_idx == len(traj_split_indices) - 1:
             end_idx += 1
         curr_path = np.array(f_annotation["gripper_positions"][start_idx:end_idx]).copy()
-        min_in, max_in = np.zeros(2), np.array([w, h])
-        min_out, max_out = np.zeros(2), np.ones(2)
         path_scaled = scale_path(curr_path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
         # repeat it the num frames times
         path_scaled = np.repeat(path_scaled[None], end_idx - start_idx, axis=0)
@@ -254,12 +255,9 @@ def get_mask_and_path_from_h5(
     # subtask_start_end_points
 
     # get full path
-    path = f_annotation["gripper_positions"]
-    w, h = f_annotation["masked_frames"].shape[-2:]
-    min_in, max_in = np.zeros(2), np.array([w, h])
-    min_out, max_out = np.zeros(2), np.ones(2)
-    path_scaled = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
-    full_path_2d = np.repeat(path_scaled[None], len(observation["ee_pos"]), axis=0)
+    full_path = f_annotation["gripper_positions"]
+    full_path_scaled = scale_path(full_path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
+    full_path_2d = np.repeat(full_path_scaled[None], len(observation["ee_pos"]), axis=0)
 
     images = observation["agentview_rgb"][()][:, ::-1]
 
