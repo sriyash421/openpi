@@ -119,6 +119,7 @@ def main(
                             task_key=libero_h5_file.split(".")[0],
                             observation=f["data"][demo_name]["obs"],
                             demo_key=demo_name,
+                            return_full_path_mask=return_full_path_mask,
                         )
                     except KeyError as e:
                         print(f"KeyError for {demo_name} in {libero_h5_file}: {e}")
