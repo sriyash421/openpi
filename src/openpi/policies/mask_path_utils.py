@@ -281,7 +281,7 @@ def get_mask_and_path_from_h5(
     # masks = f_annotation["masked_frames"][()]
     if return_full_path_mask:
         # get full path mask
-        masks = np.unsqueeze(f_annotation["masked_frames"][()], axis=-1)
+        masks = np.expand_dims(f_annotation["masked_frames"][()], axis=-1)
         subtask_path_2d = full_path_2d
     masked_imgs = []
     path_imgs = []
