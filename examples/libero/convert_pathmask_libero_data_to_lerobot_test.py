@@ -31,10 +31,10 @@ import json
 
 RAW_DATASET_NAMES = [
     # "libero_90_openvla_processed",
-    "libero_10_openvla_processed",
-    "libero_spatial_openvla_processed",
-    "libero_goal_openvla_processed",
-    "libero_object_openvla_processed",
+    "libero_10",
+    "libero_spatial",
+    "libero_goal",
+    "libero_object",
 ]  # For simplicity we will combine multiple Libero datasets into one training dataset
 REPO_NAME = "jesbu1/libero_test_lerobot_pathmask_rdp"  # Name of the output dataset, also used for the Hugging Face Hub
 
