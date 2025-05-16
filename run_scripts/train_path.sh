@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=jessetho_1023
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=48:00:00
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=185G
 #SBATCH --partition=gpu
@@ -33,12 +33,16 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 export MUJOCO_GL=egl
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
-EXP_NAME=pi0_libero_90_path_bs164_rdp
+#EXP_NAME=pi0_libero_90_path_bs164_rdp
+EXP_NAME=pi0_libero_90_fullpath_path_bs164_rdp
+#EXP_NAME=pi0_libero_90_fullpath_path_no_proprio_bs164_rdp
 # --- End Environment Setup ---
 
 # --- Training Command Setup ---
 # Define the base training command as a variable
-BASE_TRAIN_CMD="uv run scripts/train.py pi0_libero_low_mem_finetune_path --exp-name=$EXP_NAME"
+#BASE_TRAIN_CMD="uv run scripts/train.py pi0_libero_low_mem_finetune_path --exp-name=$EXP_NAME"
+#BASE_TRAIN_CMD="uv run scripts/train.py pi0_libero_low_mem_finetune_fullpath_path_no_proprio --exp-name=$EXP_NAME"
+BASE_TRAIN_CMD="uv run scripts/train.py pi0_libero_low_mem_finetune_fullpath_path --exp-name=$EXP_NAME"
 
 # Conditionally add --resume flag based on relaunch count
 if [ "$RELAUNCH_COUNT" -eq 0 ]; then
