@@ -74,7 +74,7 @@ def main(
         # Corresponds to policy_out['actions']
         "action": {
             "dtype": "float32",
-            "shape": (len(state),),
+            "shape": (len(action),),
             "names": state,
         },
         "camera_present": {
