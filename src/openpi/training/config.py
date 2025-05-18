@@ -951,7 +951,7 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
         fsdp_devices=2,
-        batch_size=164,
+        batch_size=148,
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
         # for the given model config for LoRA finetuning. Just make sure it matches the model config
@@ -1021,7 +1021,7 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=100_000,
         fsdp_devices=2,
-        batch_size=164,
+        batch_size=148,
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
         # for the given model config for LoRA finetuning. Just make sure it matches the model config
