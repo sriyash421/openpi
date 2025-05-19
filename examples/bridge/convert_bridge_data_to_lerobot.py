@@ -15,6 +15,7 @@ import dataclasses
 from pathlib import Path
 import shutil
 import tensorflow_datasets as tfds
+import numpy as np
 from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import tyro
@@ -25,10 +26,10 @@ class DatasetConfig:
     use_videos: bool = True
     image_writer_processes: int = 10
     image_writer_threads: int = 5
-    video_backend: str = "libaom-av1"
     # TODO(user): Define image shape expected by LeRobot
     image_height: int = 256
     image_width: int = 256
+    video_backend: str = None
 
 
 DEFAULT_DATASET_CONFIG = DatasetConfig()
@@ -129,6 +130,7 @@ def main(
                     # TODO: how to deal with some cameras not being present? camera_present?
                     if cam in step["observation"]:
                         frame[f"observation.images.{cam}"] = step["observation"][cam]
+                        frame["camera_present"] = not np.all(step["observation"][cam] == 0)
 
                 dataset.add_frame(frame)
             dataset.save_episode(task=step["language_instruction"].decode())
