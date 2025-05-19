@@ -15,6 +15,7 @@ import dataclasses
 from pathlib import Path
 import shutil
 import tensorflow_datasets as tfds
+import numpy as np
 from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import tyro
@@ -25,10 +26,10 @@ class DatasetConfig:
     use_videos: bool = True
     image_writer_processes: int = 10
     image_writer_threads: int = 5
-    video_backend: str | None = None
     # TODO(user): Define image shape expected by LeRobot
     image_height: int = 256
     image_width: int = 256
+    video_backend: str = None
 
 
 DEFAULT_DATASET_CONFIG = DatasetConfig()
@@ -110,7 +111,7 @@ def main(
         use_videos=True,
         image_writer_processes=dataset_config.image_writer_processes,
         image_writer_threads=dataset_config.image_writer_threads,
-        # video_backend=dataset_config.video_backend,
+        video_backend=dataset_config.video_backend,
     )
 
     # Loop over raw Libero datasets and write episodes to the LeRobot dataset
@@ -123,12 +124,16 @@ def main(
                     # TODO: check keys
                     "observation.state": step["observation"]["state"],
                     "action": step["action"],
-                    "camera_present": [cam in step["observation"] for cam in cameras],
+                    "camera_present": [True] * len(cameras),
                 }
                 for cam in cameras:
                     # TODO: how to deal with some cameras not being present? camera_present?
-                    if cam in frame:
+                    if cam in step["observation"]:
                         frame[f"observation.images.{cam}"] = step["observation"][cam]
+                        # check for all 0 images
+                        frame["camera_present"][cameras.index(cam)] = not np.all(step["observation"][cam] == 0)
+                    else:
+                        frame["camera_present"] = False
 
                 dataset.add_frame(frame)
             dataset.save_episode(task=step["language_instruction"].decode())
@@ -139,7 +144,7 @@ def main(
     # Optionally push to the Hugging Face Hub
     if push_to_hub:
         dataset.push_to_hub(
-            tags=["libero", "panda", "rlds"],
+            tags=["widowx", "bridge-v2"],
             private=False,
             push_videos=True,
             license="apache-2.0",

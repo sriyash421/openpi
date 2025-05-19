@@ -34,7 +34,7 @@ export MUJOCO_GL=egl
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
 #EXP_NAME=pi0_libero_90_path_bs164_rdp
-EXP_NAME=pi0_libero_90_fullpath_path_bs164_rdp
+EXP_NAME=pi0_libero_90_fullpath_path_bs148_rdp
 #EXP_NAME=pi0_libero_90_fullpath_path_no_proprio_bs164_rdp
 # --- End Environment Setup ---
 
