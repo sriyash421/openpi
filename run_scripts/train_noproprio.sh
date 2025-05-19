@@ -33,9 +33,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 export MUJOCO_GL=egl
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
-#EXP_NAME=pi0_libero_90_path_bs164_rdp
-EXP_NAME=pi0_libero_low_mem_finetune_no_proprio_bs164
-#EXP_NAME=pi0_libero_90_fullpath_path_no_proprio_bs164_rdp
+EXP_NAME=pi0_libero_low_mem_finetune_no_proprio_bs148
 # --- End Environment Setup ---
 
 # --- Training Command Setup ---
