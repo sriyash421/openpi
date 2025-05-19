@@ -10,7 +10,8 @@ set -u # Treat unset variables as an error when substituting.
 # The script will process ALL subdirectories found here as separate tasks.
 # ADD OPTION TO ONLY CONVERT play data dirs
 ONLY_PLAY_DATA=false
-RAW_DATA_BASE_DIR="/home/jessez/retrieval_widowx_datasets"  # <<<--- CHANGE THIS to the parent directory of your task data
+#RAW_DATA_BASE_DIR="/home/jessez/retrieval_widowx_datasets"  # <<<--- CHANGE THIS to the parent directory of your task data
+RAW_DATA_BASE_DIR="/data/jessez/widowx_expert_data"  # <<<--- CHANGE THIS to the parent directory of your task data
 # Hugging Face Hub organization name (e.g., lerobot)
 HF_ORG="jesbu1"                            # <<<--- CHANGE THIS to your HF organization/username
 # Define the name for the combined dataset repository on the Hub
