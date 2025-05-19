@@ -139,7 +139,6 @@ def main(
         print(f"Removing existing dataset directory: {LEROBOT_HOME / repo_id}")
         shutil.rmtree(LEROBOT_HOME / repo_id)
 
-    # TODO(user): Set the correct robot_type for WidowX
     robot_type = "widowx"
 
     dataset = LeRobotDataset.create(
@@ -164,7 +163,6 @@ def main(
 
             for step in episode["steps"].as_numpy_iterator():
                 frame = {
-                    # TODO: check keys
                     "observation.state": step["observation"]["state"],
                     "action": step["action"],
                     "camera_present": [True] * len(cameras),
