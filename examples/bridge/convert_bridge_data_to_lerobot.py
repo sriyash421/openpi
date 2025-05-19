@@ -124,13 +124,16 @@ def main(
                     # TODO: check keys
                     "observation.state": step["observation"]["state"],
                     "action": step["action"],
-                    "camera_present": [cam in step["observation"] for cam in cameras],
+                    "camera_present": [True] * len(cameras),
                 }
                 for cam in cameras:
                     # TODO: how to deal with some cameras not being present? camera_present?
                     if cam in step["observation"]:
                         frame[f"observation.images.{cam}"] = step["observation"][cam]
-                        frame["camera_present"] = not np.all(step["observation"][cam] == 0)
+                        # check for all 0 images
+                        frame["camera_present"][cameras.index(cam)] = not np.all(step["observation"][cam] == 0)
+                    else:
+                        frame["camera_present"] = False
 
                 dataset.add_frame(frame)
             dataset.save_episode(task=step["language_instruction"].decode())
