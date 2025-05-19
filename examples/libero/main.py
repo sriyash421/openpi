@@ -157,9 +157,6 @@ def eval_libero(args: Args) -> None:
                     ):  # for models trained with the original OpenVLA processed data, not the pathmask new data
                         img = img[:, ::-1]
                         wrist_img = wrist_img[:, ::-1]
-                    img = image_tools.convert_to_uint8(
-                        image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
-                    )
                     wrist_img = image_tools.convert_to_uint8(
                         image_tools.resize_with_pad(wrist_img, args.resize_size, args.resize_size)
                     )
@@ -185,6 +182,9 @@ def eval_libero(args: Args) -> None:
                                 mask=mask,
                             )
                             vlm_query_counter += 1
+                        img = image_tools.convert_to_uint8(
+                            image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
+                        )
 
                         # Prepare observations dict
                         element = {
@@ -218,6 +218,9 @@ def eval_libero(args: Args) -> None:
                             vlm_server_ip=args.vlm_server_ip,
                             path=path,
                             mask=mask,
+                        )
+                        img = image_tools.convert_to_uint8(
+                            image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
                         )
 
                     action = action_plan.popleft()

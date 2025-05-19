@@ -1,23 +1,57 @@
 # Convert Bridge Data to LeRobot Format
 
-This script converts Bridge data into LeRobot dataset format, with support for paths and masks.
+This repository contains scripts to convert Bridge data into LeRobot dataset format, with support for paths and masks.
 
-## Features
+## Overview
 
-- Converts Bridge data to LeRobot v2.0 format
-- Supports multiple camera views
-- Processes and includes path visualizations
-- Processes and includes mask visualizations
-- Combines paths and masks for each camera view
+The conversion process happens in two steps:
+1. Generate paths and masks using VLM inference
+2. Convert the data to LeRobot format with the generated paths and masks
 
-## Usage
+## Step 1: Generate Paths and Masks
 
-Basic usage:
+First, generate paths and masks using VLM inference:
+
 ```bash
-uv run examples/bridge/convert_bridge_data_to_lerobot.py --data_dir /path/to/data --repo_id bridge_v2_lerobot
+uv run examples/bridge/generate_paths_masks.py \
+    --data_dir /path/to/data \
+    --output_dir /path/to/output \
+    --vlm_server_ip http://your-vlm-server:8000 \
+    --draw_path True \
+    --draw_mask True
 ```
 
-### Optional Arguments
+### Optional Arguments for Path/Mask Generation
+
+- `--vlm_server_ip`: VLM server address (default: "http://0.0.0.0:8000")
+- `--resize_size`: Size to resize images for VLM (default: 224)
+- `--draw_path`: Whether to generate paths (default: True)
+- `--draw_mask`: Whether to generate masks (default: True)
+- `--flip_image_horizontally`: Whether to flip images horizontally (default: False)
+
+## Step 2: Convert to LeRobot Format
+
+Then, convert the data to LeRobot format using the generated paths and masks:
+
+```bash
+uv run examples/bridge/convert_bridge_data_to_lerobot.py \
+    --data_dir /path/to/data \
+    --repo_id bridge_v2_lerobot \
+    --paths_masks_file /path/to/output/bridge_paths_masks.h5 \
+    --dataset-config.image_height 256 \
+    --dataset-config.image_width 256 \
+    --dataset-config.path_line_size 3 \
+    --dataset-config.mask_pixels 25 \
+    --push-to-hub
+```
+
+### Required Arguments for Conversion
+
+- `--data_dir`: Directory containing the Bridge dataset
+- `--repo_id`: Repository ID for the LeRobot dataset
+- `--paths_masks_file`: Path to the HDF5 file containing generated paths and masks
+
+### Optional Arguments for Conversion
 
 - `--push-to-hub`: Push the dataset to Hugging Face Hub
 - `--dataset-config`: Configure dataset parameters:
@@ -27,18 +61,6 @@ uv run examples/bridge/convert_bridge_data_to_lerobot.py --data_dir /path/to/dat
   - `mask_pixels`: Size of mask pixels (default: 25)
   - `image_writer_processes`: Number of image writer processes (default: 10)
   - `image_writer_threads`: Number of image writer threads (default: 5)
-
-Example with custom configuration:
-```bash
-uv run examples/bridge/convert_bridge_data_to_lerobot.py \
-    --data_dir /path/to/data \
-    --repo_id bridge_v2_lerobot \
-    --dataset-config.image_height 320 \
-    --dataset-config.image_width 320 \
-    --dataset-config.path_line_size 4 \
-    --dataset-config.mask_pixels 30 \
-    --push-to-hub
-```
 
 ## Output Format
 
