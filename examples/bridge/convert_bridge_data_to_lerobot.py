@@ -25,7 +25,7 @@ class DatasetConfig:
     use_videos: bool = True
     image_writer_processes: int = 10
     image_writer_threads: int = 5
-    video_backend: str | None = None
+    video_backend: str = "libaom-av1"
     # TODO(user): Define image shape expected by LeRobot
     image_height: int = 256
     image_width: int = 256
@@ -110,7 +110,7 @@ def main(
         use_videos=True,
         image_writer_processes=dataset_config.image_writer_processes,
         image_writer_threads=dataset_config.image_writer_threads,
-        # video_backend=dataset_config.video_backend,
+        video_backend=dataset_config.video_backend,
     )
 
     # Loop over raw Libero datasets and write episodes to the LeRobot dataset
@@ -127,7 +127,7 @@ def main(
                 }
                 for cam in cameras:
                     # TODO: how to deal with some cameras not being present? camera_present?
-                    if cam in frame:
+                    if cam in step["observation"]:
                         frame[f"observation.images.{cam}"] = step["observation"][cam]
 
                 dataset.add_frame(frame)
@@ -139,7 +139,7 @@ def main(
     # Optionally push to the Hugging Face Hub
     if push_to_hub:
         dataset.push_to_hub(
-            tags=["libero", "panda", "rlds"],
+            tags=["widowx", "bridge-v2"],
             private=False,
             push_videos=True,
             license="apache-2.0",

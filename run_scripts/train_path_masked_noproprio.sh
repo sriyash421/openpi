@@ -34,7 +34,7 @@ export MUJOCO_GL=egl
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
 #EXP_NAME=pi0_libero_90_path_masked_bs164_rdp
-EXP_NAME=pi0_libero_90_fullpath_path_masked_bs164_rdp_no_proprio
+EXP_NAME=pi0_libero_90_fullpath_path_masked_bs148_rdp_no_proprio
 # --- End Environment Setup ---
 
 # --- Training Command Setup ---
