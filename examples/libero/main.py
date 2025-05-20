@@ -36,6 +36,8 @@ class Args:
     vlm_server_ip: str = "http://0.0.0.0:8000"
     vlm_query_frequency: int = 20  # call VLM once every how many action chunks
 
+    use_ground_truth_path_masks: bool = False
+
     #################################################################################################################
     # LIBERO environment-specific parameters
     #################################################################################################################
@@ -61,6 +63,7 @@ class Args:
     wandb_project: str = "p-masked-vla"  # Name of W&B project to log to (use default!)
     wandb_entity: str = "clvr"  # Name of entity to log under
     wandb_name_suffix: str = ""
+
 
 
 def eval_libero(args: Args) -> None:
