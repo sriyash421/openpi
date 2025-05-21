@@ -34,7 +34,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 export MUJOCO_GL=egl
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
-EXP_NAME=pi0_fast_lora_usc_widowx_expert_data_bs48_5_19_data
+EXP_NAME=pi0_fast_lora_usc_widowx_expert_data_bs148_5_19_data
 PROJ_NAME=hand-demos-openpi-training
 # --- End Environment Setup ---
 
