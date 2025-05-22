@@ -124,7 +124,7 @@ class BridgeInputs(transforms.DataTransformFn):
 
 
 @dataclasses.dataclass
-class USCWidowXOutputs(transforms.DataTransformFn):
+class BridgeOutputs(transforms.DataTransformFn):
     """Converts model outputs back to BRIDGE action space."""
 
     action_dim: int
