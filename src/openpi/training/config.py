@@ -21,6 +21,7 @@ import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
 import openpi.policies.usc_widowx_policy as usc_widowx_policy
+import openpi.policies.bridge_policy as bridge_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.optimizer as _optimizer
@@ -404,6 +405,57 @@ class LeRobotUSCWidowXDataConfig(DataConfigFactory):
             model_transforms=model_transforms,
             action_sequence_keys=self.action_sequence_keys,
             prompt_from_task=not self.is_play_data,
+        )
+
+@dataclasses.dataclass(frozen=True)
+class LeRobotBridgeDataConfig(DataConfigFactory):
+    """Data config for the Bridge dataset."""
+
+    # If true, will convert joint dimensions to deltas with respect to the current state before passing to the model.
+    # Gripper dimensions will remain in absolute values.
+    model_type: ModelType = ModelType.PI0
+    how_many_cameras: int = 2
+    sample_cameras: bool = False
+    default_prompt: str = ""
+
+    action_sequence_keys: Sequence[str] = ("action",)
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        data_transforms = _transforms.Group(
+            inputs=[
+                bridge_policy.BridgeInputs(
+                    action_dim=model_config.action_dim,
+                    use_delta_actions=False,
+                    model_type=self.model_type,
+                    how_many_cameras=self.how_many_cameras,
+                    sample_cameras=self.sample_cameras,
+                )
+            ],
+            outputs=[bridge_policy.BridgeOutputs(action_dim=model_config.action_dim, use_delta_actions=False)],
+        )
+        repack_dict = {
+            "state": "observation.state",
+            "observation.images.image_0": "observation.images.image_0",
+            "observation.images.image_1": "observation.images.image_1",
+            "observation.images.image_2": "observation.images.image_2",
+            "observation.images.image_3": "observation.images.image_3",
+            "camera_present": "camera_present",
+            "actions": "action",
+            "prompt": "prompt",
+        }
+        repack_transforms = _transforms.Group(inputs=[_transforms.RepackTransform(repack_dict)])
+
+        # Standard model transforms (resizing, tokenization)
+        model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs),
+            repack_transforms=repack_transforms,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=self.action_sequence_keys,
+            prompt_from_task=True,
         )
 
 
@@ -1191,7 +1243,8 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=30_000,
-        batch_size=48,
+        batch_size=8,
+        fsdp_devices=2,
         log_interval=50,
         save_interval=1000,
         keep_period=5000,
@@ -1332,6 +1385,84 @@ _CONFIGS = [
         ema_decay=None,
         num_train_steps=30_000,
         batch_size=16,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
+    ),
+    #
+    # BRIDGE Full Fine-tuning Configs
+    #
+    TrainConfig(
+        name="pi0_bridge_full_fine_tuning_1_cam_random",
+        model=pi0.Pi0Config(),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot",
+            model_type=ModelType.PI0,
+            how_many_cameras=1,
+            sample_cameras=True,
+            base_config=DataConfig(local_files_only=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=50_000,
+        batch_size=8,
+        fsdp_devices=2,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
+    ),
+    TrainConfig(
+        name="pi0_bridge_full_fine_tuning_2_cam_random",
+        model=pi0.Pi0Config(),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot",
+            model_type=ModelType.PI0,
+            how_many_cameras=2,
+            sample_cameras=True,
+            base_config=DataConfig(local_files_only=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=50_000,
+        batch_size=8,
+        fsdp_devices=2,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
+    ),
+    #
+    # BRIDGE Full Fine-tuning FAST
+    #
+    TrainConfig(
+        name="pi0_fast_bridge_full_fine_tuning_1_cam_random",
+        model=pi0_fast.Pi0FASTConfig(),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot",
+            model_type=ModelType.PI0_FAST,
+            how_many_cameras=1,
+            sample_cameras=True,
+            base_config=DataConfig(local_files_only=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        num_train_steps=50_000,
+        batch_size=8,
+        fsdp_devices=2,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=5000,
+    ),
+    TrainConfig(
+        name="pi0_fast_bridge_full_fine_tuning_2_cam_random",
+        model=pi0_fast.Pi0FASTConfig(),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot",
+            model_type=ModelType.PI0_FAST,
+            how_many_cameras=2,
+            sample_cameras=True,
+            base_config=DataConfig(local_files_only=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        num_train_steps=50_000,
+        batch_size=8,
+        fsdp_devices=2,
         log_interval=50,
         save_interval=1000,
         keep_period=5000,

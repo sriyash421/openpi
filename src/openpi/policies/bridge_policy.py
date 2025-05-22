@@ -16,9 +16,9 @@ import openpi.transforms as transforms
 
 
 def _decode_bridge(data: dict) -> dict:
-    state = np.asarray(data["observation.state"])
-    if "action" in data:
-        actions = np.asarray(data["action"])
+    state = np.asarray(data["state"])
+    if "actions" in data:
+        actions = np.asarray(data["actions"])
     else:
         actions = None
 
@@ -33,9 +33,9 @@ def _decode_bridge(data: dict) -> dict:
     for k, v in data.items():
         if "image" in k:
             data[k] = convert_image(v)
-    data["observation.state"] = state
+    data["state"] = state
     if actions is not None:
-        data["action"] = actions
+        data["actions"] = actions
     return data
 
 
@@ -43,8 +43,8 @@ def _decode_bridge(data: dict) -> dict:
 class USCWidowXInputs(transforms.DataTransformFn):
     """Prepares USC WidowX inputs for the model.
 
-    Assumes input keys: 'observation.images.image_0', 'observation.images.image_1', 'observation.images.image_2', 'observation.images.image_3', 'observation.state', 'action'.
-    The 'observation.state' is expected to be a 7-dim vector (6 joint angles + 1 gripper state).
+    Assumes input keys: 'observation.images.image_0', 'observation.images.image_1', 'observation.images.image_2', 'observation.images.image_3', 'state', 'actions'.
+    The 'state' is expected to be a 7-dim vector (6 joint angles + 1 gripper state).
     The 'action' is expected to be a 7-dim vector (6 joint actions + 1 gripper action).
     """
 
@@ -115,8 +115,8 @@ class USCWidowXInputs(transforms.DataTransformFn):
             inputs["image_mask"]["right_wrist_0_rgb"] = inputs["image_mask"]["base_1_rgb"]
             del inputs["image"]["base_1_rgb"]
             del inputs["image_mask"]["base_1_rgb"]
-        if "action" in sample:
-            inputs["action"] = transforms.pad_to_dim(sample["action"], self.action_dim)
+        if "actions" in sample:
+            inputs["actions"] = transforms.pad_to_dim(sample["actions"], self.action_dim)
         if "prompt" in sample:
             inputs["prompt"] = sample["prompt"]
 
@@ -132,4 +132,4 @@ class USCWidowXOutputs(transforms.DataTransformFn):
 
     @override
     def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
-        return {"actions": np.asarray(sample["action"][:, :7])}
+        return {"actions": np.asarray(sample["actions"][:, :7])}
