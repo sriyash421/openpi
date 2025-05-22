@@ -30,6 +30,13 @@ The conversion script assumes your raw data is organized as follows:
 - Inside each task directory, there are subdirectories for each trajectory (e.g., `traj0`, `traj1`, ...).
 - Each trajectory directory contains `obs_dict.pkl` (with 'state' and optional 'qvel' keys), `policy_out.pkl` (with 'actions' key), and subdirectories for each camera view (e.g., `external`, `over_shoulder`) containing PNG or JPG image sequences.
 
+## Downloading from CARC 
+
+If needed, first tar the raw data. Doesn't work on CARC so need to convert to a .tar.gz and then scp from CARC to get the above data structure locally.
+```bash
+tar -cvzf widowx_expert_data.tar.gz --exclude="*.dat" --exclude="depth_images" close_microwave pick_up_green_and_slide_block_right push_button push_button_hand_demo reach_block_hand_demo reach_green_block_distractors slide_pot_right
+```
+
 ## Local Conversion Example
 
 You can run the conversion locally using `uv run`. Make sure you have installed the project dependencies (`uv sync`).

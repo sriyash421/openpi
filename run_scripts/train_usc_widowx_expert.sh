@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=jessetho_1023
 #SBATCH --nodes=1
-#SBATCH --time=35:00:00
+#SBATCH --time=48:00:00
 #SBATCH --cpus-per-task=24
 #SBATCH --mem=185G
 #SBATCH --partition=gpu
@@ -34,7 +34,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 export MUJOCO_GL=egl
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
-EXP_NAME=pi0_fast_lora_usc_widowx_expert_data_deltafix_bs48
+EXP_NAME=pi0_fast_lora_usc_widowx_expert_data_bs64_5_21_data
 PROJ_NAME=hand-demos-openpi-training
 # --- End Environment Setup ---
 
