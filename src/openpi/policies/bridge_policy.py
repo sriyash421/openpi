@@ -40,8 +40,8 @@ def _decode_bridge(data: dict) -> dict:
 
 
 @dataclasses.dataclass
-class USCWidowXInputs(transforms.DataTransformFn):
-    """Prepares USC WidowX inputs for the model.
+class BridgeInputs(transforms.DataTransformFn):
+    """Prepares BRIDGE inputs for the model.
 
     Assumes input keys: 'observation.images.image_0', 'observation.images.image_1', 'observation.images.image_2', 'observation.images.image_3', 'state', 'actions'.
     The 'state' is expected to be a 7-dim vector (6 joint angles + 1 gripper state).
