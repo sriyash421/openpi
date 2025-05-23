@@ -13,12 +13,36 @@
 EVAL_SET=${1:-10}  # Default to libero_10 if not specified (options: 10, spatial, object, goal)
 USE_PATH=${2:-0}   # Default to not using path
 USE_MASK=${3:-0}   # Default to not using mask
+NO_PROPRIO=${4:-0} # Default to not using proprio
 
 VLM_QUERY_FREQUENCY=10 # how many times to call the VLM per action chunk
 
 source ~/.bashrc
 
 cd /home1/jessez/nvidia/openpi
+
+# Base command for policy server
+SERVE_CMD_BASE="uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
+
+# Append policy specific arguments based on USE_PATH and USE_MASK
+if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
+    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_fullpath_path/pi0_libero_90_fullpath_path_bs148_rdp/30000/"
+    if [ "$NO_PROPRIO" = "1" ]; then
+        SERVE_CMD_POLICY_ARGS="$SERVE_CMD_POLICY_ARGS --policy.config=pi0_libero_low_mem_finetune_path_no_proprio --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_no_proprio/pi0_libero_90_fullpath_path_no_proprio_bs148_rdp/30000"
+    fi
+elif [ "$USE_PATH" = "0" ] && [ "$USE_MASK" = "1" ]; then
+    SERVE_CMD_POLICY_ARGS="" # TODO: haven't implemented it yet
+elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
+    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_masked/pi0_libero_90_masked_bs148_rdp/30000/"
+    if [ "$NO_PROPRIO" = "1" ]; then
+        SERVE_CMD_POLICY_ARGS="$SERVE_CMD_POLICY_ARGS --policy.config=pi0_libero_low_mem_finetune_masked_no_proprio --policy.dir=checkpoints/pi0_libero_low_mem_finetune_masked_no_proprio/pi0_libero_90_fullpath_path_no_proprio_bs148_rdp/30000"
+    fi
+else
+  SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_no_proprio  --policy.dir=checkpoints/pi0_libero_low_mem_finetune_no_proprio/pi0_libero_90_fullpath_path_no_proprio_bs148_rdp/30000"
+fi
+
+# Construct the full serving command with CUDA_VISIBLE_DEVICES
+SERVE_CMD="CUDA_VISIBLE_DEVICES=$POLICY_GPU_ID $SERVE_CMD_BASE $SERVE_CMD_POLICY_ARGS"
 
 
 # Determine task suite based on EVAL_SET
