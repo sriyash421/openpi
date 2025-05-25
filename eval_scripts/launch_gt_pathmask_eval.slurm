@@ -22,7 +22,7 @@ source ~/.bashrc
 cd /home1/jessez/nvidia/openpi
 
 # Base command for policy server
-SERVE_CMD_BASE="uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
+SERVE_CMD_BASE="uv run scripts/serve_policy.py --port 8000 policy:checkpoint"
 
 # Append policy specific arguments based on USE_PATH and USE_MASK
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
