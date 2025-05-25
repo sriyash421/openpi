@@ -5,6 +5,7 @@ import dataclasses
 import logging
 import math
 import pathlib
+from pathlib import Path
 
 import imageio
 from libero.libero import benchmark
@@ -13,10 +14,13 @@ from libero.libero.envs import OffScreenRenderEnv
 import numpy as np
 from openpi_client import image_tools
 from openpi_client import websocket_client_policy as _websocket_client_policy
+from openpi.policies.mask_path_utils import get_mask_and_path_from_h5
+from vila_utils.utils.encode import scale_path
 import tqdm
 import tyro
 import sys
 import os
+import h5py
 
 from src.openpi.policies.eval_maskpath_utils import get_path_mask_from_vlm
 
@@ -37,6 +41,7 @@ class Args:
     vlm_query_frequency: int = 20  # call VLM once every how many action chunks
 
     use_ground_truth_path_masks: bool = False
+    path_and_mask_file_dir: str = ""  # Path to directory containing ground truth path and mask files
 
     #################################################################################################################
     # LIBERO environment-specific parameters
@@ -92,10 +97,17 @@ def eval_libero(args: Args) -> None:
         raise ValueError(f"Unknown task suite: {args.task_suite_name}")
 
     if args.use_wandb:
-        run_name = f"pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}-{args.wandb_name_suffix}"
+        run_name = f"pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-gtpathmask-{args.use_ground_truth_path_masks}-draw{args.draw_path}-mask{args.draw_mask}-{args.wandb_name_suffix}"
         wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name, config=args)
 
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
+
+    if args.use_ground_truth_path_masks:
+        assert (
+            args.path_and_mask_file_dir != ""
+        ), "path_and_mask_file_dir must be set when using ground truth path and mask"
+        path_and_mask_h5_file = Path(args.path_and_mask_file_dir) / "dataset_movement_and_masks.h5"
+        assert os.path.exists(path_and_mask_h5_file), f"path_and_mask_h5_file {path_and_mask_h5_file} does not exist"
 
     # Start evaluation
     total_episodes, total_successes = 0, 0
@@ -135,6 +147,34 @@ def eval_libero(args: Args) -> None:
             mask = None
             vlm_query_counter = 0
 
+            # Load ground truth path and mask if enabled
+            if args.use_ground_truth_path_masks:
+                try:
+                    # Flip images before getting path and mask to ensure proper alignment
+                    flipped_agentview = obs["agentview_image"][::-1]
+                    flipped_eye_in_hand = obs["robot0_eye_in_hand_image"][::-1]
+                    if args.flip_image_horizontally:
+                        flipped_agentview = flipped_agentview[:, ::-1]
+                        flipped_eye_in_hand = flipped_eye_in_hand[:, ::-1]
+
+                    # Get raw path and mask data directly from HDF5 file
+                    with h5py.File(path_and_mask_h5_file, "r", swmr=True) as f:
+                        task_key = task_description.replace(" ", "_")
+                        demo_key = f"demo_{episode_idx}"
+                        f_annotation = f[task_key][demo_key]["primary"]
+
+                        # Get path data
+                        path = f_annotation["gripper_positions"][0]  # Get first frame's path
+
+                        # Get mask data
+                        significant_points = f_annotation["significant_points"][0]
+                        stopped_points = f_annotation["stopped_points"][0]
+                        mask = np.concatenate([significant_points, stopped_points], axis=0)
+                except (KeyError, ValueError) as e:
+                    logging.warning(f"Failed to load ground truth path and mask: {e}")
+                    path = None
+                    mask = None
+
             logging.info(f"Starting episode {task_episodes+1}...")
             while t < max_steps + args.num_steps_wait:
                 try:
@@ -147,14 +187,8 @@ def eval_libero(args: Args) -> None:
 
                     # Get preprocessed image
                     # IMPORTANT: rotate 180 degrees to match train preprocessing
-                    # img = np.ascontiguousarray(obs["agentview_image"][::-1, ::-1])
-                    img = np.ascontiguousarray(
-                        obs["agentview_image"][::-1]
-                    )  # new preprocessing doesn't flip it horizontally
-                    # wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
-                    wrist_img = np.ascontiguousarray(
-                        obs["robot0_eye_in_hand_image"][::-1]
-                    )  # new preprocessing doesn't flip it horizontally
+                    img = np.ascontiguousarray(obs["agentview_image"][::-1])
+                    wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1])
                     if (
                         args.flip_image_horizontally
                     ):  # for models trained with the original OpenVLA processed data, not the pathmask new data
@@ -167,24 +201,63 @@ def eval_libero(args: Args) -> None:
                     if not action_plan:
                         # Finished executing previous action chunk -- compute new chunk
 
-                        # get path and mask from VLM if we've reached the query frequency
+                        # get path and mask from VLM or ground truth
                         if args.draw_path or args.draw_mask:
-                            if vlm_query_counter % args.vlm_query_frequency == 0:
-                                vlm_query_counter = 0
-                                # setting path and mask to None so that the VLM is called
-                                path, mask = None, None
-                            img, path, mask = get_path_mask_from_vlm(
-                                img,
-                                "Center Crop",
-                                str(task_description),
-                                draw_path=args.draw_path,
-                                draw_mask=args.draw_mask,
-                                verbose=True,
-                                vlm_server_ip=args.vlm_server_ip,
-                                path=path,
-                                mask=mask,
-                            )
-                            vlm_query_counter += 1
+                            if args.use_ground_truth_path_masks:
+                                # Reload ground truth path and mask every vlm_query_frequency steps
+                                if vlm_query_counter % args.vlm_query_frequency == 0:
+                                    vlm_query_counter = 0
+                                    try:
+                                        # Get raw path and mask data directly from HDF5 file
+                                        with h5py.File(path_and_mask_h5_file, "r", swmr=True) as f:
+                                            task_key = task_description.replace(" ", "_")
+                                            demo_key = f"demo_{episode_idx}"
+                                            f_annotation = f[task_key][demo_key]["primary"]
+
+                                            # Get path data
+                                            path = f_annotation["gripper_positions"][0]  # Get first frame's path
+
+                                            # Get mask data
+                                            significant_points = f_annotation["significant_points"][0]
+                                            stopped_points = f_annotation["stopped_points"][0]
+                                            mask = np.concatenate([significant_points, stopped_points], axis=0)
+
+                                    except (KeyError, ValueError) as e:
+                                        logging.warning(f"Failed to load ground truth path and mask: {e}")
+                                        path = None
+                                        mask = None
+                                vlm_query_counter += 1
+                                # Use ground truth path and mask with VLM drawing function
+                                if path is not None and mask is not None:
+                                    img, _, _ = get_path_mask_from_vlm(
+                                        img,
+                                        "Center Crop",
+                                        str(task_description),
+                                        draw_path=args.draw_path,
+                                        draw_mask=args.draw_mask,
+                                        verbose=True,
+                                        vlm_server_ip=args.vlm_server_ip,
+                                        path=path,
+                                        mask=mask,
+                                    )
+                            else:
+                                # Use VLM to get path and mask
+                                if vlm_query_counter % args.vlm_query_frequency == 0:
+                                    vlm_query_counter = 0
+                                    # setting path and mask to None so that the VLM is called
+                                    path, mask = None, None
+                                img, path, mask = get_path_mask_from_vlm(
+                                    img,
+                                    "Center Crop",
+                                    str(task_description),
+                                    draw_path=args.draw_path,
+                                    draw_mask=args.draw_mask,
+                                    verbose=True,
+                                    vlm_server_ip=args.vlm_server_ip,
+                                    path=path,
+                                    mask=mask,
+                                )
+                                vlm_query_counter += 1
                         img = image_tools.convert_to_uint8(
                             image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
                         )
@@ -211,17 +284,66 @@ def eval_libero(args: Args) -> None:
                         action_plan.extend(action_chunk[: args.replan_steps])
                     elif args.draw_path or args.draw_mask:
                         # draw path and mask on image just for visualization when action chunk is still being used
-                        img, path, mask = get_path_mask_from_vlm(
-                            img,
-                            "Center Crop",
-                            str(task_description),
-                            draw_path=args.draw_path,
-                            draw_mask=args.draw_mask,
-                            verbose=True,
-                            vlm_server_ip=args.vlm_server_ip,
-                            path=path,
-                            mask=mask,
-                        )
+                        if args.use_ground_truth_path_masks:
+                            # Reload ground truth path and mask every vlm_query_frequency steps
+                            if vlm_query_counter % args.vlm_query_frequency == 0:
+                                vlm_query_counter = 0
+                                try:
+                                    # Get raw path and mask data directly from HDF5 file
+                                    with h5py.File(path_and_mask_h5_file, "r", swmr=True) as f:
+                                        task_key = task_description.replace(" ", "_")
+                                        demo_key = f"demo_{episode_idx}"
+                                        f_annotation = f[task_key][demo_key]["primary"]
+
+                                        # Get path data
+                                        path = f_annotation["gripper_positions"][0]  # Get first frame's path
+
+                                        # Get mask data
+                                        significant_points = f_annotation["significant_points"][0]
+                                        stopped_points = f_annotation["stopped_points"][0]
+                                        mask = np.concatenate([significant_points, stopped_points], axis=0)
+
+                                        # Scale path and mask to image coordinates
+                                        w, h = img.shape[:2]
+                                        min_in, max_in = np.zeros(2), np.array([w, h])
+                                        min_out, max_out = np.zeros(2), np.ones(2)
+                                        path = scale_path(
+                                            path, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in
+                                        )
+                                        mask = scale_path(
+                                            mask, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in
+                                        )
+                                except (KeyError, ValueError) as e:
+                                    logging.warning(f"Failed to load ground truth path and mask: {e}")
+                                    path = None
+                                    mask = None
+                            vlm_query_counter += 1
+                            # Use ground truth path and mask with VLM drawing function
+                            if path is not None and mask is not None:
+                                img, _, _ = get_path_mask_from_vlm(
+                                    img,
+                                    "Center Crop",
+                                    str(task_description),
+                                    draw_path=args.draw_path,
+                                    draw_mask=args.draw_mask,
+                                    verbose=True,
+                                    vlm_server_ip=args.vlm_server_ip,
+                                    path=path,
+                                    mask=mask,
+                                )
+                        else:
+                            # Use VLM to get path and mask
+                            img, path, mask = get_path_mask_from_vlm(
+                                img,
+                                "Center Crop",
+                                str(task_description),
+                                draw_path=args.draw_path,
+                                draw_mask=args.draw_mask,
+                                verbose=True,
+                                vlm_server_ip=args.vlm_server_ip,
+                                path=path,
+                                mask=mask,
+                            )
                         img = image_tools.convert_to_uint8(
                             image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
                         )

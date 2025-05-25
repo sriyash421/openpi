@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 from urllib.parse import urlparse
 
 import websockets.sync.client
@@ -16,7 +16,7 @@ class WebsocketClientPolicy(_base_policy.BasePolicy):
     See WebsocketPolicyServer for a corresponding server implementation.
     """
 
-    def __init__(self, host: str = "localhost", port: int = 8000, address: str | None = None) -> None:
+    def __init__(self, host: str = "localhost", port: int = 8000, address: Union[str, None] = None) -> None:
         if address is None:
             address = f"ws://{host}:{port}"
         else:
