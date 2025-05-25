@@ -65,7 +65,7 @@ fi
 
 path_and_mask_file_dir="/home1/jessez/scratch_data/libero_processed_256_05_12/masked_vla_data"
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.use_ground_truth_path_masks=True --args.path_and_mask_file_dir=$path_and_mask_file_dir"
+EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.use_ground_truth_path_masks --args.path_and_mask_file_dir=$path_and_mask_file_dir"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
