@@ -14,7 +14,6 @@ from libero.libero.envs import OffScreenRenderEnv
 import numpy as np
 from openpi_client import image_tools
 from openpi_client import websocket_client_policy as _websocket_client_policy
-from openpi.policies.mask_path_utils import get_mask_and_path_from_h5
 from vila_utils.utils.encode import scale_path
 import tqdm
 import tyro

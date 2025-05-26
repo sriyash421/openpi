@@ -22,7 +22,7 @@ source ~/.bashrc
 cd /home1/jessez/nvidia/openpi
 
 # Base command for policy server
-SERVE_CMD_BASE="uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
+SERVE_CMD_BASE="uv run scripts/serve_policy.py --port 8000 policy:checkpoint"
 
 # Append policy specific arguments based on USE_PATH and USE_MASK
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
@@ -65,7 +65,7 @@ fi
 
 path_and_mask_file_dir="/home1/jessez/scratch_data/libero_processed_256_05_12/masked_vla_data"
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.use_ground_truth_path_masks=True --args.path_and_mask_file_dir=$path_and_mask_file_dir"
+EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.use_ground_truth_path_masks --args.path_and_mask_file_dir=$path_and_mask_file_dir"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
