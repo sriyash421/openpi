@@ -6,6 +6,7 @@ import logging
 import math
 import pathlib
 from pathlib import Path
+from typing import Union
 
 import imageio
 from libero.libero import benchmark
@@ -74,7 +75,7 @@ def _load_path_and_mask_from_h5(
     task_description: str,
     episode_idx: int,
     img_shape: tuple,
-) -> tuple[np.ndarray | None, np.ndarray | None]:
+) -> tuple[Union[np.ndarray, None], Union[np.ndarray, None]]:
     """Load path and mask data from HDF5 file.
 
     Args:
