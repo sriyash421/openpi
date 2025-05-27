@@ -111,12 +111,12 @@ def _load_path_and_mask_from_h5(
             stopped_points = f_annotation["stopped_points"][0]
             mask = np.concatenate([significant_points, stopped_points], axis=0)
 
-            # Scale path and mask to image coordinates
+            # Scale path and mask to 0, 1-normalized coordinates for VLM to scale back to image coords.
             w, h = img_shape[:2]
             min_in, max_in = np.zeros(2), np.array([w, h])
             min_out, max_out = np.zeros(2), np.ones(2)
-            path = scale_path(path, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
-            mask = scale_path(mask, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
+            path = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
+            mask = scale_path(mask, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
 
             return path, mask
     except (KeyError, ValueError) as e:
