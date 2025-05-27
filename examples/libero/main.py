@@ -69,6 +69,58 @@ class Args:
     wandb_name_suffix: str = ""
 
 
+def _load_path_and_mask_from_h5(
+    path_and_mask_h5_file: Path,
+    task_description: str,
+    episode_idx: int,
+    img_shape: tuple,
+) -> tuple[np.ndarray | None, np.ndarray | None]:
+    """Load path and mask data from HDF5 file.
+
+    Args:
+        path_and_mask_h5_file: Path to the HDF5 file containing path and mask data
+        task_description: Description of the task
+        episode_idx: Index of the episode
+        img_shape: Shape of the image for scaling path and mask
+
+    Returns:
+        Tuple of (path, mask) where each can be None if loading fails
+    """
+    try:
+        with h5py.File(path_and_mask_h5_file, "r", swmr=True) as f:
+            # Find a key that contains the task description
+            task_key = None
+            task_description_clean = task_description.replace(" ", "_")
+            for key in f.keys():
+                if task_description_clean in key:
+                    task_key = key
+                    break
+
+            if task_key is None:
+                raise KeyError(f"Could not find task key containing '{task_description_clean}' in HDF5 file")
+
+            demo_key = f"demo_{episode_idx}"
+            f_annotation = f[task_key][demo_key]["primary"]
+
+            # Get path data
+            path = f_annotation["gripper_positions"]  # Get path
+
+            # Get mask data
+            significant_points = f_annotation["significant_points"][0]
+            stopped_points = f_annotation["stopped_points"][0]
+            mask = np.concatenate([significant_points, stopped_points], axis=0)
+
+            # Scale path and mask to image coordinates
+            w, h = img_shape[:2]
+            min_in, max_in = np.zeros(2), np.array([w, h])
+            min_out, max_out = np.zeros(2), np.ones(2)
+            path = scale_path(path, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
+            mask = scale_path(mask, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
+
+            return path, mask
+    except (KeyError, ValueError) as e:
+        logging.warning(f"Failed to load ground truth path and mask: {e}, skipping")
+        return None, None
 
 def eval_libero(args: Args) -> None:
     # Set random seed
@@ -148,31 +200,21 @@ def eval_libero(args: Args) -> None:
 
             # Load ground truth path and mask if enabled
             if args.use_ground_truth_path_masks:
-                try:
-                    # Flip images before getting path and mask to ensure proper alignment
-                    flipped_agentview = obs["agentview_image"][::-1]
-                    flipped_eye_in_hand = obs["robot0_eye_in_hand_image"][::-1]
-                    if args.flip_image_horizontally:
-                        flipped_agentview = flipped_agentview[:, ::-1]
-                        flipped_eye_in_hand = flipped_eye_in_hand[:, ::-1]
+                # Flip images before getting path and mask to ensure proper alignment
+                flipped_agentview = obs["agentview_image"][::-1]
+                flipped_eye_in_hand = obs["robot0_eye_in_hand_image"][::-1]
+                if args.flip_image_horizontally:
+                    flipped_agentview = flipped_agentview[:, ::-1]
+                    flipped_eye_in_hand = flipped_eye_in_hand[:, ::-1]
 
-                    # Get raw path and mask data directly from HDF5 file
-                    with h5py.File(path_and_mask_h5_file, "r", swmr=True) as f:
-                        task_key = task_description.replace(" ", "_")
-                        demo_key = f"demo_{episode_idx}"
-                        f_annotation = f[task_key][demo_key]["primary"]
-
-                        # Get path data
-                        path = f_annotation["gripper_positions"][0]  # Get first frame's path
-
-                        # Get mask data
-                        significant_points = f_annotation["significant_points"][0]
-                        stopped_points = f_annotation["stopped_points"][0]
-                        mask = np.concatenate([significant_points, stopped_points], axis=0)
-                except (KeyError, ValueError) as e:
-                    logging.warning(f"Failed to load ground truth path and mask: {e}")
-                    path = None
-                    mask = None
+                path, mask = _load_path_and_mask_from_h5(
+                    path_and_mask_h5_file,
+                    task_description,
+                    episode_idx,
+                    flipped_agentview.shape,
+                )
+                if path is None or mask is None:
+                    continue
 
             logging.info(f"Starting episode {task_episodes+1}...")
             while t < max_steps + args.num_steps_wait:
@@ -206,25 +248,14 @@ def eval_libero(args: Args) -> None:
                                 # Reload ground truth path and mask every vlm_query_frequency steps
                                 if vlm_query_counter % args.vlm_query_frequency == 0:
                                     vlm_query_counter = 0
-                                    try:
-                                        # Get raw path and mask data directly from HDF5 file
-                                        with h5py.File(path_and_mask_h5_file, "r", swmr=True) as f:
-                                            task_key = task_description.replace(" ", "_")
-                                            demo_key = f"demo_{episode_idx}"
-                                            f_annotation = f[task_key][demo_key]["primary"]
-
-                                            # Get path data
-                                            path = f_annotation["gripper_positions"][0]  # Get first frame's path
-
-                                            # Get mask data
-                                            significant_points = f_annotation["significant_points"][0]
-                                            stopped_points = f_annotation["stopped_points"][0]
-                                            mask = np.concatenate([significant_points, stopped_points], axis=0)
-
-                                    except (KeyError, ValueError) as e:
-                                        logging.warning(f"Failed to load ground truth path and mask: {e}")
-                                        path = None
-                                        mask = None
+                                    path, mask = _load_path_and_mask_from_h5(
+                                        path_and_mask_h5_file,
+                                        task_description,
+                                        episode_idx,
+                                        img.shape,
+                                    )
+                                    if path is None or mask is None:
+                                        continue
                                 vlm_query_counter += 1
                                 # Use ground truth path and mask with VLM drawing function
                                 if path is not None and mask is not None:
@@ -287,35 +318,14 @@ def eval_libero(args: Args) -> None:
                             # Reload ground truth path and mask every vlm_query_frequency steps
                             if vlm_query_counter % args.vlm_query_frequency == 0:
                                 vlm_query_counter = 0
-                                try:
-                                    # Get raw path and mask data directly from HDF5 file
-                                    with h5py.File(path_and_mask_h5_file, "r", swmr=True) as f:
-                                        task_key = task_description.replace(" ", "_")
-                                        demo_key = f"demo_{episode_idx}"
-                                        f_annotation = f[task_key][demo_key]["primary"]
-
-                                        # Get path data
-                                        path = f_annotation["gripper_positions"][0]  # Get first frame's path
-
-                                        # Get mask data
-                                        significant_points = f_annotation["significant_points"][0]
-                                        stopped_points = f_annotation["stopped_points"][0]
-                                        mask = np.concatenate([significant_points, stopped_points], axis=0)
-
-                                        # Scale path and mask to image coordinates
-                                        w, h = img.shape[:2]
-                                        min_in, max_in = np.zeros(2), np.array([w, h])
-                                        min_out, max_out = np.zeros(2), np.ones(2)
-                                        path = scale_path(
-                                            path, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in
-                                        )
-                                        mask = scale_path(
-                                            mask, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in
-                                        )
-                                except (KeyError, ValueError) as e:
-                                    logging.warning(f"Failed to load ground truth path and mask: {e}")
-                                    path = None
-                                    mask = None
+                                path, mask = _load_path_and_mask_from_h5(
+                                    path_and_mask_h5_file,
+                                    task_description,
+                                    episode_idx,
+                                    img.shape,
+                                )
+                                if path is None or mask is None:
+                                    continue
                             vlm_query_counter += 1
                             # Use ground truth path and mask with VLM drawing function
                             if path is not None and mask is not None:
