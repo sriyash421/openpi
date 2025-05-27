@@ -237,6 +237,7 @@ def eval_libero(args: Args) -> None:
 
             logging.info(f"Starting episode {task_episodes + 1}...")
             vlm_query_counter = 0
+            breakpoint()
             while t < max_steps + args.num_steps_wait:
                 try:
                     # IMPORTANT: Do nothing for the first few timesteps because the simulator drops objects
@@ -245,7 +246,6 @@ def eval_libero(args: Args) -> None:
                         obs, reward, done, info = env.step(LIBERO_DUMMY_ACTION)
                         t += 1
                         continue
-                    breakpoint()
 
                     # Get preprocessed image
                     # IMPORTANT: rotate 180 degrees to match train preprocessing
