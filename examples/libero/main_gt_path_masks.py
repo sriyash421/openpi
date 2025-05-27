@@ -267,7 +267,7 @@ def eval_libero(args: Args) -> None:
                                 masked_img = masked_images[
                                     (t - args.num_steps_wait) % len(masked_images)
                                 ]  # (256, 256). need to convert to list of points to mask
-                                masked_points = np.stack(masked_img.nonzero(masked_img), axis=1)
+                                masked_points = np.stack(masked_img.nonzero(), axis=1)
                                 min_in, max_in = np.zeros(2), np.array(masked_img.shape)
                                 min_out, max_out = np.zeros(2), np.ones(2)
                                 mask = scale_path(
