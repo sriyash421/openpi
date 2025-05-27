@@ -268,6 +268,7 @@ def eval_libero(args: Args) -> None:
                                 if args.draw_mask:
                                     img = masked_img
                             vlm_query_counter += 1
+                            breakpoint()
                             img, _, _ = get_path_mask_from_vlm(
                                 img,
                                 "Center Crop",
