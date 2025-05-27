@@ -360,22 +360,28 @@ def eval_libero(args: Args) -> None:
             if args.use_wandb:
                 if done and success_videos_saved <= 2:
                     success_videos_saved += 1
-                    wandb.log(
-                        {
-                            f"videos/{task_description}/success_{success_videos_saved}": wandb.Video(
-                                str(video_path), fps=10
-                            )
-                        }
-                    )
+                    try:
+                        wandb.log(
+                            {
+                                f"videos/{task_description}/success_{success_videos_saved}": wandb.Video(
+                                    str(video_path), fps=10
+                                )
+                            }
+                        )
+                    except Exception as e:
+                        logging.error(f"Caught exception: {e}")
                 elif not done and failure_videos_saved <= 2:
                     failure_videos_saved += 1
-                    wandb.log(
-                        {
-                            f"videos/{task_description}/failure_{failure_videos_saved}": wandb.Video(
-                                str(video_path), fps=10
-                            )
-                        }
-                    )
+                    try:
+                        wandb.log(
+                            {
+                                f"videos/{task_description}/failure_{failure_videos_saved}": wandb.Video(
+                                    str(video_path), fps=10
+                                )
+                            }
+                        )
+                    except Exception as e:
+                        logging.error(f"Caught exception: {e}")
 
             # Log current results
             logging.info(f"Success: {done}")
