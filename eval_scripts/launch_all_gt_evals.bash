@@ -18,9 +18,6 @@ for eval_set in "${EVAL_SETS[@]}"; do
             if [[ $use_path -eq 0 && $use_mask -eq 1 ]]; then
                 echo "Skipping job: no path and mask for eval_set $eval_set"
                 continue
-            elif [[ $use_path -eq 1 && $use_mask -eq 0 ]]; then
-                echo "Skipping job: path and no mask for eval_set $eval_set"
-                continue
             elif [[ $use_path -eq 0 && $use_mask -eq 0 && $no_proprio -eq 0 ]]; then
                 echo "Skipping job: no path and no mask and use proprio for eval_set $eval_set"
                 continue
