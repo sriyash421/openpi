@@ -192,6 +192,9 @@ def eval_libero(args: Args) -> None:
             except ValueError:
                 logging.warning(f"Could not find initial state for task {task_description} in HDF5 file")
                 continue
+            except KeyError as e:
+                logging.warning(e)
+                continue
 
             # Initialize LIBERO environment and task description
             env, task_description = _get_libero_env(task, LIBERO_ENV_RESOLUTION, args.seed)
