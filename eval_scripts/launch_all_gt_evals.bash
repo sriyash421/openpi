@@ -43,5 +43,6 @@ for eval_set in "${EVAL_SETS[@]}"; do
             done
         done
     done
+done
 
-    echo "All evaluation jobs submitted!"
+echo "All evaluation jobs submitted!"
