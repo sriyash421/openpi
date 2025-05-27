@@ -22,8 +22,6 @@ import sys
 import os
 import h5py
 
-from src.openpi.policies.eval_maskpath_utils import get_path_mask_from_vlm
-
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
 LIBERO_ENV_RESOLUTION = 256  # resolution used to render training data
 
@@ -37,8 +35,6 @@ class Args:
     port: int = 8000
     resize_size: int = 224
     replan_steps: int = 5
-    vlm_server_ip: str = "http://0.0.0.0:8000"
-    vlm_query_frequency: int = 20  # call VLM once every how many action chunks
 
     #################################################################################################################
     # LIBERO environment-specific parameters
@@ -55,6 +51,12 @@ class Args:
     flip_image_horizontally: bool = False
 
     #################################################################################################################
+    # Ground truth path and mask parameters
+    #################################################################################################################
+    path_and_mask_file_dir: str = ""  # Path to directory containing ground truth path and mask files
+    libero_hdf5_dir: str = ""  # Path to directory containing LIBERO HDF5 files
+
+    #################################################################################################################
     # Utils
     #################################################################################################################
     video_out_path: str = "data/libero/videos"  # Path to save videos
@@ -65,6 +67,19 @@ class Args:
     wandb_project: str = "p-masked-vla"  # Name of W&B project to log to (use default!)
     wandb_entity: str = "clvr"  # Name of entity to log under
     wandb_name_suffix: str = ""
+
+
+def _load_initial_states_from_h5(libero_hdf5_dir: str, task_name: str, demo_num: int):
+    """Load initial states from HDF5 file."""
+    # get the hdf5 names
+    hdf5_names = os.listdir(libero_hdf5_dir)
+    for hdf5_name in hdf5_names:
+        if task_name not in hdf5_name:
+            continue
+        with h5py.File(os.path.join(libero_hdf5_dir, hdf5_name), "r", swmr=True) as f:
+            return f["data"][f"demo_{demo_num}"]["states"][0]
+
+    raise ValueError(f"Could not find task name {task_name} in HDF5 files")
 
 
 def _load_path_and_mask_from_h5(
@@ -147,10 +162,14 @@ def eval_libero(args: Args) -> None:
         raise ValueError(f"Unknown task suite: {args.task_suite_name}")
 
     if args.use_wandb:
-        run_name = f"pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}-{args.wandb_name_suffix}"
+        run_name = f"pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-gtpathmask-draw{args.draw_path}-mask{args.draw_mask}-{args.wandb_name_suffix}"
         wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name, config=args)
 
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
+
+    assert args.path_and_mask_file_dir != "", "path_and_mask_file_dir must be set"
+    path_and_mask_h5_file = Path(args.path_and_mask_file_dir) / "dataset_movement_and_masks.h5"
+    assert os.path.exists(path_and_mask_h5_file), f"path_and_mask_h5_file {path_and_mask_h5_file} does not exist"
 
     # Start evaluation
     total_episodes, total_successes = 0, 0
@@ -163,15 +182,15 @@ def eval_libero(args: Args) -> None:
         success_videos_saved = 0
         failure_videos_saved = 0
 
-        # Get default LIBERO initial states
-        initial_states = task_suite.get_task_init_states(task_id)
-
-        # Initialize LIBERO environment and task description
-        env, task_description = _get_libero_env(task, LIBERO_ENV_RESOLUTION, args.seed)
-
         # Start episodes
         task_episodes, task_successes = 0, 0
         for episode_idx in tqdm.tqdm(range(args.num_trials_per_task)):
+            # Load initial states from HDF5 file
+            initial_states = _load_initial_states_from_h5(args.libero_hdf5_dir, task_description, episode_idx)
+
+            # Initialize LIBERO environment and task description
+            env, task_description = _get_libero_env(task, LIBERO_ENV_RESOLUTION, args.seed)
+
             logging.info(f"\nTask: {task_description}")
 
             # Reset environment
@@ -185,12 +204,28 @@ def eval_libero(args: Args) -> None:
             t = 0
             replay_images = []
 
-            # initialize vlm path and and query counter
+            # initialize path and mask
             path = None
             mask = None
-            vlm_query_counter = 0
 
-            logging.info(f"Starting episode {task_episodes+1}...")
+            # Load ground truth path and mask
+            # Flip images before getting path and mask to ensure proper alignment
+            flipped_agentview = obs["agentview_image"][::-1]
+            flipped_eye_in_hand = obs["robot0_eye_in_hand_image"][::-1]
+            if args.flip_image_horizontally:
+                flipped_agentview = flipped_agentview[:, ::-1]
+                flipped_eye_in_hand = flipped_eye_in_hand[:, ::-1]
+
+            path, mask = _load_path_and_mask_from_h5(
+                path_and_mask_h5_file,
+                task_description,
+                episode_idx,
+                flipped_agentview.shape,
+            )
+            if path is None or mask is None:
+                continue
+
+            logging.info(f"Starting episode {task_episodes + 1}...")
             while t < max_steps + args.num_steps_wait:
                 try:
                     # IMPORTANT: Do nothing for the first few timesteps because the simulator drops objects
@@ -204,9 +239,7 @@ def eval_libero(args: Args) -> None:
                     # IMPORTANT: rotate 180 degrees to match train preprocessing
                     img = np.ascontiguousarray(obs["agentview_image"][::-1])
                     wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1])
-                    if (
-                        args.flip_image_horizontally
-                    ):  # for models trained with the original OpenVLA processed data, not the pathmask new data
+                    if args.flip_image_horizontally:
                         img = img[:, ::-1]
                         wrist_img = wrist_img[:, ::-1]
                     wrist_img = image_tools.convert_to_uint8(
@@ -215,26 +248,6 @@ def eval_libero(args: Args) -> None:
 
                     if not action_plan:
                         # Finished executing previous action chunk -- compute new chunk
-
-                        # get path and mask from VLM
-                        if args.draw_path or args.draw_mask:
-                            # Use VLM to get path and mask
-                            if vlm_query_counter % args.vlm_query_frequency == 0:
-                                vlm_query_counter = 0
-                                # setting path and mask to None so that the VLM is called
-                                path, mask = None, None
-                            img, path, mask = get_path_mask_from_vlm(
-                                img,
-                                "Center Crop",
-                                str(task_description),
-                                draw_path=args.draw_path,
-                                draw_mask=args.draw_mask,
-                                verbose=True,
-                                vlm_server_ip=args.vlm_server_ip,
-                                path=path,
-                                mask=mask,
-                            )
-                            vlm_query_counter += 1
                         img = image_tools.convert_to_uint8(
                             image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
                         )
@@ -255,27 +268,10 @@ def eval_libero(args: Args) -> None:
 
                         # Query model to get action
                         action_chunk = client.infer(element)["actions"]
-                        assert (
-                            len(action_chunk) >= args.replan_steps
-                        ), f"We want to replan every {args.replan_steps} steps, but policy only predicts {len(action_chunk)} steps."
+                        assert len(action_chunk) >= args.replan_steps, (
+                            f"We want to replan every {args.replan_steps} steps, but policy only predicts {len(action_chunk)} steps."
+                        )
                         action_plan.extend(action_chunk[: args.replan_steps])
-                    elif args.draw_path or args.draw_mask:
-                        # draw path and mask on image just for visualization when action chunk is still being used
-                        # Use VLM to get path and mask
-                        img, path, mask = get_path_mask_from_vlm(
-                            img,
-                            "Center Crop",
-                            str(task_description),
-                            draw_path=args.draw_path,
-                            draw_mask=args.draw_mask,
-                            verbose=True,
-                            vlm_server_ip=args.vlm_server_ip,
-                            path=path,
-                            mask=mask,
-                        )
-                        img = image_tools.convert_to_uint8(
-                            image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
-                        )
 
                     action = action_plan.popleft()
 
@@ -311,14 +307,22 @@ def eval_libero(args: Args) -> None:
             if args.use_wandb:
                 if done and success_videos_saved <= 2:
                     success_videos_saved += 1
-                    wandb.log({
-                        f"videos/{task_description}/success_{success_videos_saved}": wandb.Video(str(video_path), fps=10)
-                    })
+                    wandb.log(
+                        {
+                            f"videos/{task_description}/success_{success_videos_saved}": wandb.Video(
+                                str(video_path), fps=10
+                            )
+                        }
+                    )
                 elif not done and failure_videos_saved <= 2:
                     failure_videos_saved += 1
-                    wandb.log({
-                        f"videos/{task_description}/failure_{failure_videos_saved}": wandb.Video(str(video_path), fps=10)
-                    })
+                    wandb.log(
+                        {
+                            f"videos/{task_description}/failure_{failure_videos_saved}": wandb.Video(
+                                str(video_path), fps=10
+                            )
+                        }
+                    )
 
             # Log current results
             logging.info(f"Success: {done}")
@@ -335,6 +339,7 @@ def eval_libero(args: Args) -> None:
     if args.use_wandb:
         wandb.log({f"{args.task_suite_name}/success_rate": float(total_successes) / float(total_episodes)})
         wandb.finish()
+
 
 def _get_libero_env(task, resolution, seed):
     """Initializes and returns the LIBERO environment, along with the task description."""
