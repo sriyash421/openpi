@@ -186,6 +186,7 @@ def eval_libero(args: Args) -> None:
         failure_videos_saved = 0
 
         # Start episodes
+        breakpoint()
         task_episodes, task_successes = 0, 0
         for episode_idx in tqdm.tqdm(range(args.num_trials_per_task)):
             # Load initial states from HDF5 file
@@ -237,7 +238,6 @@ def eval_libero(args: Args) -> None:
 
             logging.info(f"Starting episode {task_episodes + 1}...")
             vlm_query_counter = 0
-            breakpoint()
             while t < max_steps + args.num_steps_wait:
                 try:
                     # IMPORTANT: Do nothing for the first few timesteps because the simulator drops objects
