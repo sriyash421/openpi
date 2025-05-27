@@ -250,12 +250,12 @@ def eval_libero(args: Args) -> None:
                     wrist_img = image_tools.convert_to_uint8(
                         image_tools.resize_with_pad(wrist_img, args.resize_size, args.resize_size)
                     )
+                    img = image_tools.convert_to_uint8(
+                        image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
+                    )
 
                     if not action_plan:
                         # Finished executing previous action chunk -- compute new chunk
-                        img = image_tools.convert_to_uint8(
-                            image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
-                        )
 
                         # Prepare observations dict
                         element = {
