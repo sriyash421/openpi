@@ -273,9 +273,9 @@ def eval_libero(args: Args) -> None:
                             path=path,
                             mask=mask,
                         )
-                        img = image_tools.convert_to_uint8(
-                            image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
-                        )
+                    img = image_tools.convert_to_uint8(
+                        image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
+                    )
 
                     action = action_plan.popleft()
 

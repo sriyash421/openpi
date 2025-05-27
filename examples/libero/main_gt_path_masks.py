@@ -122,8 +122,8 @@ def _load_path_and_mask_from_h5(
             path = f_annotation["gripper_positions"]  # Get path
 
             # Get mask data
-            significant_points = f_annotation["significant_points"][0]
-            stopped_points = f_annotation["stopped_points"][0]
+            significant_points = f_annotation["significant_points"]
+            stopped_points = f_annotation["stopped_points"]
             mask = np.concatenate([significant_points, stopped_points], axis=0)
 
             # Scale path and mask to 0, 1-normalized coordinates for VLM to scale back to image coords.
@@ -226,7 +226,7 @@ def eval_libero(args: Args) -> None:
                 flipped_agentview = flipped_agentview[:, ::-1]
                 flipped_eye_in_hand = flipped_eye_in_hand[:, ::-1]
 
-            path, mask = _load_path_and_mask_from_h5(
+            path, masks_list = _load_path_and_mask_from_h5(
                 path_and_mask_h5_file,
                 task_description,
                 episode_idx,
@@ -256,9 +256,6 @@ def eval_libero(args: Args) -> None:
                     wrist_img = image_tools.convert_to_uint8(
                         image_tools.resize_with_pad(wrist_img, args.resize_size, args.resize_size)
                     )
-                    img = image_tools.convert_to_uint8(
-                        image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
-                    )
 
                     if not action_plan:
                         # Finished executing previous action chunk -- compute new chunk
@@ -267,28 +264,22 @@ def eval_libero(args: Args) -> None:
                             # Reload ground truth path and mask every vlm_query_frequency steps
                             if vlm_query_counter % args.draw_frequency == 0:
                                 vlm_query_counter = 0
-                                path, mask = _load_path_and_mask_from_h5(
-                                    path_and_mask_h5_file,
-                                    task_description,
-                                    episode_idx,
-                                    img.shape,
-                                )
-                                if path is None or mask is None:
-                                    continue
+                                mask = masks_list[(t - args.num_steps_wait) % len(masks_list)]
                             vlm_query_counter += 1
-                            # Use ground truth path and mask with VLM drawing function
-                            if path is not None and mask is not None:
-                                img, _, _ = get_path_mask_from_vlm(
-                                    img,
-                                    "Center Crop",
-                                    str(task_description),
-                                    draw_path=args.draw_path,
-                                    draw_mask=args.draw_mask,
-                                    verbose=True,
-                                    vlm_server_ip=args.vlm_server_ip,
-                                    path=path,
-                                    mask=mask,
-                                )
+                            img, _, _ = get_path_mask_from_vlm(
+                                img,
+                                "Center Crop",
+                                str(task_description),
+                                draw_path=args.draw_path,
+                                draw_mask=args.draw_mask,
+                                verbose=True,
+                                vlm_server_ip=args.vlm_server_ip,
+                                path=path,
+                                mask=mask,
+                            )
+                        img = image_tools.convert_to_uint8(
+                            image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
+                        )
 
                         # Prepare observations dict
                         element = {
@@ -310,10 +301,26 @@ def eval_libero(args: Args) -> None:
                             f"We want to replan every {args.replan_steps} steps, but policy only predicts {len(action_chunk)} steps."
                         )
                         action_plan.extend(action_chunk[: args.replan_steps])
+                    elif args.draw_path or args.draw_mask:
+                        # draw path and mask on image just for visualization when action chunk is still being used
+                        img, path, mask = get_path_mask_from_vlm(
+                            img,
+                            "Center Crop",
+                            str(task_description),
+                            draw_path=args.draw_path,
+                            draw_mask=args.draw_mask,
+                            verbose=True,
+                            vlm_server_ip=args.vlm_server_ip,
+                            path=path,
+                            mask=mask,
+                        )
 
                     action = action_plan.popleft()
 
                     # Save preprocessed image for replay video
+                    img = image_tools.convert_to_uint8(
+                        image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
+                    )
                     replay_images.append(img)
 
                     # Execute action in environment
