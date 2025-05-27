@@ -186,7 +186,6 @@ def eval_libero(args: Args) -> None:
         failure_videos_saved = 0
 
         # Start episodes
-        breakpoint()
         task_episodes, task_successes = 0, 0
         for episode_idx in tqdm.tqdm(range(args.num_trials_per_task)):
             # Load initial states from HDF5 file
@@ -233,7 +232,7 @@ def eval_libero(args: Args) -> None:
                 episode_idx,
                 flipped_agentview.shape,
             )
-            if path is None or mask is None:
+            if path is None or masks_list is None:
                 continue
 
             logging.info(f"Starting episode {task_episodes + 1}...")
