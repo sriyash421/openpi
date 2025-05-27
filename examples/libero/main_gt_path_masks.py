@@ -122,18 +122,18 @@ def _load_path_and_mask_from_h5(
             path = f_annotation["gripper_positions"]  # Get path
 
             # Get mask data
-            significant_points = f_annotation["significant_points"]
-            stopped_points = f_annotation["stopped_points"]
-            mask = np.concatenate([significant_points, stopped_points], axis=0)
+            # significant_points = f_annotation["significant_points"]
+            # stopped_points = f_annotation["stopped_points"]
+            # mask = np.concatenate([significant_points, stopped_points], axis=0)
 
             # Scale path and mask to 0, 1-normalized coordinates for VLM to scale back to image coords.
             w, h = img_shape[:2]
             min_in, max_in = np.zeros(2), np.array([w, h])
             min_out, max_out = np.zeros(2), np.ones(2)
             path = scale_path(path, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
-            mask = scale_path(mask, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out)
+            masked_images = f_annotation["masked_frames"][()]
 
-            return path, mask
+            return path, masked_images
     except (KeyError, ValueError) as e:
         logging.warning(f"Failed to load ground truth path and mask: {e}, skipping")
         return None, None
@@ -226,13 +226,13 @@ def eval_libero(args: Args) -> None:
                 flipped_agentview = flipped_agentview[:, ::-1]
                 flipped_eye_in_hand = flipped_eye_in_hand[:, ::-1]
 
-            path, masks_list = _load_path_and_mask_from_h5(
+            path, masked_images = _load_path_and_mask_from_h5(
                 path_and_mask_h5_file,
                 task_description,
                 episode_idx,
                 flipped_agentview.shape,
             )
-            if path is None or masks_list is None:
+            if path is None or masked_images is None:
                 continue
 
             logging.info(f"Starting episode {task_episodes + 1}...")
@@ -264,14 +264,16 @@ def eval_libero(args: Args) -> None:
                             # Reload ground truth path and mask every vlm_query_frequency steps
                             if vlm_query_counter % args.draw_frequency == 0:
                                 vlm_query_counter = 0
-                                mask = masks_list[(t - args.num_steps_wait) % len(masks_list)]
+                                masked_img = masked_images[(t - args.num_steps_wait) % len(masked_images)]
+                                if args.draw_mask:
+                                    img = masked_img
                             vlm_query_counter += 1
                             img, _, _ = get_path_mask_from_vlm(
                                 img,
                                 "Center Crop",
                                 str(task_description),
                                 draw_path=args.draw_path,
-                                draw_mask=args.draw_mask,
+                                draw_mask=False,
                                 verbose=True,
                                 vlm_server_ip=None,
                                 path=path,
@@ -308,7 +310,7 @@ def eval_libero(args: Args) -> None:
                             "Center Crop",
                             str(task_description),
                             draw_path=args.draw_path,
-                            draw_mask=args.draw_mask,
+                            draw_mask=False,
                             verbose=True,
                             vlm_server_ip=None,
                             path=path,
