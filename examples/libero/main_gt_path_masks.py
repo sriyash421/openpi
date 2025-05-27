@@ -186,7 +186,7 @@ def eval_libero(args: Args) -> None:
         task_episodes, task_successes = 0, 0
         for episode_idx in tqdm.tqdm(range(args.num_trials_per_task)):
             # Load initial states from HDF5 file
-            initial_states = _load_initial_states_from_h5(args.libero_hdf5_dir, task_description, episode_idx)
+            initial_state = _load_initial_states_from_h5(args.libero_hdf5_dir, task_description, episode_idx)
 
             # Initialize LIBERO environment and task description
             env, task_description = _get_libero_env(task, LIBERO_ENV_RESOLUTION, args.seed)
@@ -198,7 +198,7 @@ def eval_libero(args: Args) -> None:
             action_plan = collections.deque()
 
             # Set initial states
-            obs = env.set_init_state(initial_states[episode_idx])
+            obs = env.set_init_state(initial_state)
 
             # Setup
             t = 0
