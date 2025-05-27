@@ -21,6 +21,7 @@ import tyro
 import sys
 import os
 import h5py
+from src.openpi.policies.eval_maskpath_utils import get_path_mask_from_vlm
 
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
 LIBERO_ENV_RESOLUTION = 256  # resolution used to render training data
@@ -54,6 +55,7 @@ class Args:
     # Ground truth path and mask parameters
     #################################################################################################################
     path_and_mask_file_dir: str = ""  # Path to directory containing ground truth path and mask files
+    draw_frequency: int = 10  # Query VLM every n steps
     libero_hdf5_dir: str = ""  # Path to directory containing LIBERO HDF5 files
 
     #################################################################################################################
@@ -234,6 +236,7 @@ def eval_libero(args: Args) -> None:
                 continue
 
             logging.info(f"Starting episode {task_episodes + 1}...")
+            vlm_query_counter = 0
             while t < max_steps + args.num_steps_wait:
                 try:
                     # IMPORTANT: Do nothing for the first few timesteps because the simulator drops objects
@@ -259,6 +262,33 @@ def eval_libero(args: Args) -> None:
 
                     if not action_plan:
                         # Finished executing previous action chunk -- compute new chunk
+                        # get path and mask from VLM or ground truth
+                        if args.draw_path or args.draw_mask:
+                            # Reload ground truth path and mask every vlm_query_frequency steps
+                            if vlm_query_counter % args.draw_frequency == 0:
+                                vlm_query_counter = 0
+                                path, mask = _load_path_and_mask_from_h5(
+                                    path_and_mask_h5_file,
+                                    task_description,
+                                    episode_idx,
+                                    img.shape,
+                                )
+                                if path is None or mask is None:
+                                    continue
+                            vlm_query_counter += 1
+                            # Use ground truth path and mask with VLM drawing function
+                            if path is not None and mask is not None:
+                                img, _, _ = get_path_mask_from_vlm(
+                                    img,
+                                    "Center Crop",
+                                    str(task_description),
+                                    draw_path=args.draw_path,
+                                    draw_mask=args.draw_mask,
+                                    verbose=True,
+                                    vlm_server_ip=args.vlm_server_ip,
+                                    path=path,
+                                    mask=mask,
+                                )
 
                         # Prepare observations dict
                         element = {

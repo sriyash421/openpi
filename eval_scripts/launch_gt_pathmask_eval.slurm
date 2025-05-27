@@ -68,7 +68,7 @@ fi
 path_and_mask_file_dir="/home1/jessez/scratch_data/libero_processed_256_05_12/masked_vla_data"
 libero_hdf5_dir="/home1/jessez/scratch_data/libero_processed_256_05_12/${TASK_SUITE}"
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main_gt_path_masks.py --args.task_suite_name=$TASK_SUITE --args.libero_hdf5_dir=$libero_hdf5_dir"
+EVAL_CMD="python examples/libero/main_gt_path_masks.py --args.task_suite_name=$TASK_SUITE --args.libero_hdf5_dir=$libero_hdf5_dir --args.query_vlm_every_n_steps=$VLM_QUERY_FREQUENCY"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
