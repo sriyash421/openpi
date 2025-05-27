@@ -273,7 +273,7 @@ def eval_libero(args: Args) -> None:
                                 draw_path=args.draw_path,
                                 draw_mask=args.draw_mask,
                                 verbose=True,
-                                vlm_server_ip=args.vlm_server_ip,
+                                vlm_server_ip=None,
                                 path=path,
                                 mask=mask,
                             )
@@ -310,7 +310,7 @@ def eval_libero(args: Args) -> None:
                             draw_path=args.draw_path,
                             draw_mask=args.draw_mask,
                             verbose=True,
-                            vlm_server_ip=args.vlm_server_ip,
+                            vlm_server_ip=None,
                             path=path,
                             mask=mask,
                         )
