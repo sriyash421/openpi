@@ -73,8 +73,9 @@ def _load_initial_states_from_h5(libero_hdf5_dir: str, task_name: str, demo_num:
     """Load initial states from HDF5 file."""
     # get the hdf5 names
     hdf5_names = os.listdir(libero_hdf5_dir)
+    task_name_underscore = task_name.replace(" ", "_")
     for hdf5_name in hdf5_names:
-        if task_name not in hdf5_name:
+        if task_name_underscore not in hdf5_name:
             continue
         with h5py.File(os.path.join(libero_hdf5_dir, hdf5_name), "r", swmr=True) as f:
             return f["data"][f"demo_{demo_num}"]["states"][0]
@@ -186,7 +187,11 @@ def eval_libero(args: Args) -> None:
         task_episodes, task_successes = 0, 0
         for episode_idx in tqdm.tqdm(range(args.num_trials_per_task)):
             # Load initial states from HDF5 file
-            initial_state = _load_initial_states_from_h5(args.libero_hdf5_dir, task_description, episode_idx)
+            try:
+                initial_state = _load_initial_states_from_h5(args.libero_hdf5_dir, task_description, episode_idx)
+            except ValueError:
+                logging.warning(f"Could not find initial state for task {task_description} in HDF5 file")
+                continue
 
             # Initialize LIBERO environment and task description
             env, task_description = _get_libero_env(task, LIBERO_ENV_RESOLUTION, args.seed)
