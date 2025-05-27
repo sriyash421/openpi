@@ -245,6 +245,7 @@ def eval_libero(args: Args) -> None:
                         obs, reward, done, info = env.step(LIBERO_DUMMY_ACTION)
                         t += 1
                         continue
+                    breakpoint()
 
                     # Get preprocessed image
                     # IMPORTANT: rotate 180 degrees to match train preprocessing
@@ -303,7 +304,7 @@ def eval_libero(args: Args) -> None:
                         action_plan.extend(action_chunk[: args.replan_steps])
                     elif args.draw_path or args.draw_mask:
                         # draw path and mask on image just for visualization when action chunk is still being used
-                        img, path, mask = get_path_mask_from_vlm(
+                        img, _, _ = get_path_mask_from_vlm(
                             img,
                             "Center Crop",
                             str(task_description),
