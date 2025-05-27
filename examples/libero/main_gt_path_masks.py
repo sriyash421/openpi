@@ -277,7 +277,7 @@ def eval_libero(args: Args) -> None:
                                 verbose=True,
                                 vlm_server_ip=None,
                                 path=path,
-                                mask=mask,
+                                mask="dummy mask",
                             )
                         img = image_tools.convert_to_uint8(
                             image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
@@ -314,7 +314,7 @@ def eval_libero(args: Args) -> None:
                             verbose=True,
                             vlm_server_ip=None,
                             path=path,
-                            mask=mask,
+                            mask="dummy mask",
                         )
 
                     action = action_plan.popleft()
