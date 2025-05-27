@@ -264,11 +264,16 @@ def eval_libero(args: Args) -> None:
                             # Reload ground truth path and mask every vlm_query_frequency steps
                             if vlm_query_counter % args.draw_frequency == 0:
                                 vlm_query_counter = 0
-                                masked_img = masked_images[(t - args.num_steps_wait) % len(masked_images)]
-                                if args.draw_mask:
-                                    img = masked_img
+                                masked_img = masked_images[
+                                    (t - args.num_steps_wait) % len(masked_images)
+                                ]  # (256, 256). need to convert to list of points to mask
+                                masked_points = np.stack(masked_img.nonzero(masked_img), axis=1)
+                                min_in, max_in = np.zeros(2), np.array(masked_img.shape)
+                                min_out, max_out = np.zeros(2), np.ones(2)
+                                mask = scale_path(
+                                    masked_points, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out
+                                )
                             vlm_query_counter += 1
-                            breakpoint()
                             img, _, _ = get_path_mask_from_vlm(
                                 img,
                                 "Center Crop",
@@ -278,7 +283,7 @@ def eval_libero(args: Args) -> None:
                                 verbose=True,
                                 vlm_server_ip=None,
                                 path=path,
-                                mask="dummy mask",
+                                mask=mask,
                             )
                         img = image_tools.convert_to_uint8(
                             image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
@@ -315,7 +320,7 @@ def eval_libero(args: Args) -> None:
                             verbose=True,
                             vlm_server_ip=None,
                             path=path,
-                            mask="dummy mask",
+                            mask=mask,
                         )
 
                     action = action_plan.popleft()
