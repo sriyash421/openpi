@@ -75,7 +75,7 @@ def _load_path_and_mask_from_h5(
     task_description: str,
     episode_idx: int,
     img_shape: tuple,
-) -> tuple[Union[np.ndarray, None], Union[np.ndarray, None]]:
+):
     """Load path and mask data from HDF5 file.
 
     Args:
