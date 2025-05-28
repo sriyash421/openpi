@@ -48,7 +48,7 @@ SERVE_CMD="CUDA_VISIBLE_DEVICES=$POLICY_GPU_ID $SERVE_CMD_BASE $SERVE_CMD_POLICY
 echo "Running serving command: $SERVE_CMD"
 bash -c "$SERVE_CMD" &
 
-sleep 20
+sleep 30
 
 # Determine task suite based on EVAL_SET
 if [ "$EVAL_SET" = "10" ]; then
