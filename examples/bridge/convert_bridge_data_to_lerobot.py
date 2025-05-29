@@ -224,6 +224,7 @@ def main(
                                             frame[f"observation.masked_path.{cam}"] = masked_path_img
                             else:
                                 frame["camera_present"][cameras.index(cam)] = False
+                        frame["camera_present"] = np.array(frame["camera_present"])
 
                         dataset.add_frame(frame)
                     dataset.save_episode(task=step["language_instruction"].decode())
