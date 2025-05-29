@@ -112,8 +112,12 @@ class BridgeInputs(transforms.DataTransformFn):
         if self.how_many_cameras == 2:
             inputs["image"]["base_0_rgb"] = sample[camera_images[0]]
             inputs["image_mask"]["base_0_rgb"] = np.True_
-            inputs["image"]["base_1_rgb"] = sample[camera_images[1]]
-            inputs["image_mask"]["base_1_rgb"] = np.True_
+            if len(camera_images) > 1:
+                inputs["image"]["base_1_rgb"] = sample[camera_images[1]]
+                inputs["image_mask"]["base_1_rgb"] = np.True_
+            else:
+                inputs["image"]["base_1_rgb"] = inputs["image"]["base_0_rgb"]
+                inputs["image_mask"]["base_1_rgb"] = inputs["image_mask"]["base_0_rgb"]
         elif self.how_many_cameras == 1:
             inputs["image"]["base_0_rgb"] = sample[camera_images[0]]
             inputs["image_mask"]["base_0_rgb"] = np.True_
