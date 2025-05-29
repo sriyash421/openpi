@@ -28,6 +28,8 @@ def _decode_bridge(data: dict) -> dict:
         if np.issubdtype(img.dtype, np.floating):
             if np.max(img) <= 1:
                 img = (255 * img).astype(np.uint8)
+        if img.shape[0] == 3:
+            img = einops.rearrange(img, "c h w -> h w c")
         return img
 
     if "camera_present" in data:
