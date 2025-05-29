@@ -30,6 +30,12 @@ def _decode_bridge(data: dict) -> dict:
                 img = (255 * img).astype(np.uint8)
         return img
 
+    if "camera_present" in data:
+        camera_present = np.asarray(data["camera_present"])
+    else:
+        camera_present = None
+    data["camera_present"] = camera_present
+
     for k, v in data.items():
         if "image" in k:
             data[k] = convert_image(v)
@@ -69,15 +75,16 @@ class BridgeInputs(transforms.DataTransformFn):
         if not required_keys.issubset(sample.keys()):
             raise ValueError(f"Missing required keys. Found: {sample.keys()}, Required: {required_keys}")
 
+        # Create inputs dict. Do not change the keys in the dict below.
+        # convert images to numpy arrays
+        sample = _decode_bridge(sample)
+
         # other keys include: "observation.images.image_1", "observation.images.image_2", "observation.images.image_3". Check camera_present to see which ones are present and sample.
         available_cameras = np.count_nonzero(sample["camera_present"])
         camera_idx_to_include = np.arange(available_cameras)[: self.sample_cameras]
         if self.sample_cameras and available_cameras >= self.how_many_cameras:
             camera_idx_to_include = np.random.choice(available_cameras, self.how_many_cameras, replace=False)
 
-        # Create inputs dict. Do not change the keys in the dict below.
-        # convert images to numpy arrays
-        sample = _decode_bridge(sample)
         zero_image = np.zeros_like(sample["observation.images.image_0"])
         inputs = {
             "state": transforms.pad_to_dim(sample["state"], self.action_dim),
