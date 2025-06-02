@@ -252,8 +252,8 @@ def main(
                     dataset.add_frame(frame)
                 dataset.save_episode(task=step["language_instruction"].decode())
 
-    # Consolidate the dataset, skip computing stats since we will do that later
-    dataset.consolidate(run_compute_stats=False)
+    # Consolidate the dataset
+    dataset.consolidate(run_compute_stats=True)
 
     # Optionally push to the Hugging Face Hub
     if push_to_hub:
@@ -262,6 +262,7 @@ def main(
             private=False,
             push_videos=True,
             license="apache-2.0",
+            upload_large_folder=True,
         )
 
 
