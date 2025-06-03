@@ -89,7 +89,7 @@ class DataConfig:
     # If true, will use the LeRobot dataset task to define the prompt.
     prompt_from_task: bool = False
 
-    # If true, will disable syncing the dataset from the Hugging Face Hub. Allows training on local-only datasets.
+    # not used anymore in my code as i updated lerobot
     local_files_only: bool = False
 
 
