@@ -128,11 +128,6 @@ def main(
                 "shape": (dataset_config.image_height, dataset_config.image_width, 3),
                 "names": ["height", "width", "channels"],
             }
-            features[f"observation.mask.{cam}"] = {
-                "dtype": "video",
-                "shape": (dataset_config.image_height, dataset_config.image_width, 3),
-                "names": ["height", "width", "channels"],
-            }
             features[f"observation.masked_path.{cam}"] = {
                 "dtype": "video",
                 "shape": (dataset_config.image_height, dataset_config.image_width, 3),
@@ -155,25 +150,17 @@ def main(
         image_writer_threads=dataset_config.image_writer_threads,
         video_backend=dataset_config.video_backend,
     )
-
     # Load paths and masks from HDF5 file if use_paths_masks is True
-    path_data = None
-    path_lengths = None
-    mask_data = None
-    mask_lengths = None
-
     if dataset_config.use_paths_masks and paths_masks_file is not None:
-        with h5py.File(paths_masks_file, "r") as f:
+        with h5py.File(paths_masks_file, "r") as path_masks_h5:
             # Loop over raw Libero datasets and write episodes to the LeRobot dataset
             for raw_dataset_name in RAW_DATASET_NAMES:
                 raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
                 for episode_idx, episode in enumerate(raw_dataset):
+                    if episode_idx > 5:
+                        break
                     # Get the path and mask data for this episode from HDF5
-                    episode_group = f[f"episode_{episode_idx}"]
-                    path_data = episode_group["paths"][:] if "paths" in episode_group else None
-                    path_lengths = episode_group["path_lengths"][:] if "paths" in episode_group else None
-                    mask_data = episode_group["masks"][:] if "masks" in episode_group else None
-                    mask_lengths = episode_group["mask_lengths"][:] if "masks" in episode_group else None
+                    episode_group = path_masks_h5[f"episode_{episode_idx}"]
 
                     for step in episode["steps"].as_numpy_iterator():
                         frame = {
@@ -184,18 +171,61 @@ def main(
 
                         # Process images, paths, and masks for each camera
                         for cam in cameras:
+                            # Get the path and mask data for this camera from HDF5
+                            path_data = episode_group[f"{cam}_paths"][:] if f"{cam}_paths" in episode_group else None
+                            path_lengths = (
+                                episode_group[f"{cam}_path_lengths"][:]
+                                if f"{cam}_path_lengths" in episode_group
+                                else None
+                            )
+                            mask_data = episode_group[f"{cam}_masks"][:] if f"{cam}_masks" in episode_group else None
+                            mask_lengths = (
+                                episode_group[f"{cam}_mask_lengths"][:]
+                                if f"{cam}_mask_lengths" in episode_group
+                                else None
+                            )
+                            # Timesteps correspond to which steps have the path and masks
+                            path_timesteps = (
+                                episode_group[f"{cam}_path_timesteps"][:]
+                                if f"{cam}_path_timesteps" in episode_group
+                                else None
+                            )
+                            mask_timesteps = (
+                                episode_group[f"{cam}_mask_timesteps"][:]
+                                if f"{cam}_mask_timesteps" in episode_group
+                                else None
+                            )
+
+                            next_path_timestep_idx = 0
+                            next_mask_timestep_idx = 0
+
                             if cam in step["observation"]:
                                 img = step["observation"][cam]
                                 frame[f"observation.images.{cam}"] = img
                                 # check for all 0 images
                                 frame["camera_present"][cameras.index(cam)] = not np.all(img == 0)
+                                # Skip if any of the path or mask data is not available or if the camera is not present
+                                if (
+                                    any(data is None for data in [path_data, path_lengths, mask_data, mask_lengths])
+                                    or frame["camera_present"][cameras.index(cam)] is False
+                                ):
+                                    continue
 
                                 # Process path and mask if available and enabled
                                 if dataset_config.use_paths_masks and path_data is not None:
                                     # Get the current step's path
                                     step_idx = step["step_id"]
+                                    # because we query the path and mask data for each step but it's only generated every N steps in the HDF5, we check if the step_idx has reached the next timestep
                                     if step_idx < len(path_lengths) and path_lengths[step_idx] > 0:
-                                        current_path = path_data[step_idx, : path_lengths[step_idx]]
+                                        if step_idx == path_timesteps[next_path_timestep_idx]:
+                                            next_path_timestep_idx += 1
+                                        if step_idx == mask_timesteps[next_mask_timestep_idx]:
+                                            next_mask_timestep_idx += 1
+
+                                        current_path_idx = next_path_timestep_idx - 1
+                                        current_mask_idx = next_mask_timestep_idx - 1
+
+                                        current_path = path_data[current_path_idx, : path_lengths[current_path_idx]]
                                         # Add path to image
                                         path_img = process_path_obs(
                                             img.copy(), current_path, path_line_size=dataset_config.path_line_size
@@ -208,12 +238,12 @@ def main(
                                             and step_idx < len(mask_lengths)
                                             and mask_lengths[step_idx] > 0
                                         ):
-                                            current_mask = mask_data[step_idx, : mask_lengths[step_idx]]
+                                            current_mask = mask_data[current_mask_idx, : mask_lengths[current_mask_idx]]
                                             # Apply mask
                                             masked_img = process_mask_obs(
                                                 img.copy(), current_mask, mask_pixels=dataset_config.mask_pixels
                                             )
-                                            frame[f"observation.mask.{cam}"] = masked_img
+                                            # frame[f"observation.mask.{cam}"] = masked_img
 
                                             # Combine path and mask
                                             masked_path_img = process_path_obs(
