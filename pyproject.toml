@@ -58,7 +58,7 @@ dev = [
 
 [tool.uv.sources]
 openpi-client = { workspace = true }
-lerobot = { git = "https://github.com/jesbu1/lerobot", rev = "0c8bf61a5e930d68ffca4e1b4f338ee4cb545754" }
+lerobot = { git = "https://github.com/jesbu1/lerobot", rev = "271222a11bf897e2aa75158a1a85914919e94423" }
 
 [tool.uv.workspace]
 members = ["packages/*"]

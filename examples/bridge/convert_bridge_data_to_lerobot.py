@@ -16,7 +16,14 @@ from pathlib import Path
 import shutil
 import tensorflow_datasets as tfds
 import numpy as np
-from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
+try:
+    # for older lerobot versions before 2.0.0
+    from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
+    OLD_LEROBOT = True
+except ImportError:
+    # newer lerobot versions use HF_LEROBOT_HOME instead of LEROBOT_HOME
+    from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME as LEROBOT_HOME
+    OLD_LEROBOT = False
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import tyro
 from vila_utils.utils.decode import add_path_2d_to_img_alt_fast, add_mask_2d_to_img
@@ -34,7 +41,7 @@ class DatasetConfig:
     image_width: int = 256
     video_backend: str = None
     # Path and mask specific configs
-    path_line_size: int = 3
+    path_line_size: int = 2
     mask_pixels: int = 25
     use_paths_masks: bool = False  # Whether to process and include paths and masks
 
@@ -152,7 +159,7 @@ def main(
     )
     # Load paths and masks from HDF5 file if use_paths_masks is True
     if dataset_config.use_paths_masks and paths_masks_file is not None:
-        with h5py.File(paths_masks_file, "r") as path_masks_h5:
+        with h5py.File(paths_masks_file, "r", swmr=True) as path_masks_h5:
             # Loop over raw Libero datasets and write episodes to the LeRobot dataset
             for raw_dataset_name in RAW_DATASET_NAMES:
                 raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
@@ -160,16 +167,21 @@ def main(
                     if episode_idx > 5:
                         break
                     # Get the path and mask data for this episode from HDF5
-                    episode_group = path_masks_h5[f"episode_{episode_idx}"]
+                    if f"episode_{episode_idx}" in path_masks_h5:
+                        episode_group = path_masks_h5[f"episode_{episode_idx}"]
+                    else:
+                        continue
+                    next_path_timestep_idx = 0
+                    next_mask_timestep_idx = 0
 
-                    for step in episode["steps"].as_numpy_iterator():
+
+                    for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
                         frame = {
                             "observation.state": step["observation"]["state"],
                             "action": step["action"],
                             "camera_present": [True] * len(cameras),
                         }
 
-                        # Process images, paths, and masks for each camera
                         for cam in cameras:
                             # Get the path and mask data for this camera from HDF5
                             path_data = episode_group[f"{cam}_paths"][:] if f"{cam}_paths" in episode_group else None
@@ -196,9 +208,6 @@ def main(
                                 else None
                             )
 
-                            next_path_timestep_idx = 0
-                            next_mask_timestep_idx = 0
-
                             if cam in step["observation"]:
                                 img = step["observation"][cam]
                                 frame[f"observation.images.{cam}"] = img
@@ -209,55 +218,58 @@ def main(
                                     any(data is None for data in [path_data, path_lengths, mask_data, mask_lengths])
                                     or frame["camera_present"][cameras.index(cam)] is False
                                 ):
+                                    frame[f"observation.path.{cam}"] = np.zeros_like(img)
+                                    frame[f"observation.masked_path.{cam}"] = np.zeros_like(img)
                                     continue
 
                                 # Process path and mask if available and enabled
                                 if dataset_config.use_paths_masks and path_data is not None:
                                     # Get the current step's path
-                                    step_idx = step["step_id"]
                                     # because we query the path and mask data for each step but it's only generated every N steps in the HDF5, we check if the step_idx has reached the next timestep
-                                    if step_idx < len(path_lengths) and path_lengths[step_idx] > 0:
-                                        if step_idx == path_timesteps[next_path_timestep_idx]:
-                                            next_path_timestep_idx += 1
-                                        if step_idx == mask_timesteps[next_mask_timestep_idx]:
-                                            next_mask_timestep_idx += 1
+                                    if step_idx == path_timesteps[next_path_timestep_idx % len(path_timesteps)] and next_path_timestep_idx < len(path_timesteps):
+                                        next_path_timestep_idx += 1
+                                    if step_idx == mask_timesteps[next_mask_timestep_idx % len(mask_timesteps)] and next_mask_timestep_idx < len(mask_timesteps):
+                                        next_mask_timestep_idx += 1
+                                    
 
-                                        current_path_idx = next_path_timestep_idx - 1
-                                        current_mask_idx = next_mask_timestep_idx - 1
+                                    current_path_idx = next_path_timestep_idx - 1
+                                    current_mask_idx = next_mask_timestep_idx - 1
 
-                                        current_path = path_data[current_path_idx, : path_lengths[current_path_idx]]
-                                        # Add path to image
-                                        path_img = process_path_obs(
-                                            img.copy(), current_path, path_line_size=dataset_config.path_line_size
+                                    current_path = path_data[current_path_idx, : path_lengths[current_path_idx]]
+                                    # Add path to image
+                                    path_img = process_path_obs(
+                                        img.copy(), current_path, path_line_size=dataset_config.path_line_size
+                                    )
+                                    frame[f"observation.path.{cam}"] = path_img
+
+                                    # Add mask if available
+                                    if (
+                                        mask_data is not None
+                                    ):
+                                        current_mask = mask_data[current_mask_idx, : mask_lengths[current_mask_idx]]
+                                        # Apply mask
+                                        masked_img = process_mask_obs(
+                                            img.copy(), current_mask, mask_pixels=dataset_config.mask_pixels
                                         )
-                                        frame[f"observation.path.{cam}"] = path_img
+                                        # frame[f"observation.mask.{cam}"] = masked_img
 
-                                        # Add mask if available
-                                        if (
-                                            mask_data is not None
-                                            and step_idx < len(mask_lengths)
-                                            and mask_lengths[step_idx] > 0
-                                        ):
-                                            current_mask = mask_data[current_mask_idx, : mask_lengths[current_mask_idx]]
-                                            # Apply mask
-                                            masked_img = process_mask_obs(
-                                                img.copy(), current_mask, mask_pixels=dataset_config.mask_pixels
-                                            )
-                                            # frame[f"observation.mask.{cam}"] = masked_img
-
-                                            # Combine path and mask
-                                            masked_path_img = process_path_obs(
-                                                masked_img.copy(),
-                                                current_path,
-                                                path_line_size=dataset_config.path_line_size,
-                                            )
-                                            frame[f"observation.masked_path.{cam}"] = masked_path_img
+                                        # Combine path and mask
+                                        masked_path_img = process_path_obs(
+                                            masked_img.copy(),
+                                            current_path,
+                                            path_line_size=dataset_config.path_line_size,
+                                        )
+                                        frame[f"observation.masked_path.{cam}"] = masked_path_img
                             else:
                                 frame["camera_present"][cameras.index(cam)] = False
-                        frame["camera_present"] = np.array(frame["camera_present"])
-
-                        dataset.add_frame(frame)
-                    dataset.save_episode(task=step["language_instruction"].decode())
+                        frame["camera_present"] = np.array(frame["camera_present"], dtype=bool)
+                        if not OLD_LEROBOT:
+                            frame["task"] = step["language_instruction"].decode() # new lerobot requires task in frame
+                        dataset.add_frame(frame) 
+                    if OLD_LEROBOT:
+                        dataset.save_episode(task=step["language_instruction"].decode())
+                    else:
+                        dataset.save_episode()
     else:
         # Process without paths and masks
         for raw_dataset_name in RAW_DATASET_NAMES:
@@ -278,12 +290,19 @@ def main(
                             frame["camera_present"][cameras.index(cam)] = not np.all(img == 0)
                         else:
                             frame["camera_present"][cameras.index(cam)] = False
-
+                    frame["camera_present"] = np.array(frame["camera_present"], dtype=bool) 
+                    if not OLD_LEROBOT:
+                        frame["task"] = episode["language_instruction"].decode() # new lerobot requires task in frame
                     dataset.add_frame(frame)
-                dataset.save_episode(task=step["language_instruction"].decode())
 
-    # Consolidate the dataset
-    dataset.consolidate(run_compute_stats=True)
+                if OLD_LEROBOT:
+                    dataset.save_episode(task=step["language_instruction"].decode())
+                else:
+                    dataset.save_episode()
+
+    # Consolidate the dataset (not needed in lerobot 2.0.0)
+    if OLD_LEROBOT:
+        dataset.consolidate(run_compute_stats=True)
 
     # Optionally push to the Hugging Face Hub
     if push_to_hub:
