@@ -27,7 +27,7 @@ except ImportError:
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import tyro
 from vila_utils.utils.decode import add_path_2d_to_img_alt_fast, add_mask_2d_to_img
-from vila_utils.utils.encode import scale_path
+from vila_utils.utils.encode import scale_path, smooth_path_rdp
 import h5py
 
 
@@ -42,8 +42,9 @@ class DatasetConfig:
     video_backend: str = None
     # Path and mask specific configs
     path_line_size: int = 2
-    mask_pixels: int = 25
+    mask_ratio: float = 0.15 # ratio of the image height to the mask size
     use_paths_masks: bool = False  # Whether to process and include paths and masks
+    apply_rdp: bool = True # Whether to apply RDP to the path and mask output from the VLM
 
 
 DEFAULT_DATASET_CONFIG = DatasetConfig()
@@ -53,7 +54,7 @@ RAW_DATASET_NAMES = [
 ]
 
 
-def process_path_obs(sample_img, path, path_line_size=3):
+def process_path_obs(sample_img, path, path_line_size=3, apply_rdp=False):
     """Process path observation by drawing it onto the image."""
     height, width = sample_img.shape[:2]
 
@@ -62,13 +63,36 @@ def process_path_obs(sample_img, path, path_line_size=3):
     min_out, max_out = np.zeros(2), np.ones(2)
     path_scaled = scale_path(path, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
 
+    if apply_rdp:
+        length_before = len(path_scaled)
+        path_scaled = smooth_path_rdp(path_scaled, tolerance=0.05)
+        length_after = len(path_scaled)
+        if length_before > length_after:
+            print(f"RDP reduced path length from {length_before} to {length_after}")
     # Draw path
     return add_path_2d_to_img_alt_fast(sample_img, path_scaled, line_size=path_line_size)
 
 
-def process_mask_obs(sample_img, mask_points, mask_pixels=25):
+def process_mask_obs(sample_img, mask_points, mask_pixels=25, scale_mask=False, apply_rdp=False):
     """Process mask observation by applying it to the image."""
-    return add_mask_2d_to_img(sample_img, mask_points, mask_pixels=mask_pixels)
+    if scale_mask:
+        height, width = sample_img.shape[:2]
+
+        # Scale mask points to image size
+        min_in, max_in = np.zeros(2), np.array([width, height])
+        min_out, max_out = np.zeros(2), np.ones(2)
+        mask_points_scaled = scale_path(mask_points, min_in=min_out, max_in=max_out, min_out=min_in, max_out=max_in)
+    else:
+        mask_points_scaled = mask_points
+
+    if apply_rdp:
+        length_before = len(mask_points_scaled)
+        mask_points_scaled = smooth_path_rdp(mask_points_scaled, tolerance=0.05)
+        length_after = len(mask_points_scaled)
+        if length_before > length_after:
+            print(f"RDP reduced mask length from {length_before} to {length_after}")
+
+    return add_mask_2d_to_img(sample_img, mask_points_scaled, mask_pixels=mask_pixels)
 
 
 def main(
@@ -164,7 +188,7 @@ def main(
             for raw_dataset_name in RAW_DATASET_NAMES:
                 raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
                 for episode_idx, episode in enumerate(raw_dataset):
-                    if episode_idx > 5:
+                    if episode_idx > 10:
                         break
                     # Get the path and mask data for this episode from HDF5
                     if f"episode_{episode_idx}" in path_masks_h5:
@@ -238,7 +262,7 @@ def main(
                                     current_path = path_data[current_path_idx, : path_lengths[current_path_idx]]
                                     # Add path to image
                                     path_img = process_path_obs(
-                                        img.copy(), current_path, path_line_size=dataset_config.path_line_size
+                                        img.copy(), current_path, path_line_size=dataset_config.path_line_size, apply_rdp=dataset_config.apply_rdp
                                     )
                                     frame[f"observation.path.{cam}"] = path_img
 
@@ -248,8 +272,9 @@ def main(
                                     ):
                                         current_mask = mask_data[current_mask_idx, : mask_lengths[current_mask_idx]]
                                         # Apply mask
+                                        height, width = img.shape[:2]
                                         masked_img = process_mask_obs(
-                                            img.copy(), current_mask, mask_pixels=dataset_config.mask_pixels
+                                            img.copy(), current_mask, mask_pixels=int(height*dataset_config.mask_ratio), scale_mask=np.all(current_mask <= 1), apply_rdp=dataset_config.apply_rdp
                                         )
                                         # frame[f"observation.mask.{cam}"] = masked_img
 
