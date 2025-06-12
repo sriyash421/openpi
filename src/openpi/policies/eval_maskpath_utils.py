@@ -168,7 +168,7 @@ def get_path_mask_from_vlm(
     temperature = 0.0
     for _ in range(5):
         try:
-            if path is None or mask is None:
+            if path is None and draw_path or mask is None and draw_mask:
                 prompt_type = "path_mask"
                 response_text = send_request(
                     image,

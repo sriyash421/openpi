@@ -267,23 +267,25 @@ def eval_libero(args: Args) -> None:
                                 masked_img = masked_images[
                                     (t - args.num_steps_wait) % len(masked_images)
                                 ]  # (256, 256). need to convert to list of points to mask
-                                masked_points = np.stack(masked_img.nonzero(), axis=1)
-                                min_in, max_in = np.zeros(2), np.array(masked_img.shape)
-                                min_out, max_out = np.zeros(2), np.ones(2)
-                                mask = scale_path(
-                                    masked_points, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out
-                                )
+                                # masked_points = np.stack(masked_img.nonzero(), axis=1)
+                                # min_in, max_in = np.zeros(2), np.array(masked_img.shape)
+                                # min_out, max_out = np.zeros(2), np.ones(2)
+                                # mask = scale_path(
+                                #    masked_points, min_in=min_in, max_in=max_in, min_out=min_out, max_out=max_out
+                                # )
+                                if args.draw_mask:
+                                    img = masked_img[..., None] * img
                             vlm_query_counter += 1
                             img, _, _ = get_path_mask_from_vlm(
                                 img,
                                 "Center Crop",
                                 str(task_description),
                                 draw_path=args.draw_path,
-                                draw_mask=args.draw_mask,
+                                draw_mask=False,
                                 verbose=True,
                                 vlm_server_ip=None,
                                 path=path,
-                                mask=mask,
+                                mask=None,
                             )
                         img = image_tools.convert_to_uint8(
                             image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
@@ -311,16 +313,18 @@ def eval_libero(args: Args) -> None:
                         action_plan.extend(action_chunk[: args.replan_steps])
                     elif args.draw_path or args.draw_mask:
                         # draw path and mask on image just for visualization when action chunk is still being used
+                        if args.draw_mask:
+                            img = masked_img[..., None] * img
                         img, _, _ = get_path_mask_from_vlm(
                             img,
                             "Center Crop",
                             str(task_description),
                             draw_path=args.draw_path,
-                            draw_mask=args.draw_mask,
+                            draw_mask=False,
                             verbose=True,
                             vlm_server_ip=None,
                             path=path,
-                            mask=mask,
+                            mask=None,
                         )
 
                     action = action_plan.popleft()
