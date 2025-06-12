@@ -17,7 +17,7 @@ NO_PROPRIO=${4:-0} # Default to not using proprio
 
 POLICY_GPU_ID=0
 
-VLM_QUERY_FREQUENCY=10 # how many times to call the VLM per action chunk
+VLM_QUERY_FREQUENCY=1 # how many times to call the VLM per action chunk
 
 source ~/.bashrc
 
@@ -68,7 +68,7 @@ fi
 path_and_mask_file_dir="/home1/jessez/scratch_data/libero_processed_256_05_12/masked_vla_data"
 libero_hdf5_dir="/home1/jessez/scratch_data/libero_processed_256_05_12/${TASK_SUITE}"
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main_gt_path_masks.py --args.task_suite_name=$TASK_SUITE --args.path_and_mask_file_dir=$path_and_mask_file_dir --args.libero_hdf5_dir=$libero_hdf5_dir --args.draw_frequency=$VLM_QUERY_FREQUENCY --args.wandb_name_suffix=noproprio-${NO_PROPRIO}"
+EVAL_CMD="python examples/libero/main_gt_path_masks.py --args.task_suite_name=$TASK_SUITE --args.path_and_mask_file_dir=$path_and_mask_file_dir --args.libero_hdf5_dir=$libero_hdf5_dir --args.draw_frequency=$VLM_QUERY_FREQUENCY --args.wandb_name_suffix=noproprio-${NO_PROPRIO}-vlmfreq${VLM_QUERY_FREQUENCY}"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then

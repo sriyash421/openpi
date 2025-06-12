@@ -55,7 +55,7 @@ class Args:
     # Ground truth path and mask parameters
     #################################################################################################################
     path_and_mask_file_dir: str = ""  # Path to directory containing ground truth path and mask files
-    draw_frequency: int = 10  # Query VLM every n steps
+    draw_frequency: int = 1  # Query VLM every n steps
     libero_hdf5_dir: str = ""  # Path to directory containing LIBERO HDF5 files
 
     #################################################################################################################
