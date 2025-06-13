@@ -7,8 +7,8 @@ or explicit paths to individual trajectory directories.
 Example usage (by task directories):
 uv run examples/bridge/convert_usc_data_to_lerobot.py --raw-dirs /path/to/task1 /path/to/task2 --repo-id <org>/<combined-dataset-name>
 
-Example usage (by specific trajectories):
-uv run examples/usc_widowx/convert_usc_data_to_lerobot.py --traj-paths /path/to/task1/traj0 /path/to/task2/traj5 --repo-id <org>/<combined-dataset-name>
+Example usage for path masks:
+CUDA_VISIBLE_DEVICES=, uv run examples/bridge/convert_bridge_data_to_lerobot.py --data_dir /data/shared/openx_rlds_data/ --repo_id jesbu1/test --paths_masks_file ~/VILA/test_bridge_labeling_5x/bridge_paths_masks.h5 --dataset-config.use_paths_masks --push_to_hub
 """
 
 import dataclasses
