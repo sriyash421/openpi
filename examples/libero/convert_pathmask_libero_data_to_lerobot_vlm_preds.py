@@ -102,7 +102,7 @@ def main(
     dataset = LeRobotDataset.create(
         repo_id=repo_name,
         robot_type="panda",
-        fps=10,
+        fps=20,
         features={
             "image": {
                 "dtype": "video",
@@ -146,7 +146,7 @@ def main(
         for raw_dataset_name in RAW_DATASET_NAMES:
             raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
             for episode_idx, episode in enumerate(raw_dataset):
-                if episode_idx > 10:
+                if episode_idx > 15:
                     break
                 # Initialize path and mask tracking variables
                 current_path = None
