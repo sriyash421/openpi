@@ -215,18 +215,18 @@ def main(
                                         )
                                         frame["masked_path_image"] = masked_path_img
                                     else:
-                                        frame["masked_path_image"] = np.zeros_like(step["observation"]["image"])
+                                        frame["masked_path_image"] = step["observation"]["image"]
                                 else:
-                                    frame["masked_path_image"] = np.zeros_like(step["observation"]["image"])
+                                    frame["masked_path_image"] = step["observation"]["image"]
                             else:
-                                frame["path_image"] = np.zeros_like(step["observation"]["image"])
-                                frame["masked_path_image"] = np.zeros_like(step["observation"]["image"])
+                                frame["path_image"] = step["observation"]["image"]
+                                frame["masked_path_image"] = step["observation"]["image"]
                         else:
-                            frame["path_image"] = np.zeros_like(step["observation"]["image"])
-                            frame["masked_path_image"] = np.zeros_like(step["observation"]["image"])
+                            frame["path_image"] = step["observation"]["image"]
+                            frame["masked_path_image"] = step["observation"]["image"]
                     else:
-                        frame["path_image"] = np.zeros_like(step["observation"]["image"])
-                        frame["masked_path_image"] = np.zeros_like(step["observation"]["image"])
+                        frame["path_image"] = step["observation"]["image"]
+                        frame["masked_path_image"] = step["observation"]["image"]
 
                     if not OLD_LEROBOT:
                         frame["task"] = step["language_instruction"].decode() # new lerobot requires task in frame
