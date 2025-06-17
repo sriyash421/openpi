@@ -42,6 +42,7 @@ RAW_DATASET_NAMES = [
     # "libero_object_openvla_processed",
 ]  # For simplicity we will combine multiple Libero datasets into one training dataset
 REPO_NAME = "jesbu1/libero_90_lerobot_pathmask_rdp_vlm_preds"  # Name of the output dataset, also used for the Hugging Face Hub
+FLIP_IMAGE = True
 
 
 from vila_utils.utils.decode import add_path_2d_to_img_alt_fast, add_mask_2d_to_img
@@ -153,12 +154,17 @@ def main(
                 next_mask_timestep_idx = 0
 
                 for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
+                    img = step["observation"]["image"]
+                    if FLIP_IMAGE:
+                        img = np.flip(img, axis=1)
                     frame = {
-                            "image": step["observation"]["image"],
-                            "wrist_image": step["observation"]["wrist_image"],
-                            "state": step["observation"]["state"],
-                            "actions": step["action"],
-                        }
+                        "image": img,
+                        "wrist_image": step["observation"]["wrist_image"]
+                        if not FLIP_IMAGE
+                        else np.flip(step["observation"]["wrist_image"], axis=1),
+                        "state": step["observation"]["state"],
+                        "actions": step["action"],
+                    }
 
                     # Get the path and mask data for this episode from HDF5
                     if f"episode_{episode_idx}" in path_masks_h5:
@@ -181,10 +187,7 @@ def main(
                             # Add path to image if we have one
                             if current_path is not None:
                                 path_img = process_path_obs(
-                                    step["observation"]["image"].copy(), 
-                                    current_path, 
-                                    path_line_size=path_line_size, 
-                                    apply_rdp=True
+                                    img.copy(), current_path, path_line_size=path_line_size, apply_rdp=True
                                 )
                                 frame["path_image"] = path_img
 
@@ -213,18 +216,18 @@ def main(
                                         )
                                         frame["masked_path_image"] = masked_path_img
                                     else:
-                                        frame["masked_path_image"] = step["observation"]["image"]
+                                        frame["masked_path_image"] = img
                                 else:
-                                    frame["masked_path_image"] = step["observation"]["image"]
+                                    frame["masked_path_image"] = img
                             else:
-                                frame["path_image"] = step["observation"]["image"]
-                                frame["masked_path_image"] = step["observation"]["image"]
+                                frame["path_image"] = img
+                                frame["masked_path_image"] = img
                         else:
-                            frame["path_image"] = step["observation"]["image"]
-                            frame["masked_path_image"] = step["observation"]["image"]
+                            frame["path_image"] = img
+                            frame["masked_path_image"] = img
                     else:
-                        frame["path_image"] = step["observation"]["image"]
-                        frame["masked_path_image"] = step["observation"]["image"]
+                        frame["path_image"] = img
+                        frame["masked_path_image"] = img
 
                     if not OLD_LEROBOT:
                         frame["task"] = step["language_instruction"].decode() # new lerobot requires task in frame
