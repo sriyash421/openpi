@@ -156,12 +156,12 @@ def main(
                 for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
                     img = step["observation"]["image"]
                     if FLIP_IMAGE:
-                        img = np.flip(img, axis=1)
+                        img = np.flip(img)
                     frame = {
                         "image": img,
                         "wrist_image": step["observation"]["wrist_image"]
                         if not FLIP_IMAGE
-                        else np.flip(step["observation"]["wrist_image"], axis=1),
+                        else np.fliplr(step["observation"]["wrist_image"]),
                         "state": step["observation"]["state"],
                         "actions": step["action"],
                     }
