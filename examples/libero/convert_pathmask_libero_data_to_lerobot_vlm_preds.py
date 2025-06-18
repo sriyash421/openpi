@@ -156,7 +156,7 @@ def main(
                 for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
                     img = step["observation"]["image"]
                     if FLIP_IMAGE:
-                        img = np.flip(img)
+                        img = np.fliplr(img)
                     frame = {
                         "image": img,
                         "wrist_image": step["observation"]["wrist_image"]
@@ -202,11 +202,11 @@ def main(
                                     if current_mask is not None:
                                         height, width = step["observation"]["image"].shape[:2]
                                         masked_img = process_mask_obs(
-                                            step["observation"]["image"].copy(), 
-                                            current_mask, 
-                                            mask_pixels=int(height*mask_ratio), 
-                                            scale_mask=np.all(current_mask <= 1), 
-                                            apply_rdp=True
+                                            img.copy(),
+                                            current_mask,
+                                            mask_pixels=int(height * mask_ratio),
+                                            scale_mask=np.all(current_mask <= 1),
+                                            apply_rdp=True,
                                         )
                                         # Combine path and mask
                                         masked_path_img = process_path_obs(
