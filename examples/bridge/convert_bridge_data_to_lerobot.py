@@ -8,7 +8,7 @@ Example usage (by task directories):
 uv run examples/bridge/convert_usc_data_to_lerobot.py --raw-dirs /path/to/task1 /path/to/task2 --repo-id <org>/<combined-dataset-name>
 
 Example usage for path masks:
-uv run examples/bridge/convert_bridge_data_to_lerobot.py --data_dir /data/shared/openx_rlds_data/ --repo_id jesbu1/test_bridge --paths-masks-file ~/VILA/test_bridge_labeling_5x/bridge_paths_masks_merged.h5 --push_to_hub
+uv run examples/bridge/convert_bridge_data_to_lerobot.py --data_dir /data/shared/openx_rlds_data/ --repo_id jesbu1/bridge_v2_lerobot_pathmask --paths-masks-file ~/VILA/test_bridge_labeling_5x/bridge_paths_masks_merged.h5 --push_to_hub
 """
 
 import dataclasses
