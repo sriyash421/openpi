@@ -31,7 +31,6 @@ except ImportError:
 
     OLD_LEROBOT = False
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.common.datasets.push_dataset_to_hub._download_raw import download_raw
 import numpy as np
 import torch
 import tqdm
@@ -451,22 +450,7 @@ def port_usc_data(
         # TODO(user): Add support for downloading multiple raw_repo_ids if needed.
         existing_raw_dirs = [d for d in raw_dirs if d.exists()]
         if not existing_raw_dirs:
-             # If raw_repo_id is provided, attempt download to the *first* path in raw_dirs
-             # This assumes raw_repo_id contains all necessary data, which might not be true
-             # for the multi-directory case. Recommend pre-downloading for multi-dir.
-            if raw_repo_id:
-                 target_download_dir = raw_dirs[0]
-                 warnings.warn(f"None of the specified raw directories exist. Attempting to download from {raw_repo_id} into {target_download_dir}. This might not contain all required task data.")
-                 print(f"Downloading from {raw_repo_id} to {target_download_dir}...")
-                 # Create parent if it doesn't exist
-                 target_download_dir.parent.mkdir(parents=True, exist_ok=True)
-                 download_raw(target_download_dir, repo_id=raw_repo_id)
-                 # Re-check existence after download
-                 existing_raw_dirs = [d for d in raw_dirs if d.exists()]
-                 if not existing_raw_dirs:
-                      raise FileNotFoundError(f"Raw data directory {target_download_dir} still not found after attempting download from {raw_repo_id}.")
-            else:
-                 raise FileNotFoundError(f"None of the specified raw directories exist: {raw_dirs}, and no raw_repo_id provided for download.")
+            raise FileNotFoundError(f"None of the specified raw directories exist: {raw_dirs}")
 
         # Warn if some directories were provided but don't exist
         missing_dirs = [d for d in raw_dirs if not d.exists()]
