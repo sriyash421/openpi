@@ -8,7 +8,7 @@ Example usage (by task directories):
 uv run examples/bridge/convert_usc_data_to_lerobot.py --raw-dirs /path/to/task1 /path/to/task2 --repo-id <org>/<combined-dataset-name>
 
 Example usage for path masks:
-CUDA_VISIBLE_DEVICES=, uv run examples/bridge/convert_bridge_data_to_lerobot.py --data_dir /data/shared/openx_rlds_data/ --repo_id jesbu1/test --paths_masks_file ~/VILA/test_bridge_labeling_5x/bridge_paths_masks.h5 --dataset-config.use_paths_masks --push_to_hub
+uv run examples/bridge/convert_bridge_data_to_lerobot.py --data_dir /data/shared/openx_rlds_data/ --repo_id jesbu1/bridge_v2_lerobot_pathmask --paths-masks-file ~/VILA/test_bridge_labeling_5x/bridge_paths_masks_merged.h5 --push_to_hub
 """
 
 import dataclasses
@@ -34,8 +34,8 @@ import h5py
 @dataclasses.dataclass(frozen=True)
 class DatasetConfig:
     use_videos: bool = True
-    image_writer_processes: int = 10
-    image_writer_threads: int = 5
+    image_writer_processes: int = 12
+    image_writer_threads: int = 7
     # TODO(user): Define image shape expected by LeRobot
     image_height: int = 256
     image_width: int = 256
@@ -43,8 +43,8 @@ class DatasetConfig:
     # Path and mask specific configs
     path_line_size: int = 2
     mask_ratio: float = 0.15 # ratio of the image height to the mask size
-    use_paths_masks: bool = False  # Whether to process and include paths and masks
-    apply_rdp: bool = True # Whether to apply RDP to the path and mask output from the VLM
+    use_paths_masks: bool = True  # Whether to process and include paths and masks
+    apply_rdp: bool = False # Whether to apply RDP to the path and mask output from the VLM
 
 
 DEFAULT_DATASET_CONFIG = DatasetConfig()
@@ -188,8 +188,6 @@ def main(
             for raw_dataset_name in RAW_DATASET_NAMES:
                 raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
                 for episode_idx, episode in enumerate(raw_dataset):
-                    if episode_idx > 10:
-                        break
                     # Get the path and mask data for this episode from HDF5
                     if f"episode_{episode_idx}" in path_masks_h5:
                         episode_group = path_masks_h5[f"episode_{episode_idx}"]

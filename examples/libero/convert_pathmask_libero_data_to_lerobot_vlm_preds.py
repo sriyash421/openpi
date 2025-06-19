@@ -247,6 +247,7 @@ def main(
             tags=["libero", "panda", "rlds"],
             private=False,
             push_videos=True,
+            upload_large_folder=True,
             license="apache-2.0",
         )
 
