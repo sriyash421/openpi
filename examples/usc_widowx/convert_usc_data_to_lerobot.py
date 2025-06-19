@@ -20,7 +20,16 @@ from typing import Literal, Dict, List, Tuple, Optional
 import warnings
 import pickle
 
-from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
+try:
+    # for older lerobot versions before 2.0.0
+    from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
+
+    OLD_LEROBOT = True
+except ImportError:
+    # newer lerobot versions use HF_LEROBOT_HOME instead of LEROBOT_HOME
+    from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME as LEROBOT_HOME
+
+    OLD_LEROBOT = False
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.common.datasets.push_dataset_to_hub._download_raw import download_raw
 import numpy as np
@@ -367,9 +376,14 @@ def populate_dataset(
 
             assert all_cams_present, f"Camera {camera} missing image data for frame {i} in {traj_path.name}. Skipping frame."
 
+            if not OLD_LEROBOT:
+                frame["task"] = task  # language instruction is now in the frame
             dataset.add_frame(frame)
 
-        dataset.save_episode(task=task)
+        if OLD_LEROBOT:
+            dataset.save_episode(task=task)
+        else:
+            dataset.save_episode()
         num_added_episodes += 1
         print(f"Saved episode {num_added_episodes} from {traj_path.name} with {num_frames} frames.")
 
