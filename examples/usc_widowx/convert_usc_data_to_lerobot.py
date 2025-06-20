@@ -10,6 +10,14 @@ uv run examples/usc_widowx/convert_usc_data_to_lerobot.py --raw-dirs /path/to/ta
 
 Example usage (by specific trajectories):
 uv run examples/usc_widowx/convert_usc_data_to_lerobot.py --traj-paths /path/to/task1/traj0 /path/to/task2/traj5 --repo-id <org>/<combined-dataset-name>
+
+Example again for new widowx:
+python examples/usc_widowx/convert_usc_data_to_lerobot.py \
+    --raw-dirs /Volumes/Sandisk\ 1TB/test_widowx_data/2025-06-19_19-25-31/raw/reach_the_green_block/ \
+    --repo-id "jesbu1/usc_widowx_6_19_lerobot" \
+    --mode "video" \
+    --push-to-hub \
+    --dataset-config.use-videos=True
 """
 
 import dataclasses
@@ -145,8 +153,9 @@ def create_empty_dataset(
         "gripper",
     ]
     cameras = [
-        "external",
-        "over_shoulder",
+        "images0",
+        # "external",
+        # "over_shoulder",
         # Add other camera names if present, e.g., "wrist"
     ]
 
@@ -209,7 +218,6 @@ def load_raw_episode_data(
         raise FileNotFoundError(f"Observation file not found: {obs_file}")
     if not action_file.exists():
         raise FileNotFoundError(f"Action file not found: {action_file}")
-
     obs_data = load_pickle_data(obs_file)
     action_data = load_pickle_data(action_file)
 
@@ -241,7 +249,7 @@ def load_raw_episode_data(
     imgs_per_cam = {}
     for camera in cameras:
         # Assuming images are in a subdirectory named after the camera.
-        image_dir = traj_path / f"{camera}_imgs"
+        image_dir = traj_path / f"{camera}"
         imgs_np = load_images(image_dir)
         print(f"Loaded {imgs_np.shape[0]} images from directory {image_dir}")
 
@@ -355,8 +363,8 @@ def populate_dataset(
 
         for i in range(num_frames):
             frame = {
-                "observation.state": state[i],
-                "action": action[i],
+                "observation.state": state[i].numpy().astype(np.float32),
+                "action": action[i].numpy().astype(np.float32),
             }
 
             all_cams_present = True
@@ -376,8 +384,9 @@ def populate_dataset(
             assert all_cams_present, f"Camera {camera} missing image data for frame {i} in {traj_path.name}. Skipping frame."
 
             if not OLD_LEROBOT:
-                frame["task"] = task  # language instruction is now in the frame
-            dataset.add_frame(frame)
+                dataset.add_frame(frame, task=task)
+            else:
+                dataset.add_frame(frame)
 
         if OLD_LEROBOT:
             dataset.save_episode(task=task)
@@ -500,11 +509,19 @@ def port_usc_data(
 
     if dataset.num_episodes > 0:
         print("Consolidating dataset...")
-        dataset.consolidate()
+        if OLD_LEROBOT:
+            dataset.consolidate()
 
         if push_to_hub:
             print("Pushing dataset to Hugging Face Hub...")
-            dataset.push_to_hub()
+            dataset.push_to_hub(
+                repo_id=repo_id,
+                use_videos=True,
+                private=False,
+                push_videos=True,
+                upload_large_folder=True,
+                license="apache-2.0",
+            )
             print(f"Successfully pushed {repo_id} to Hub.")
         else:
             print(f"Dataset saved locally at {LEROBOT_HOME / repo_id}. Skipping push to Hub.")
