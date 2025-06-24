@@ -80,7 +80,12 @@ def process_mask_obs(sample_img, mask_points, mask_pixels=25, scale_mask=False, 
 
     return add_mask_2d_to_img(sample_img, mask_points_scaled, mask_pixels=mask_pixels)
 
-
+def assert_image_valid(img):
+    assert img.shape == (256, 256, 3), f"Image shape is {img.shape} but should be (256, 256, 3)"
+    assert img.dtype == np.uint8, f"Image dtype is {img.dtype} but should be uint8"
+    assert img.max() <= 255, f"Image max is {img.max()} but should be 255"
+    assert img.min() >= 0, f"Image min is {img.min()} but should be 0"
+    return img
 
 def main(
     data_dir: str,
@@ -107,22 +112,22 @@ def main(
         features={
             "image": {
                 "dtype": "video",
-                "shape": (256, 256, 3),
+                "shape": (224, 224, 3),
                 "names": ["height", "width", "channel"],
             },
             "path_image": {
                 "dtype": "video",
-                "shape": (256, 256, 3),
+                "shape": (224, 224, 3),
                 "names": ["height", "width", "channel"],
             },
             "masked_path_image": {
                 "dtype": "video",
-                "shape": (256, 256, 3),
+                "shape": (224, 224, 3),
                 "names": ["height", "width", "channel"],
             },
             "wrist_image": {
                 "dtype": "video",
-                "shape": (256, 256, 3),
+                "shape": (224, 224, 3),
                 "names": ["height", "width", "channel"],
             },
             "state": {
@@ -228,6 +233,11 @@ def main(
                     else:
                         frame["path_image"] = img
                         frame["masked_path_image"] = img
+
+                    assert_image_valid(frame["image"])
+                    assert_image_valid(frame["wrist_image"])
+                    assert_image_valid(frame["path_image"])
+                    assert_image_valid(frame["masked_path_image"])
 
                     if not OLD_LEROBOT:
                         frame["task"] = step["language_instruction"].decode() # new lerobot requires task in frame
