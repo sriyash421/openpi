@@ -37,8 +37,8 @@ class DatasetConfig:
     image_writer_processes: int = 12
     image_writer_threads: int = 7
     # TODO(user): Define image shape expected by LeRobot
-    image_height: int = 256
-    image_width: int = 256
+    image_height: int = 224
+    image_width: int = 224
     video_backend: str = None
     # Path and mask specific configs
     path_line_size: int = 2
