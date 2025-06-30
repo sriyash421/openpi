@@ -16,6 +16,9 @@ uv run examples/libero/convert_pathmask_libero_data_to_lerobot_vlm_preds.py --da
 
 import shutil
 from pathlib import Path
+import torch
+import torchvision.transforms.functional as F
+import cv2
 
 from openpi.policies.mask_path_utils import get_mask_and_path_from_h5
 import tensorflow_datasets as tfds
@@ -43,6 +46,7 @@ RAW_DATASET_NAMES = [
 ]  # For simplicity we will combine multiple Libero datasets into one training dataset
 REPO_NAME = "jesbu1/libero_90_lerobot_pathmask_rdp_vlm_preds"  # Name of the output dataset, also used for the Hugging Face Hub
 FLIP_IMAGE = True
+DOWNSIZE_IMAGE_SIZE = 224
 
 
 from vila_utils.utils.decode import add_path_2d_to_img_alt_fast, add_mask_2d_to_img
@@ -107,22 +111,27 @@ def main(
         features={
             "image": {
                 "dtype": "video",
-                "shape": (256, 256, 3),
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "path_image": {
                 "dtype": "video",
-                "shape": (256, 256, 3),
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "masked_path_image": {
                 "dtype": "video",
-                "shape": (256, 256, 3),
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
+                "names": ["height", "width", "channel"],
+            },
+            "masked_path_centered_image": {
+                "dtype": "video",
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "wrist_image": {
                 "dtype": "video",
-                "shape": (256, 256, 3),
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "state": {
@@ -136,8 +145,8 @@ def main(
                 "names": ["actions"],
             },
         },
-        image_writer_threads=10,
-        image_writer_processes=5,
+        image_writer_threads=14,
+        image_writer_processes=7,
         use_videos=True,
     )
 
@@ -229,8 +238,37 @@ def main(
                         frame["path_image"] = img
                         frame["masked_path_image"] = img
 
+                    # center the image around the first point
+                    if current_path is not None and len(current_path) > 0:
+                        first_point = current_path[0]
+                        height, width = frame["masked_path_image"].shape[:2]
+                        
+                        # Convert first_point to pixel coordinates
+                        # Assuming first_point is in normalized coordinates [0, 1]
+                        center_x = int(first_point[0] * width)
+                        center_y = int(first_point[1] * height)
+                        
+                        # Calculate crop boundaries
+                        crop_size = min(height, width) // 2  # Use half the smaller dimension
+                        top = center_y - crop_size
+                        left = center_x - crop_size
+                        
+                            
+                        img_tensor = torch.from_numpy(frame["masked_path_image"]).permute(2, 0, 1)
+                        cropped_tensor = F.crop(img_tensor, top, left, height, width)
+                        frame["masked_path_centered_image"] = cropped_tensor.permute(1, 2, 0).numpy()
+                    else:
+                        frame["masked_path_centered_image"] = frame["masked_path_image"]
+
                     if not OLD_LEROBOT:
                         frame["task"] = step["language_instruction"].decode() # new lerobot requires task in frame
+
+
+                    #downsize all images to 224x224
+                    for key in dataset.features:
+                        if dataset.features[key]["dtype"] == "video":
+                            frame[key] = cv2.resize(frame[key], (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE))
+
                     dataset.add_frame(frame)
                 if OLD_LEROBOT:
                     dataset.save_episode(task=step["language_instruction"].decode())
