@@ -162,9 +162,6 @@ def main(
             raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
             for episode_idx, episode in enumerate(raw_dataset):
                 # Initialize path and mask tracking variables
-
-                if episode_idx == 20:
-                    break
                 current_path = None
                 current_mask = None
                 next_path_timestep_idx = 0
