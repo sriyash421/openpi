@@ -95,7 +95,7 @@ def main(
     data_dir: str,
     paths_masks_file: str = None,  # Make paths_masks_file optional
     path_line_size: int = 2,
-    mask_ratio: float = 0.15,
+    mask_ratio: float = 0.1,
     *,
     push_to_hub: bool = False,
     repo_name: str = REPO_NAME,
@@ -150,8 +150,8 @@ def main(
                 "names": ["actions"],
             },
         },
-        image_writer_threads=14,
-        image_writer_processes=7,
+        image_writer_threads=10,
+        image_writer_processes=5,
         use_videos=True,
     )
 
@@ -162,6 +162,9 @@ def main(
             raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
             for episode_idx, episode in enumerate(raw_dataset):
                 # Initialize path and mask tracking variables
+
+                if episode_idx == 20:
+                    break
                 current_path = None
                 current_mask = None
                 next_path_timestep_idx = 0
