@@ -206,7 +206,8 @@ def main(
                             if dataset.features[key]["dtype"] == "image":
                                 frame[key] = cv2.resize(frame[key], (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE))
 
-                        dataset.add_frame(frame)
+                        if not OLD_LEROBOT:
+                            frame["task"] = command
 
                         # Determine current subtask instruction (if using subtask instructions)
                         if use_subtask_instructions and quests:
