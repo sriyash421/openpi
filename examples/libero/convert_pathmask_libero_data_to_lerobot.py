@@ -58,6 +58,7 @@ def main(
     push_to_hub: bool = False,
     use_subtask_instructions: bool = False,
     return_full_path_mask: bool = False,
+    mask_ratio: float = 0.08,
 ):
     repo_name = REPO_NAME
     if return_full_path_mask:
@@ -132,6 +133,7 @@ def main(
                             observation=f["data"][demo_name]["obs"],
                             demo_key=demo_name,
                             return_full_path_mask=return_full_path_mask,
+                            mask_ratio=mask_ratio,
                         )
                     except KeyError as e:
                         print(f"KeyError for {demo_name} in {libero_h5_file}: {e}")
