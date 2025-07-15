@@ -19,15 +19,25 @@ Running this conversion script will take approximately 30 minutes.
 
 import shutil
 from pathlib import Path
+import cv2
 
 from openpi.policies.mask_path_utils import get_mask_and_path_from_h5
-from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import h5py
 import numpy as np
 import tyro
 import os
 import json
+try:
+    # for older lerobot versions before 2.0.0
+    from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
+
+    OLD_LEROBOT = True
+except ImportError:
+    # newer lerobot versions use HF_LEROBOT_HOME instead of LEROBOT_HOME
+    from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME as LEROBOT_HOME
+
+    OLD_LEROBOT = False
 
 RAW_DATASET_NAMES = [
     "libero_90_openvla_processed",
@@ -37,6 +47,8 @@ RAW_DATASET_NAMES = [
     # "libero_object_openvla_processed",
 ]  # For simplicity we will combine multiple Libero datasets into one training dataset
 REPO_NAME = "jesbu1/libero_90_lerobot_pathmask_rdp"  # Name of the output dataset, also used for the Hugging Face Hub
+FLIP_IMAGE = True
+DOWNSIZE_IMAGE_SIZE = 224
 
 
 def main(
@@ -66,27 +78,27 @@ def main(
         features={
             "image": {
                 "dtype": "image",
-                "shape": (256, 256, 3),
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "masked_image": {
                 "dtype": "image",
-                "shape": (256, 256, 3),
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "path_image": {
                 "dtype": "image",
-                "shape": (256, 256, 3),
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "masked_path_image": {
                 "dtype": "image",
-                "shape": (256, 256, 3),
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "wrist_image": {
                 "dtype": "image",
-                "shape": (256, 256, 3),
+                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "state": {
@@ -163,19 +175,32 @@ def main(
                         ee_state = f["data"][demo_name]["obs"]["ee_states"][i]
                         state = np.asarray(np.concatenate((ee_state, gripper_state), axis=-1), np.float32)
 
-                        dataset.add_frame(
-                            {
-                                "image": f["data"][demo_name]["obs"]["agentview_rgb"][i][
-                                    ::-1
-                                ],  # flip the image as it comes from LIBERO reversed
-                                "wrist_image": f["data"][demo_name]["obs"]["eye_in_hand_rgb"][i][::-1],
-                                "masked_image": masked_imgs[i],
-                                "path_image": path_imgs[i],
-                                "masked_path_image": masked_path_imgs[i],
-                                "state": state,
-                                "actions": f["data"][demo_name]["actions"][i],
-                            }
-                        )
+                        # Get base images and apply flipping if needed
+                        agentview_img = f["data"][demo_name]["obs"]["agentview_rgb"][i][
+                            ::-1
+                        ]  # flip the image as it comes from LIBERO reversed
+                        wrist_img = f["data"][demo_name]["obs"]["eye_in_hand_rgb"][i][::-1]
+
+                        if FLIP_IMAGE:
+                            agentview_img = np.fliplr(agentview_img)
+                            wrist_img = np.fliplr(wrist_img)
+
+                        frame = {
+                            "image": agentview_img,
+                            "wrist_image": wrist_img,
+                            "masked_image": masked_imgs[i],
+                            "path_image": path_imgs[i],
+                            "masked_path_image": masked_path_imgs[i],
+                            "state": state,
+                            "actions": f["data"][demo_name]["actions"][i],
+                        }
+
+                        # Downsize all images to 224x224
+                        for key in dataset.features:
+                            if dataset.features[key]["dtype"] == "image":
+                                frame[key] = cv2.resize(frame[key], (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE))
+
+                        dataset.add_frame(frame)
 
                         # Determine current subtask instruction (if using subtask instructions)
                         if use_subtask_instructions and quests:
@@ -186,9 +211,15 @@ def main(
                             if (current_subtask is not None and new_subtask != current_subtask) or i == num_steps - 1:
                                 # Save episode with current subtask instruction
                                 if current_subtask is None:
-                                    dataset.save_episode(task=command)
+                                    if OLD_LEROBOT:
+                                        dataset.save_episode(task=command)
+                                    else:
+                                        dataset.save_episode()
                                 else:
-                                    dataset.save_episode(task=current_subtask)
+                                    if OLD_LEROBOT:
+                                        dataset.save_episode(task=current_subtask)
+                                    else:
+                                        dataset.save_episode()
                                 current_subtask = new_subtask
                             # Initialize current_subtask if this is the first frame
                             elif current_subtask is None:
@@ -196,10 +227,14 @@ def main(
 
                     # If not using subtask instructions, save the entire episode at once
                     if not use_subtask_instructions:
-                        dataset.save_episode(task=command)
+                        if OLD_LEROBOT:
+                            dataset.save_episode(task=command)
+                        else:
+                            dataset.save_episode()
 
-    # Consolidate the dataset, skip computing stats since we will do that later
-    dataset.consolidate(run_compute_stats=False)
+    if OLD_LEROBOT:
+        # Consolidate the dataset, skip computing stats since we will do that later
+        dataset.consolidate(run_compute_stats=False)
 
     # Optionally push to the Hugging Face Hub
     if push_to_hub:
