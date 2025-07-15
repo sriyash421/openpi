@@ -198,7 +198,7 @@ def main(
                             "path_image": path_imgs[i],
                             "masked_path_image": masked_path_imgs[i],
                             "state": state,
-                            "actions": f["data"][demo_name]["actions"][i],
+                            "actions": f["data"][demo_name]["actions"][i].astype(np.float32),
                         }
 
                         # Downsize all images to 224x224
