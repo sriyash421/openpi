@@ -120,6 +120,7 @@ def process_mask_obs(
     mask,
     mask_noise_std=0.01,
     mask_rdp_tolerance=0.1,
+    mask_ratio=0.1,
 ):
     # sample_img -> HxWx3
     height, width = sample_img.shape[:2]
@@ -143,7 +144,7 @@ def process_mask_obs(
     unique_mask = np.unique(mask_scaled.astype(np.uint16), axis=0)
 
     # set size of the mask pixels, 15% of the height
-    mask_pixels = int(height * 0.15)
+    mask_pixels = int(height * mask_ratio)
 
     # apply mask
     sample_img = add_mask_2d_to_img(sample_img, unique_mask, mask_pixels=mask_pixels)
@@ -196,6 +197,7 @@ def get_mask_and_path_from_h5(
     observation: dict,
     demo_key: str,
     return_full_path_mask: bool,
+    mask_ratio: float = 0.1,
 ):
     """
     Helper function to load annotations (path, mask) from separate hdf5 file.
@@ -203,6 +205,7 @@ def get_mask_and_path_from_h5(
     :param task_key: The key to the task in the hdf5 file.
     :param demo_key: The key to the demo in the hdf5 file.
     :param return_full_path_mask: Whether to return the full paths and full masks. No subtrajectories.
+    :param mask_ratio: The ratio of the height of the image to the size of the mask.
     Returns:
         masked_imgs: A list of masked images.
         path_imgs: A list of path images.
