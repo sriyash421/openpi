@@ -203,7 +203,7 @@ def main(
 
                         # Downsize all images to 224x224
                         for key in dataset.features:
-                            if dataset.features[key]["dtype"] == "image":
+                            if dataset.features[key]["dtype"] == "video":
                                 frame[key] = cv2.resize(frame[key], (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE))
 
                         if not OLD_LEROBOT:
