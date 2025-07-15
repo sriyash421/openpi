@@ -6,6 +6,9 @@ modified for any other data you have saved in a custom format.
 
 Usage:
 uv run examples/libero/convert_pathmask_libero_data_to_lerobot.py --data_dir /path/to/your/data --path_and_mask_file_dir /path/to/dir_containing_h5points
+e.g,:
+
+CUDA_VISIBLE_DEVICES=, uv run examples/libero/convert_pathmask_libero_data_to_lerobot.py --data_dir ~/.cache/huggingface/hub/datasets--jesbu1--libero_90_rlds/snapshots/93169e35e1e6ddf6c43171bf038cb4971b60e72a/ --path_and_mask_file_dir ~/libero_small_processed_256/dataset_movement_and_masks.h5
 
 If you want to push your dataset to the Hugging Face Hub, you can add the `--push_to_hub` flag:
 
@@ -75,30 +78,30 @@ def main(
     dataset = LeRobotDataset.create(
         repo_id=repo_name,
         robot_type="panda",
-        fps=10,
+        fps=20,
         features={
             "image": {
-                "dtype": "image",
+                "dtype": "video",
                 "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "masked_image": {
-                "dtype": "image",
+                "dtype": "video",
                 "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "path_image": {
-                "dtype": "image",
+                "dtype": "video",
                 "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "masked_path_image": {
-                "dtype": "image",
+                "dtype": "video",
                 "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
             "wrist_image": {
-                "dtype": "image",
+                "dtype": "video",
                 "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
@@ -115,6 +118,7 @@ def main(
         },
         image_writer_threads=10,
         image_writer_processes=5,
+        use_videos=True,
     )
 
     # Loop over raw Libero datasets and write episodes to the LeRobot dataset
