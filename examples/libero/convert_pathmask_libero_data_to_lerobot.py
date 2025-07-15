@@ -207,9 +207,10 @@ def main(
                                 frame[key] = cv2.resize(frame[key], (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE))
 
                         if not OLD_LEROBOT:
-                            frame["task"] = command
-
-                        dataset.add_frame(frame)
+                            # frame["task"] = command
+                            dataset.add_frame(frame, task=command)
+                        else:
+                            dataset.add_frame(frame)
 
                         # Determine current subtask instruction (if using subtask instructions)
                         if use_subtask_instructions and quests:
