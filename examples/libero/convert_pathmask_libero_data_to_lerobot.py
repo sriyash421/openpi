@@ -209,6 +209,8 @@ def main(
                         if not OLD_LEROBOT:
                             frame["task"] = command
 
+                        dataset.add_frame(frame)
+
                         # Determine current subtask instruction (if using subtask instructions)
                         if use_subtask_instructions and quests:
                             # Get the subtask for this frame directly
