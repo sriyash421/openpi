@@ -10,6 +10,14 @@ uv run examples/usc_widowx/convert_usc_data_to_lerobot.py --raw-dirs /path/to/ta
 
 Example usage (by specific trajectories):
 uv run examples/usc_widowx/convert_usc_data_to_lerobot.py --traj-paths /path/to/task1/traj0 /path/to/task2/traj5 --repo-id <org>/<combined-dataset-name>
+
+Example again for new widowx:
+python examples/usc_widowx/convert_usc_data_to_lerobot.py \
+    --raw-dirs /Volumes/Sandisk\ 1TB/test_widowx_data/2025-06-19_19-25-31/raw/reach_the_green_block/ \
+    --repo-id "jesbu1/usc_widowx_6_19_lerobot" \
+    --mode "video" \
+    --push-to-hub \
+    --dataset-config.use-videos=True
 """
 
 import dataclasses
@@ -20,9 +28,17 @@ from typing import Literal, Dict, List, Tuple, Optional
 import warnings
 import pickle
 
-from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
+try:
+    # for older lerobot versions before 2.0.0
+    from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
+
+    OLD_LEROBOT = True
+except ImportError:
+    # newer lerobot versions use HF_LEROBOT_HOME instead of LEROBOT_HOME
+    from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME as LEROBOT_HOME
+
+    OLD_LEROBOT = False
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.common.datasets.push_dataset_to_hub._download_raw import download_raw
 import numpy as np
 import torch
 import tqdm
@@ -137,8 +153,9 @@ def create_empty_dataset(
         "gripper",
     ]
     cameras = [
-        "external",
-        "over_shoulder",
+        "images0",
+        # "external",
+        # "over_shoulder",
         # Add other camera names if present, e.g., "wrist"
     ]
 
@@ -201,7 +218,6 @@ def load_raw_episode_data(
         raise FileNotFoundError(f"Observation file not found: {obs_file}")
     if not action_file.exists():
         raise FileNotFoundError(f"Action file not found: {action_file}")
-
     obs_data = load_pickle_data(obs_file)
     action_data = load_pickle_data(action_file)
 
@@ -233,7 +249,7 @@ def load_raw_episode_data(
     imgs_per_cam = {}
     for camera in cameras:
         # Assuming images are in a subdirectory named after the camera.
-        image_dir = traj_path / f"{camera}_imgs"
+        image_dir = traj_path / f"{camera}"
         imgs_np = load_images(image_dir)
         print(f"Loaded {imgs_np.shape[0]} images from directory {image_dir}")
 
@@ -347,8 +363,8 @@ def populate_dataset(
 
         for i in range(num_frames):
             frame = {
-                "observation.state": state[i],
-                "action": action[i],
+                "observation.state": state[i].numpy().astype(np.float32),
+                "action": action[i].numpy().astype(np.float32),
             }
 
             all_cams_present = True
@@ -367,9 +383,15 @@ def populate_dataset(
 
             assert all_cams_present, f"Camera {camera} missing image data for frame {i} in {traj_path.name}. Skipping frame."
 
-            dataset.add_frame(frame)
+            if not OLD_LEROBOT:
+                dataset.add_frame(frame, task=task)
+            else:
+                dataset.add_frame(frame)
 
-        dataset.save_episode(task=task)
+        if OLD_LEROBOT:
+            dataset.save_episode(task=task)
+        else:
+            dataset.save_episode()
         num_added_episodes += 1
         print(f"Saved episode {num_added_episodes} from {traj_path.name} with {num_frames} frames.")
 
@@ -437,22 +459,7 @@ def port_usc_data(
         # TODO(user): Add support for downloading multiple raw_repo_ids if needed.
         existing_raw_dirs = [d for d in raw_dirs if d.exists()]
         if not existing_raw_dirs:
-             # If raw_repo_id is provided, attempt download to the *first* path in raw_dirs
-             # This assumes raw_repo_id contains all necessary data, which might not be true
-             # for the multi-directory case. Recommend pre-downloading for multi-dir.
-            if raw_repo_id:
-                 target_download_dir = raw_dirs[0]
-                 warnings.warn(f"None of the specified raw directories exist. Attempting to download from {raw_repo_id} into {target_download_dir}. This might not contain all required task data.")
-                 print(f"Downloading from {raw_repo_id} to {target_download_dir}...")
-                 # Create parent if it doesn't exist
-                 target_download_dir.parent.mkdir(parents=True, exist_ok=True)
-                 download_raw(target_download_dir, repo_id=raw_repo_id)
-                 # Re-check existence after download
-                 existing_raw_dirs = [d for d in raw_dirs if d.exists()]
-                 if not existing_raw_dirs:
-                      raise FileNotFoundError(f"Raw data directory {target_download_dir} still not found after attempting download from {raw_repo_id}.")
-            else:
-                 raise FileNotFoundError(f"None of the specified raw directories exist: {raw_dirs}, and no raw_repo_id provided for download.")
+            raise FileNotFoundError(f"None of the specified raw directories exist: {raw_dirs}")
 
         # Warn if some directories were provided but don't exist
         missing_dirs = [d for d in raw_dirs if not d.exists()]
@@ -502,11 +509,19 @@ def port_usc_data(
 
     if dataset.num_episodes > 0:
         print("Consolidating dataset...")
-        dataset.consolidate()
+        if OLD_LEROBOT:
+            dataset.consolidate()
 
         if push_to_hub:
             print("Pushing dataset to Hugging Face Hub...")
-            dataset.push_to_hub()
+            dataset.push_to_hub(
+                repo_id=repo_id,
+                use_videos=True,
+                private=False,
+                push_videos=True,
+                upload_large_folder=True,
+                license="apache-2.0",
+            )
             print(f"Successfully pushed {repo_id} to Hub.")
         else:
             print(f"Dataset saved locally at {LEROBOT_HOME / repo_id}. Skipping push to Hub.")

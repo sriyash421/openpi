@@ -48,18 +48,18 @@ def main(data_dir: str, *, push_to_hub: bool = False):
     dataset = LeRobotDataset.create(
         repo_id=REPO_NAME,
         robot_type="panda",
-        fps=10,
+        fps=20,
         features={
             "image": {
                 "dtype": "image",
                 "shape": (256, 256, 3),
-                #"shape": (128, 128, 3),
+                # "shape": (128, 128, 3),
                 "names": ["height", "width", "channel"],
             },
             "wrist_image": {
                 "dtype": "image",
                 "shape": (256, 256, 3),
-                #"shape": (128, 128, 3),
+                # "shape": (128, 128, 3),
                 "names": ["height", "width", "channel"],
             },
             "state": {

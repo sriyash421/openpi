@@ -172,6 +172,7 @@ wheels = [
 ]
 
 [[package]]
+=======
 name = "appnope"
 version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1917,6 +1918,7 @@ dependencies = [
     { name = "pyzmq" },
     { name = "scipy" },
     { name = "sentence-transformers" },
+    { name = "pyzmq" },
     { name = "termcolor" },
     { name = "torch" },
     { name = "torchvision" },
@@ -3010,6 +3012,7 @@ wheels = [
 ]
 
 [[package]]
+=======
 name = "opencv-python"
 version = "4.10.0.84"
 source = { registry = "https://pypi.org/simple" }
@@ -3109,7 +3112,7 @@ requires-dist = [
     { name = "imageio", specifier = ">=2.36.1" },
     { name = "jax", extras = ["cuda12"], specifier = "==0.5.0" },
     { name = "jaxtyping", specifier = "==0.2.36" },
-    { name = "lerobot", directory = "../my_lerobot" },
+    { name = "lerobot", git = "https://github.com/jesbu1/lerobot?rev=271222a11bf897e2aa75158a1a85914919e94423" },
     { name = "ml-collections", specifier = "==1.0.0" },
     { name = "numpy", specifier = ">=1.26.4" },
     { name = "numpydantic", specifier = ">=1.6.6" },
