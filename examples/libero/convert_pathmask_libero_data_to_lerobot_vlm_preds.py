@@ -95,7 +95,7 @@ def main(
     data_dir: str,
     paths_masks_file: str = None,  # Make paths_masks_file optional
     path_line_size: int = 2,
-    mask_ratio: float = 0.1,
+    mask_ratio: float = 0.08,
     *,
     push_to_hub: bool = False,
     repo_name: str = REPO_NAME,
@@ -166,6 +166,9 @@ def main(
                 current_mask = None
                 next_path_timestep_idx = 0
                 next_mask_timestep_idx = 0
+
+                #if episode_idx > 10:
+                #    break
 
                 for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
                     img = step["observation"]["image"]
