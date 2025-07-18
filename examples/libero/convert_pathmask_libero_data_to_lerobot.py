@@ -61,8 +61,8 @@ def main(
     push_to_hub: bool = False,
     use_subtask_instructions: bool = False,
     return_full_path_mask: bool = False,
-    mask_ratio_min: float = 0.05,
-    mask_ratio_max: float = 0.15,
+    mask_ratio_min: float = 0.01,
+    mask_ratio_max: float = 0.12,
 ):
     repo_name = REPO_NAME
     if return_full_path_mask:
