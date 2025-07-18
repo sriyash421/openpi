@@ -81,11 +81,11 @@ def main(
                 "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
-            "masked_image": {
-                "dtype": "video",
-                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
-                "names": ["height", "width", "channel"],
-            },
+            # "masked_image": {
+            #    "dtype": "video",
+            #    "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
+            #    "names": ["height", "width", "channel"],
+            # },
             "path_image": {
                 "dtype": "video",
                 "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
@@ -194,7 +194,7 @@ def main(
                         frame = {
                             "image": agentview_img,
                             "wrist_image": wrist_img,
-                            "masked_image": masked_imgs[i],
+                            # "masked_image": masked_imgs[i],
                             "path_image": path_imgs[i],
                             "masked_path_image": masked_path_imgs[i],
                             "state": state,
