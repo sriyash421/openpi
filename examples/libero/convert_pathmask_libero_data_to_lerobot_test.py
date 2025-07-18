@@ -58,7 +58,8 @@ def main(
     push_to_hub: bool = False,
     use_subtask_instructions: bool = False,
     return_full_path_mask: bool = False,
-    mask_ratio: float = 0.08,
+    mask_ratio_min: float = 0.05,
+    mask_ratio_max: float = 0.15,
 ):
     repo_name = REPO_NAME
     if return_full_path_mask:
@@ -128,6 +129,7 @@ def main(
                 for demo_name in f["data"]:
                     num_steps = len(f["data"][demo_name]["obs"]["ee_pos"])
                     try:
+                        mask_ratio = np.random.uniform(mask_ratio_min, mask_ratio_max)
                         masked_imgs, path_imgs, masked_path_imgs, quests = get_mask_and_path_from_h5(
                             annotation_path=Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5",
                             task_key=libero_h5_file.split(".")[0],
