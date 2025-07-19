@@ -61,7 +61,8 @@ def main(
     push_to_hub: bool = False,
     use_subtask_instructions: bool = False,
     return_full_path_mask: bool = False,
-    mask_ratio: float = 0.08,
+    mask_ratio_min: float = 0.01,
+    mask_ratio_max: float = 0.12,
 ):
     repo_name = REPO_NAME
     if return_full_path_mask:
@@ -85,11 +86,11 @@ def main(
                 "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
                 "names": ["height", "width", "channel"],
             },
-            "masked_image": {
-                "dtype": "video",
-                "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
-                "names": ["height", "width", "channel"],
-            },
+            # "masked_image": {
+            #    "dtype": "video",
+            #    "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
+            #    "names": ["height", "width", "channel"],
+            # },
             "path_image": {
                 "dtype": "video",
                 "shape": (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE, 3),
@@ -131,6 +132,7 @@ def main(
                 for demo_name in f["data"]:
                     num_steps = len(f["data"][demo_name]["obs"]["ee_pos"])
                     try:
+                        mask_ratio = np.random.uniform(mask_ratio_min, mask_ratio_max)
                         masked_imgs, path_imgs, masked_path_imgs, quests = get_mask_and_path_from_h5(
                             annotation_path=Path(path_and_mask_file_dir) / "dataset_movement_and_masks.h5",
                             task_key=libero_h5_file.split(".")[0],
@@ -194,19 +196,23 @@ def main(
                         frame = {
                             "image": agentview_img,
                             "wrist_image": wrist_img,
-                            "masked_image": masked_imgs[i],
+                            # "masked_image": masked_imgs[i],
                             "path_image": path_imgs[i],
                             "masked_path_image": masked_path_imgs[i],
                             "state": state,
-                            "actions": f["data"][demo_name]["actions"][i],
+                            "actions": f["data"][demo_name]["actions"][i].astype(np.float32),
                         }
 
                         # Downsize all images to 224x224
                         for key in dataset.features:
-                            if dataset.features[key]["dtype"] == "image":
+                            if dataset.features[key]["dtype"] == "video":
                                 frame[key] = cv2.resize(frame[key], (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE))
 
-                        dataset.add_frame(frame)
+                        if not OLD_LEROBOT:
+                            # frame["task"] = command
+                            dataset.add_frame(frame, task=command)
+                        else:
+                            dataset.add_frame(frame)
 
                         # Determine current subtask instruction (if using subtask instructions)
                         if use_subtask_instructions and quests:

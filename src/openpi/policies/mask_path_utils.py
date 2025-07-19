@@ -273,7 +273,7 @@ def get_mask_and_path_from_h5(
         # movement_across_video = f_annotation[movement_key]
         mask_points = np.concatenate([significant_points, stopped_points], axis=0)
         unmasked_template = np.ones_like(images[i])
-        mask = process_mask_obs(unmasked_template, mask_points)
+        mask = process_mask_obs(unmasked_template, mask_points, mask_ratio=mask_ratio)
         # mask = add_mask_2d_to_img(unmasked_template, mask_points)
 
         masks.append(mask)

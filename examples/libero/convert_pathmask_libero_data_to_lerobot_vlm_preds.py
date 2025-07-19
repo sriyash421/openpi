@@ -95,7 +95,8 @@ def main(
     data_dir: str,
     paths_masks_file: str = None,  # Make paths_masks_file optional
     path_line_size: int = 2,
-    mask_ratio: float = 0.08,
+    mask_ratio_min: float = 0.01,
+    mask_ratio_max: float = 0.12,
     *,
     push_to_hub: bool = False,
     repo_name: str = REPO_NAME,
@@ -215,6 +216,7 @@ def main(
                                     # Add mask if we have one
                                     if current_mask is not None:
                                         height, width = step["observation"]["image"].shape[:2]
+                                        mask_ratio = np.random.uniform(mask_ratio_min, mask_ratio_max)
                                         masked_img = process_mask_obs(
                                             img.copy(),
                                             current_mask,
