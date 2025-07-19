@@ -167,9 +167,6 @@ def main(
                 next_path_timestep_idx = 0
                 next_mask_timestep_idx = 0
 
-                #if episode_idx > 10:
-                #    break
-
                 for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
                     img = step["observation"]["image"]
                     if FLIP_IMAGE:
@@ -268,8 +265,8 @@ def main(
                     else:
                         frame["masked_path_centered_image"] = frame["masked_path_image"]
 
-                    if not OLD_LEROBOT:
-                        frame["task"] = step["language_instruction"].decode() # new lerobot requires task in frame
+                    #if not OLD_LEROBOT:
+                    #    frame["task"] = step["language_instruction"].decode() # new lerobot requires task in frame
 
 
                     #downsize all images to 224x224
@@ -277,7 +274,10 @@ def main(
                         if dataset.features[key]["dtype"] == "video":
                             frame[key] = cv2.resize(frame[key], (DOWNSIZE_IMAGE_SIZE, DOWNSIZE_IMAGE_SIZE))
 
-                    dataset.add_frame(frame)
+                    if OLD_LEROBOT:
+                        dataset.add_frame(frame)
+                    else:
+                        dataset.add_frame(frame, task=step["language_instruction"].decode())
                 if OLD_LEROBOT:
                     dataset.save_episode(task=step["language_instruction"].decode())
                 else:
