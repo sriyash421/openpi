@@ -191,6 +191,8 @@ def main(
 
                         if FLIP_IMAGE:
                             agentview_img = np.fliplr(agentview_img)
+                            path_imgs[i] = np.fliplr(path_imgs[i])
+                            masked_path_imgs[i] = np.fliplr(masked_path_imgs[i])
                             wrist_img = np.fliplr(wrist_img)
 
                         frame = {
