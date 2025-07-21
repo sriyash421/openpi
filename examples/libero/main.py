@@ -38,7 +38,7 @@ class Args:
     resize_size: int = 224
     replan_steps: int = 5
     vlm_server_ip: str = "http://0.0.0.0:8000"
-    vlm_query_frequency: int = 20  # call VLM once every how many action chunks
+    vlm_query_frequency: int = 5  # call VLM once every how many action chunks
 
     #################################################################################################################
     # LIBERO environment-specific parameters
@@ -52,7 +52,7 @@ class Args:
     draw_path: bool = False
     draw_mask: bool = False
 
-    flip_image_horizontally: bool = False
+    flip_image_horizontally: bool = True
 
     #################################################################################################################
     # Utils
