@@ -13,6 +13,8 @@
 EVAL_SET=${1:-10}  # Default to libero_10 if not specified (options: 10, spatial, object, goal)
 USE_PATH=${2:-0}   # Default to not using path
 USE_MASK=${3:-0}   # Default to not using mask
+VILA_GPU_ID=0
+POLICY_GPU_ID=0
 
 VLM_QUERY_FREQUENCY=5 # how many times to call the VLM per action chunk
 
@@ -25,7 +27,7 @@ conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_G
 # Wait for the model to load
 sleep 30
 
-SERVE_CMD="CUDA_VISIBLE_DEVICES=0 uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
+SERVE_CMD="CUDA_VISIBLE_DEVICES=$POLICY_GPU_ID uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
     SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_low_mem_finetune_path_new/30000/"
