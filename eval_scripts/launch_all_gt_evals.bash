@@ -6,8 +6,8 @@ mkdir -p slurm_outputs
 # Define evaluation sets and options
 EVAL_SETS=("10" "spatial" "object" "goal")
 #PATH_OPTIONS=("1")
-PATH_OPTIONS=("0" "1")
-MASK_OPTIONS=("0" "1")
+PATH_OPTIONS=("1")
+MASK_OPTIONS=("1")
 NO_PROPRIO_OPTIONS=("0" "1")
 
 # Loop through all combinations and launch jobs
