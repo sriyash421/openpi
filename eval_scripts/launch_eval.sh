@@ -17,21 +17,23 @@ source ~/.bashrc
 cd /home1/jessez/nvidia/VILA
 echo "Running VILA server on GPU $VILA_GPU_ID (Port: $VILA_PORT - Note: Port used by client connection, server might default to 8000)"
 # Use specified GPU for VILA server - Assuming VILA server runs on default port 8000, client needs to connect to VILA_PORT
-conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_GPU_ID python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_oxe_sim_path_mask/snapshots/3d08e92de1cd7517b1acbf72648ce3bbf48c19ae/checkpoint-5700" &
+conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_GPU_ID python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_path_mask_fast/snapshots/12df7a04221a50e88733cd2f1132eb01257aba0d/checkpoint-11700/" &
 
 # Wait for the model to load
-sleep 20
+sleep 30
 
 # Base command for policy server, now using POLICY_PORT
 SERVE_CMD_BASE="uv run scripts/serve_policy.py --port $POLICY_PORT policy:checkpoint"
 
 # Append policy specific arguments based on USE_PATH and USE_MASK
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
-    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
+    #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
+    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_low_mem_finetune_path_new/30000/"
 elif [ "$USE_PATH" = "0" ] && [ "$USE_MASK" = "1" ]; then
     SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_masked/pi0_libero_90_masked_bs164_rdp/30000/"
 elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
-    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_90_path_masked_bs164_rdp/30000/"
+    #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_90_path_masked_bs164_rdp/30000/"
+    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_low_mem_finetune_path_masked_mask0.01_0.12/30000/"
 else
     SERVE_CMD_POLICY_ARGS="" # No specific policy args if neither or only base is used
 fi
