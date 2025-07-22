@@ -9,7 +9,7 @@ Usage:
 If you want to push your dataset to the Hugging Face Hub, you can add the `--push_to_hub` flag.
 
 uv run examples/libero/convert_pathmask_libero_data_to_lerobot_vlm_preds.py --data_dir ~/.cache/huggingface/hub/datasets--jesbu1--libero_90_rlds/snapshots/93169e35e1e6ddf6c43171bf038cb4971b60e72a/ \
---paths_masks_file ~/VILA/test_libero_labeling_5x/libero_90_openvla_processed_paths_masks.h5 \
+--paths_masks_file ~/VILA/test_libero_labeling_13b/libero_90_openvla_processed_paths_masks.h5 \
 --repo_name jesbu1/libero_90_lerobot_pathmask_vlm_labeled \
 --push_to_hub
 """
