@@ -162,6 +162,9 @@ def main(
         for raw_dataset_name in RAW_DATASET_NAMES:
             raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
             for episode_idx, episode in enumerate(raw_dataset):
+                mask_ratio = np.random.uniform(
+                    mask_ratio_min, mask_ratio_max
+                )  # set the masking ratio for this entire episode
                 # Initialize path and mask tracking variables
                 current_path = None
                 current_mask = None
@@ -216,7 +219,6 @@ def main(
                                     # Add mask if we have one
                                     if current_mask is not None:
                                         height, width = step["observation"]["image"].shape[:2]
-                                        mask_ratio = np.random.uniform(mask_ratio_min, mask_ratio_max)
                                         masked_img = process_mask_obs(
                                             img.copy(),
                                             current_mask,
