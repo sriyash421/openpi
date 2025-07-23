@@ -16,7 +16,7 @@ USE_MASK=${3:-0}   # Default to not using mask
 VILA_GPU_ID=0
 POLICY_GPU_ID=0
 
-VLM_QUERY_FREQUENCY=5 # how many times to call the VLM per action chunk
+VLM_QUERY_FREQUENCY=8 # how many times to call the VLM per action chunk
 
 source ~/.bashrc
 
@@ -27,7 +27,7 @@ conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_G
 # Wait for the model to load
 sleep 60
 
-SERVE_CMD_BASE="CUDA_VISIBLE_DEVICES=$POLICY_GPU_ID uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
+SERVE_CMD_BASE="uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
     SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_low_mem_finetune_path_new/30000/"
