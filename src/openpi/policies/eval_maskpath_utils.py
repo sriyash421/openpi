@@ -18,7 +18,7 @@ DOWNSAMPLE_RESOLUTION = 256
 PATH_MODEL_NAME_MASK = PATH_MODEL_NAME = "vila_3b_path_mask_fast"
 
 
-def draw_onto_image(vlm_path_mask_output, prompt_type, img, verbose=False):
+def draw_onto_image(vlm_path_mask_output, prompt_type, img, verbose=False, mask_ratio: float = 0.08):
     # default inference code which is a bit different from the original data processing code because of legacy code reasons.
     h, w, c = img.shape
     scaled_mask = None
@@ -48,7 +48,7 @@ def draw_onto_image(vlm_path_mask_output, prompt_type, img, verbose=False):
     if "mask" in prompt_type and scaled_mask is not None:
         if verbose:
             print("adding mask")
-        img = add_mask_2d_to_img(img, scaled_mask, mask_pixels=int(h * 0.15))
+        img = add_mask_2d_to_img(img, scaled_mask, mask_pixels=int(h * mask_ratio))
 
     if "path" in prompt_type and scaled_path is not None:
         if verbose:
@@ -161,6 +161,7 @@ def get_path_mask_from_vlm(
     vlm_server_ip: str = SERVER_IP,
     path=None,
     mask=None,
+    mask_ratio: float = 0.08,
 ):
     # used for VLM inference during eval
     assert draw_path or draw_mask
@@ -184,7 +185,7 @@ def get_path_mask_from_vlm(
                 drawn_rgb = draw_onto_image((path, mask), "path", image.copy())
                 image = drawn_rgb
             if draw_mask:
-                masked_rgb = draw_onto_image((path, mask), "mask", image.copy())
+                masked_rgb = draw_onto_image((path, mask), "mask", image.copy(), mask_ratio=mask_ratio)
                 image = masked_rgb
 
             return image, path, mask

@@ -53,6 +53,7 @@ class Args:
     draw_mask: bool = False
 
     flip_image_horizontally: bool = True
+    mask_ratio: float = 0.08
 
     #################################################################################################################
     # Utils
@@ -233,6 +234,7 @@ def eval_libero(args: Args) -> None:
                                 vlm_server_ip=args.vlm_server_ip,
                                 path=path,
                                 mask=mask,
+                                mask_ratio=args.mask_ratio,
                             )
                             vlm_query_counter += 1
                         img = image_tools.convert_to_uint8(
