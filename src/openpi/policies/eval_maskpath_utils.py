@@ -11,11 +11,11 @@ from vila_utils.utils.encode import scale_path
 
 # Constants
 SERVER_IP = "https://whippet-pet-singularly.ngrok.app"
+OLD_PROMPT = False
 DOWNSAMPLE_RESOLUTION = 256
 # PATH_MODEL_NAME = "vila_3b_oxe_no_droid"
 # PATH_MODEL_NAME_MASK = "vila_3b_oxe_no_droid_path_mask"
-PATH_MODEL_NAME = "vila_3b_oxe_sim_path"
-PATH_MODEL_NAME_MASK = "vila_3b_oxe_sim_path_mask"
+PATH_MODEL_NAME_MASK = PATH_MODEL_NAME = "vila_3b_path_mask_fast"
 
 
 def draw_onto_image(vlm_path_mask_output, prompt_type, img, verbose=False):
@@ -109,7 +109,7 @@ def send_request(
         try:
             start_time = time.time()  # Record start time
             client = OpenAI(base_url=server_ip, api_key="fake-key")
-            prompt = get_prompt(quest, prompt_type, prompt_eval=True)
+            prompt = get_prompt(quest, prompt_type, prompt_eval=OLD_PROMPT)
             response = client.chat.completions.create(
                 messages=[
                     {
