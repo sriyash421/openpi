@@ -25,9 +25,9 @@ echo "Running VILA server"
 conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_GPU_ID python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_path_mask_fast/snapshots/12df7a04221a50e88733cd2f1132eb01257aba0d/checkpoint-11700/" &
 
 # Wait for the model to load
-sleep 30
+sleep 60
 
-SERVE_CMD="CUDA_VISIBLE_DEVICES=$POLICY_GPU_ID uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
+SERVE_CMD_BASE="CUDA_VISIBLE_DEVICES=$POLICY_GPU_ID uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
     SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_low_mem_finetune_path_new/30000/"
@@ -40,6 +40,8 @@ fi
 
 cd /home1/jessez/nvidia/openpi
 
+# Construct the full serving command with CUDA_VISIBLE_DEVICES
+SERVE_CMD="CUDA_VISIBLE_DEVICES=$POLICY_GPU_ID $SERVE_CMD_BASE $SERVE_CMD_POLICY_ARGS"
 echo "Running serving command: $SERVE_CMD"
 bash -c "$SERVE_CMD" &
 
