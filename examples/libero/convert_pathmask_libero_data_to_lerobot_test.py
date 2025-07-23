@@ -58,12 +58,15 @@ def main(
     push_to_hub: bool = False,
     use_subtask_instructions: bool = False,
     return_full_path_mask: bool = False,
-    mask_ratio_min: float = 0.01,
-    mask_ratio_max: float = 0.12,
+    max_ep_per_task: int = 50,
+    mask_ratio_min: float = 0.05,
+    mask_ratio_max: float = 0.10,
 ):
     repo_name = REPO_NAME
     if return_full_path_mask:
         repo_name = repo_name + "_full_path_mask"
+    if max_ep_per_task < 50:  # using a subset
+        repo_name = repo_name + f"_max_ep_per_task_{max_ep_per_task}"
     # Clean up any existing dataset in the output directory
     output_path = LEROBOT_HOME / repo_name
     if output_path.exists():
@@ -126,7 +129,10 @@ def main(
         libero_h5_list = [file for file in os.listdir(Path(data_dir) / raw_dataset_name) if file.endswith(".hdf5")]
         for libero_h5_file in libero_h5_list:
             with h5py.File(Path(data_dir) / raw_dataset_name / libero_h5_file, "r", swmr=True) as f:
+                num_episodes_added = 0
                 for demo_name in f["data"]:
+                    if num_episodes_added >= max_ep_per_task:
+                        break
                     num_steps = len(f["data"][demo_name]["obs"]["ee_pos"])
                     try:
                         mask_ratio = np.random.uniform(mask_ratio_min, mask_ratio_max)
@@ -144,6 +150,7 @@ def main(
                     except ValueError as e:
                         print(f"ValueError for {demo_name} in {libero_h5_file}: {e}")
                         continue
+                    num_episodes_added += 1
 
                     # Compute the main language instruction
                     if "problem_info" in f["data"].attrs:
