@@ -190,7 +190,7 @@ def main(
                     num_steps = len(f["data"][demo_name]["obs"]["ee_pos"])
 
                     # Get the path and mask data for this episode from HDF5
-                    episode_key = f"{demo_name}"
+                    episode_key = demo_name.replace("demo", "episode")
                     if episode_key in path_masks_h5:
                         episode_group = path_masks_h5[episode_key]
                         # Get path and mask data
@@ -237,6 +237,7 @@ def main(
                             command = command + w + " "
                         command = command[:-1]
 
+
                     if not FLIP_IMAGE:  # flip instruction by changing left to right and right to left
                         if "left" in command:
                             command = command.replace("left", "right")
@@ -251,6 +252,8 @@ def main(
                     current_mask = None
                     next_path_timestep_idx = 0
                     next_mask_timestep_idx = 0
+                    
+                    mask_ratio = np.random.uniform(mask_ratio_min, mask_ratio_max)
 
                     for i in range(num_steps):
                         gripper_state = f["data"][demo_name]["obs"]["gripper_states"][i]
@@ -307,7 +310,6 @@ def main(
                                     # Add mask if we have one
                                     if current_mask is not None:
                                         height, width = agentview_img.shape[:2]
-                                        mask_ratio = np.random.uniform(mask_ratio_min, mask_ratio_max)
                                         masked_img = process_mask_obs(
                                             agentview_img.copy(),
                                             current_mask,
