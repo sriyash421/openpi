@@ -240,6 +240,12 @@ def main(
                             command = command + w + " "
                         command = command[:-1]
 
+                    if not FLIP_IMAGE:  # flip instruction by changing left to right and right to left
+                        if "left" in command:
+                            command = command.replace("left", "right")
+                        if "right" in command:
+                            command = command.replace("right", "left")
+
                     # Track subtask instructions to divide episodes
                     current_subtask = None
 
