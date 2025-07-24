@@ -5,7 +5,7 @@ We use the Libero dataset (stored in RLDS) for this example, but it can be easil
 modified for any other data you have saved in a custom format.
 
 Usage:
-uv run examples/libero/convert_pathmask_libero_data_to_lerobot_test_vlm_preds.py --data_dir /path/to/your/data --paths_masks_dir /path/to/vlm_predictions_of_all_h5s
+uv run examples/libero/convert_pathmask_libero_data_to_lerobot_test_vlm_preds.py --data_dir /path/to/your/data --paths_masks_dir /path/to/vlm_predictions_of_all_h5s --max_ep_per_task XX
 
 If you want to push your dataset to the Hugging Face Hub, you can add the `--push_to_hub` flag:
 
@@ -110,12 +110,9 @@ def main(
     *,
     push_to_hub: bool = False,
     use_subtask_instructions: bool = False,
-    return_full_path_mask: bool = False,
     max_ep_per_task: int = 50,
 ):
     repo_name = REPO_NAME
-    if return_full_path_mask:
-        repo_name = repo_name + "_full_path_mask"
     if max_ep_per_task < 50:  # using a subset
         repo_name = repo_name + f"_max_ep_per_task_{max_ep_per_task}"
     # Clean up any existing dataset in the output directory
