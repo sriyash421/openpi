@@ -45,7 +45,7 @@ RAW_DATASET_NAMES = [
     # "libero_object_openvla_processed",
 ]  # For simplicity we will combine multiple Libero datasets into one training dataset
 REPO_NAME = "jesbu1/libero_90_lerobot_pathmask_rdp_vlm_preds"  # Name of the output dataset, also used for the Hugging Face Hub
-FLIP_IMAGE = True
+FLIP_IMAGE = False
 DOWNSIZE_IMAGE_SIZE = 224
 
 
@@ -183,6 +183,12 @@ def main(
                         "state": step["observation"]["state"],
                         "actions": step["action"],
                     }
+                    command = step["language_instruction"].decode()
+                    if not FLIP_IMAGE:  # flip instruction by changing left to right and right to left
+                        if "left" in command:
+                            command = command.replace("left", "right")
+                        if "right" in command:
+                            command = command.replace("right", "left")
 
                     # Get the path and mask data for this episode from HDF5
                     if f"episode_{episode_idx}" in path_masks_h5:
@@ -281,9 +287,9 @@ def main(
                     if OLD_LEROBOT:
                         dataset.add_frame(frame)
                     else:
-                        dataset.add_frame(frame, task=step["language_instruction"].decode())
+                        dataset.add_frame(frame, task=command)
                 if OLD_LEROBOT:
-                    dataset.save_episode(task=step["language_instruction"].decode())
+                    dataset.save_episode(task=command)
                 else:
                     dataset.save_episode()
 
