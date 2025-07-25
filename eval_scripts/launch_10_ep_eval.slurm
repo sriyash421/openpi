@@ -57,7 +57,7 @@ fi
 
 
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.draw_frequency=$VLM_QUERY_FREQUENCY --args.wandb_name_suffix=-vlmfreq${VLM_QUERY_FREQUENCY}_test10ep"
+EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_query_frequency=$VLM_QUERY_FREQUENCY --args.wandb_name_suffix=-vlmfreq${VLM_QUERY_FREQUENCY}_test10ep"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
