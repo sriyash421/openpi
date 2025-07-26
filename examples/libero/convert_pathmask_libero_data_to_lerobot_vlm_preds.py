@@ -49,7 +49,7 @@ RAW_DATASET_NAMES = [
 REPO_NAME = "jesbu1/libero_90_lerobot_pathmask_rdp_vlm_preds"  # Name of the output dataset, also used for the Hugging Face Hub
 FLIP_IMAGE = False
 DOWNSIZE_IMAGE_SIZE = 224
-DEBUG = False
+DEBUG = True
 
 
 from vila_utils.utils.decode import add_path_2d_to_img_alt_fast, add_mask_2d_to_img
