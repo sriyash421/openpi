@@ -49,6 +49,7 @@ RAW_DATASET_NAMES = [
 REPO_NAME = "jesbu1/libero_90_lerobot_pathmask_rdp_vlm_preds"  # Name of the output dataset, also used for the Hugging Face Hub
 FLIP_IMAGE = False
 DOWNSIZE_IMAGE_SIZE = 224
+DEBUG = False
 
 
 from vila_utils.utils.decode import add_path_2d_to_img_alt_fast, add_mask_2d_to_img
@@ -164,6 +165,9 @@ def main(
         for raw_dataset_name in RAW_DATASET_NAMES:
             raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
             for episode_idx, episode in enumerate(raw_dataset):
+                if DEBUG:
+                    if episode_idx > 20:
+                        break
                 mask_ratio = np.random.uniform(
                     mask_ratio_min, mask_ratio_max
                 )  # set the masking ratio for this entire episode
