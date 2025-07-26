@@ -16,9 +16,16 @@ USE_MASK=${3:-0}   # Default to not using mask
 
 POLICY_GPU_ID=0
 
-VLM_QUERY_FREQUENCY=1 # how many times to call the VLM per action chunk
+VLM_QUERY_FREQUENCY=5 # how many times to call the VLM per action chunk
 
 source ~/.bashrc
+
+cd /home1/jessez/nvidia/VILA
+echo "Running VILA server"
+conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_GPU_ID python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_path_mask_fast/snapshots/12df7a04221a50e88733cd2f1132eb01257aba0d/checkpoint-11700/" &
+
+# Wait for the model to load
+sleep 60
 
 cd /home1/jessez/nvidia/openpi
 
