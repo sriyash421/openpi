@@ -64,6 +64,7 @@ class Args:
 
     use_wandb: bool = True  # Whether to also log results in Weights & Biases
     wandb_project: str = "p-masked-vla"  # Name of W&B project to log to (use default!)
+    wandb_group_prefix: str = None
     wandb_entity: str = "clvr"  # Name of entity to log under
     wandb_name_suffix: str = ""
 
@@ -148,8 +149,12 @@ def eval_libero(args: Args) -> None:
         raise ValueError(f"Unknown task suite: {args.task_suite_name}")
 
     if args.use_wandb:
-        run_name = f"pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}-{args.wandb_name_suffix}"
-        wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name, config=args)
+        run_name = f"eval-pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}-{args.wandb_name_suffix}"
+        if args.wandb_group_prefix:
+            group = f"{args.wandb_group_prefix}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_vlmfreq{args.vlm_query_frequency}_replan{args.replan_steps}_draw{args.draw_path}_mask{args.draw_mask}"
+        else:
+            group = None
+        wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name, config=args, group=group)
 
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
 
