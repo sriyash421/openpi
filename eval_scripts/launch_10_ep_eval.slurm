@@ -36,9 +36,9 @@ SERVE_CMD_BASE="uv run scripts/serve_policy.py --port 8000 policy:checkpoint"
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_low_mem_finetune_path_new_maxep10/10000/"
 elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
-    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_fullpath_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_fullpath_path_masked/pi0_libero_low_mem_finetune_path_new_maxep10/10000/"
+    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_low_mem_finetune_path_masked_mask_maxep10/10000/"
 else
-  SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_low_mem_finetune/pi0_libero_test_10ep/10000"
+  SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_low_mem_finetune/pi0_libero_test_10ep/20000"
 fi
 
 # Construct the full serving command with CUDA_VISIBLE_DEVICES
