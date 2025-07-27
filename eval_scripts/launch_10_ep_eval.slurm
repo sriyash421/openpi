@@ -17,7 +17,7 @@ USE_MASK=${3:-0}   # Default to not using mask
 POLICY_GPU_ID=0
 VILA_GPU_ID=0
 
-VLM_QUERY_FREQUENCY=5 # how many times to call the VLM per action chunk
+VLM_QUERY_FREQUENCY=10 # how many times to call the VLM per action chunk
 
 source ~/.bashrc
 
