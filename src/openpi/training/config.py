@@ -655,7 +655,8 @@ _CONFIGS = [
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotLiberoDataConfig(
             # repo_id="jesbu1/libero_90_lerobot",
-            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
+            # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_5",
             base_config=DataConfig(
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
@@ -668,7 +669,7 @@ _CONFIGS = [
                 local_files_only=True,
                 prompt_from_task=True,
             ),
-            obs_type="path",
+            obs_type="regular",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=50_000,
