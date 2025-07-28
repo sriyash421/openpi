@@ -212,9 +212,9 @@ def main(
                 next_path_timestep_idx = 0
                 next_mask_timestep_idx = 0
 
-                for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
-                    img = step["observation"]["image"]
-                    state = np.concatenate([step["observation"]["base_pose_tool_reached"], step["observation"]["gripper_closed"]])
+                for step_idx, step in enumerate(episode["steps"]):
+                    img = tf.io.decode_image(step["observation"]["image"]).numpy()
+                    state = tf.concat([step["observation"]["base_pose_tool_reached"], step["observation"]["gripper_closed"]], axis=-1).numpy()
                     action = rt1_action_extraction(step).numpy()
                     frame = {
                         "image": img,
