@@ -19,21 +19,14 @@ uv run examples/fractal/convert_fractal_data_to_lerobot.py --data_dir ~/.cache/h
 """
 
 import shutil
-from pathlib import Path
-import torch
-import torchvision.transforms.functional as F
 import tensorflow_datasets as tfds
 import tensorflow as tf
 import cv2
-
-from openpi.policies.mask_path_utils import get_mask_and_path_from_h5
 import tensorflow_datasets as tfds
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import h5py
 import numpy as np
 import tyro
-import os
-import json
 try:
     # for older lerobot versions before 2.0.0
     from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
