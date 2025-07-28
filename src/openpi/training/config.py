@@ -1599,6 +1599,30 @@ _CONFIGS = [
     ),
     #### BRIDGE FAST LoRA Fine-tuning
     TrainConfig(
+        name="pi0_fast_lora_bridge_1_cam",
+        model=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
+        ),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot",
+            how_many_cameras=1,
+            sample_cameras=False,
+            model_type=ModelType.PI0_FAST,
+            base_config=DataConfig(local_files_only=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        freeze_filter=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
+        ).get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
+        batch_size=240,
+        fsdp_devices=3,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=10000,
+    ),
+    TrainConfig(
         name="pi0_fast_lora_bridge_1_cam_random",
         model=pi0_fast.Pi0FASTConfig(
             action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
