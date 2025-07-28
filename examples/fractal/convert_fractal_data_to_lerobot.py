@@ -129,7 +129,7 @@ def main(
     data_dir: str,
     paths_masks_file: str = None,  # Make paths_masks_file optional
     path_line_size: int = 2,
-    mask_ratio_min: float = 0.05,
+    mask_ratio_min: float = 0.08,
     mask_ratio_max: float = 0.10,
     *,
     push_to_hub: bool = False,
