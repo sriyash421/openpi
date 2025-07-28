@@ -176,6 +176,7 @@ def main(
         print(f"-------------------------Processing {raw_dataset_name}-------------------------")
         # open the directory containing the h5 files using raw_dataset_name
         libero_h5_list = [file for file in os.listdir(Path(data_dir) / raw_dataset_name) if file.endswith(".hdf5")]
+        libero_h5_list.sort()
         for libero_h5_file in libero_h5_list:
             paths_mask_file = (
                 Path(paths_masks_dir) / f"{raw_dataset_name}_{libero_h5_file.split('.')[0]}_paths_masks.h5"
