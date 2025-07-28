@@ -6,7 +6,7 @@ modified for any other data you have saved in a custom format.
 
 Usage:
 uv run examples/libero/convert_pathmask_libero_data_to_lerobot_test_vlm_preds.py --data_dir /path/to/your/data --paths_masks_dir /path/to/vlm_predictions_of_all_h5s --max_ep_per_task XX
-CUDA_VISIBLE_DEVICES=, uv run examples/libero/convert_pathmask_libero_data_to_lerobot_test_vlm_preds.py --data_dir /data/jessez/libero_processed_256_05_12/ --paths_masks_dir ~/VILA/libero_test_dataset_labeled_vila3b/ --max_ep_per_task 1 --push_to_hub
+CUDA_VISIBLE_DEVICES=, uv run examples/libero/convert_pathmask_libero_data_to_lerobot_test_vlm_preds.py --data_dir /data/jessez/libero_processed_256_05_12/ --paths_masks_dir ~/VILA/libero_test_dataset_labeled_vila3b/ --max_ep_per_task 10 --push_to_hub
 
 If you want to push your dataset to the Hugging Face Hub, you can add the `--push_to_hub` flag:
 
