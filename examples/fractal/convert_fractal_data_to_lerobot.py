@@ -262,7 +262,7 @@ def main(
 
                                     # Add mask if we have one
                                     if current_mask is not None:
-                                        height, width = step["observation"]["image"].shape[:2]
+                                        height, width = img.shape[:2]
                                         masked_img = process_mask_obs(
                                             img.copy(),
                                             current_mask,
