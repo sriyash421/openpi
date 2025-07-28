@@ -12,8 +12,9 @@ or ~/VILA/libero_90_labels_3b/libero_90_openvla_processed_paths_masks.h5
 
 uv pip install tensorflow_datasets 
 
-uv run examples/fractal/convert_fractal_data_to_lerobot.py --data_dir ~/.cache/huggingface/hub/datasets--jesbu1--fractal_rlds/snapshots/93169e35e1e6ddf6c43171bf038cb4971b60e72a/ \
---paths_masks_file ~/VILA/fractal_labels_3b/fractal_paths_masks.h5 \
+uv run examples/fractal/convert_fractal_data_to_lerobot.py \
+--data_dir /data/shared/openx_rlds_data/ \
+--paths_masks_file ~/VILA/fractal_labels_3b/fractal20220817_data_paths_masks.h5 \
 --repo_name jesbu1/fractal_lerobot_pathmask_vlm_labeled \
 --push_to_hub
 """
@@ -72,14 +73,14 @@ def rel2abs_gripper_actions(actions: tf.Tensor) -> tf.Tensor:
 
 def rt1_action_extraction(step: dict) -> dict: # from OpenVLA's OXE Transform for RT1
     # make gripper action absolute action, +1 = open, 0 = close
-    gripper_action = step["action"]["gripper_closedness_action"][:, 0]
+    gripper_action = step["action"]["gripper_closedness_action"]
     gripper_action = rel2abs_gripper_actions(gripper_action)
 
     action = tf.concat(
         (
             step["action"]["world_vector"],
             step["action"]["rotation_delta"],
-            gripper_action[:, None],
+            gripper_action,
         ),
         axis=-1,
     )
