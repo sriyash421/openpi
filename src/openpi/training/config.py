@@ -505,7 +505,7 @@ class TrainConfig:
     batch_size: int = 96 # 64 uses 31GB of memory on 1 GPU when doing LoRA fine-tuning, 96 uses 41GB of memory on 1 GPU when doing LoRA fine-tuning.
     # Number of workers to use for the data loader. Increasing this number will speed up data loading but
     # will increase memory and CPU usage.
-    num_workers: int = 15
+    num_workers: int = 24
     # Number of train steps (batches) to run.
     num_train_steps: int = 30_000
 
