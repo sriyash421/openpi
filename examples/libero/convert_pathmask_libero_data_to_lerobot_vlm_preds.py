@@ -192,7 +192,6 @@ def main(
                     }
                     command = step["language_instruction"].decode()
                     if not FLIP_IMAGE:  # flip instruction by changing left to right and right to left
-                        breakpoint()
                         if "left" in command:
                             command = command.replace("left", "right")
                         elif "right" in command:
