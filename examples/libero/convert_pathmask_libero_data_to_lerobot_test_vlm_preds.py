@@ -25,7 +25,6 @@ import torch
 import torchvision.transforms.functional as F
 
 
-from openpi.policies.mask_path_utils import get_mask_and_path_from_h5
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import h5py
 import numpy as np
