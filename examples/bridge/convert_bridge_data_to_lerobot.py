@@ -42,7 +42,7 @@ class DatasetConfig:
     video_backend: str = None
     # Path and mask specific configs
     path_line_size: int = 2
-    mask_ratio_min: float = 0.05,
+    mask_ratio_min: float = 0.08,
     mask_ratio_max: float = 0.10,
     use_paths_masks: bool = True  # Whether to process and include paths and masks
     apply_rdp: bool = False # Whether to apply RDP to the path and mask output from the VLM
