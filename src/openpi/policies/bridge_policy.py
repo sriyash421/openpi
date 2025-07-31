@@ -83,7 +83,7 @@ class BridgeInputs(transforms.DataTransformFn):
 
         # other keys include: "observation.images.image_1", "observation.images.image_2", "observation.images.image_3". Check camera_present to see which ones are present and sample.
         available_cameras = np.count_nonzero(sample["camera_present"])
-        camera_idx_to_include = np.arange(available_cameras)[: self.sample_cameras]
+        camera_idx_to_include = np.arange(available_cameras)[: self.how_many_cameras]
         if self.sample_cameras and available_cameras >= self.how_many_cameras:
             camera_idx_to_include = np.random.choice(available_cameras, self.how_many_cameras, replace=False)
 
