@@ -1616,6 +1616,7 @@ _CONFIGS = [
         ).get_freeze_filter(),
         ema_decay=None,
         num_train_steps=30_000,
+        num_workers=28,
         batch_size=160,
         fsdp_devices=2,
         log_interval=50,
