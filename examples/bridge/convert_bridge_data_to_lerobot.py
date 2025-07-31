@@ -42,7 +42,8 @@ class DatasetConfig:
     video_backend: str = None
     # Path and mask specific configs
     path_line_size: int = 2
-    mask_ratio: float = 0.15 # ratio of the image height to the mask size
+    mask_ratio_min: float = 0.05,
+    mask_ratio_max: float = 0.10,
     use_paths_masks: bool = True  # Whether to process and include paths and masks
     apply_rdp: bool = False # Whether to apply RDP to the path and mask output from the VLM
 
@@ -116,9 +117,9 @@ def main(
     ]
     cameras = [
         "image_0",
-        "image_1",
-        "image_2",
-        "image_3",
+        #"image_1",
+        #"image_2",
+        #"image_3",
     ]
     action = ["x", "y", "z", "roll", "pitch", "yaw", "gripper"]
 
@@ -197,6 +198,8 @@ def main(
                     next_mask_timestep_idx = 0
 
 
+                    mask_ratio = np.random.uniform(dataset_config.mask_ratio_min, dataset_config.mask_ratio_max)
+
                     for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
                         frame = {
                             "observation.state": step["observation"]["state"],
@@ -272,7 +275,7 @@ def main(
                                         # Apply mask
                                         height, width = img.shape[:2]
                                         masked_img = process_mask_obs(
-                                            img.copy(), current_mask, mask_pixels=int(height*dataset_config.mask_ratio), scale_mask=np.all(current_mask <= 1), apply_rdp=dataset_config.apply_rdp
+                                            img.copy(), current_mask, mask_pixels=int(height*mask_ratio), scale_mask=np.all(current_mask <= 1), apply_rdp=dataset_config.apply_rdp
                                         )
                                         # frame[f"observation.mask.{cam}"] = masked_img
 
