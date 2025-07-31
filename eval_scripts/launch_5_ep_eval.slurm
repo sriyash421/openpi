@@ -39,7 +39,7 @@ if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
 elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
     SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_low_mem_finetune_path_masked_mask_maxep5/10000/"
 else
-  SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_low_mem_finetune/pi0_libero_test_5ep/20000"
+  SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_low_mem_finetune/pi0_libero_test_5ep/10000"
 fi
 
 # Construct the full serving command with CUDA_VISIBLE_DEVICES
