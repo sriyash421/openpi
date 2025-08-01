@@ -197,6 +197,7 @@ def main(
                         elif "right" in command:
                             command = command.replace("right", "left")
 
+
                     # Get the path and mask data for this episode from HDF5
                     if f"episode_{episode_idx}" in path_masks_h5:
                         episode_group = path_masks_h5[f"episode_{episode_idx}"]
@@ -214,6 +215,10 @@ def main(
                             if step_idx == path_timesteps[next_path_timestep_idx % len(path_timesteps)] and next_path_timestep_idx < len(path_timesteps):
                                 current_path = path_data[next_path_timestep_idx, :path_lengths[next_path_timestep_idx]]
                                 next_path_timestep_idx += 1
+                            
+                            if not FLIP_IMAGE: # flip the path 2d points horizontally by doing 1 - x if the image is not flipped, to match with VLM trained image
+                                current_path[:, 0] = 1 - current_path[:, 0]
+
 
                             # Add path to image if we have one
                             if current_path is not None:
@@ -226,8 +231,11 @@ def main(
                                 if mask_data is not None:
                                     # Check if we need to update the mask
                                     if step_idx == mask_timesteps[next_mask_timestep_idx % len(mask_timesteps)] and next_mask_timestep_idx < len(mask_timesteps):
-                                        current_mask = mask_data[next_mask_timestep_idx, :mask_lengths[next_mask_timestep_idx]]
+                                        current_mask = mask_data[next_mask_timestep_idx, :mask_lengths[next_mask_timestep_idx]].copy()
                                         next_mask_timestep_idx += 1
+
+                                    if not FLIP_IMAGE: # flip the mask 2d points horizontally by doing 1 - x if the image is not flipped, to match with VLM trained image
+                                        current_mask[:, 0] = 1 - current_mask[:, 0]
 
                                     # Add mask if we have one
                                     if current_mask is not None:
