@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=biyik_1165
+#SBATCH --account=jessetho_1023
 #SBATCH --nodes=1
 #SBATCH --time=20:00:00
 #SBATCH --cpus-per-task=16
