@@ -61,15 +61,16 @@ class WidowXConfigs:
         "skip_move_to_neutral": False,
         "return_full_image": False,
         "camera_topics": [
-            {"name": "/D435/color/image_raw"},
+            #{"name": "/D435/color/image_raw"},
             {"name": "/blue/image_raw"},
             # {"name": "/yellow/image_raw"},
         ],
     }
 
 camera_to_name_map = {
-    "external_img": "external",
-    "over_shoulder_img": "over_shoulder",
+    #"external_img": "external",
+    #"over_shoulder_img": "over_shoulder",
+    "full_image": "observation.images.image_0",
 }
 
 
@@ -147,19 +148,20 @@ def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str)
     obs_for_policy = {
         "state": raw_obs["state"],
         "prompt": prompt,
+        "camera_present": [],
     }
     for cam_name in cameras:
         # Map camera name to the key used in raw_obs
         assert (
-            f"{cam_name}_img" in raw_obs
-        ), f"Camera image key '{cam_name}_img' not found in raw observation. Available keys: {raw_obs.keys()}"
-        img_key = f"{cam_name}_img"
+            f"{cam_name}" in raw_obs
+        ), f"Camera image key '{cam_name}' not found in raw observation. Available keys: {raw_obs.keys()}"
+        img_key = f"{cam_name}"
 
         img = raw_obs[img_key]
 
-        # Policy expects keys like 'external', 'over_shoulder' directly under 'images'
-        obs_for_policy[f"images/{cam_name}"] = image_tools.resize_with_pad(img, resolution, resolution)
-
+        # Policy expects keys like 'observation.images.image0'
+        obs_for_policy[f"{camera_to_name_map[cam_name]}"] = image_tools.resize_with_pad(img, resolution, resolution)
+        obs_for_policy["camera_present"].append(1)
     return obs_for_policy
 
 def run_inference_loop(
@@ -358,7 +360,7 @@ def main():
     )
     parser.add_argument("--robot-ip", type=str, default="localhost", help="IP address of the WidowX robot controller.")
     parser.add_argument("--robot-port", type=int, default=5556, help="IP address of the WidowX robot controller.")
-    parser.add_argument("--cameras", nargs='+', default=["external", "over_shoulder"], help="List of camera names to use (e.g., external over_shoulder). Should match policy expectations.")
+    parser.add_argument("--cameras", nargs='+', default=["full_image"], help="List of camera names to use (e.g., external over_shoulder). Should match policy expectations.")
     parser.add_argument("--prompt", type=str, required=True, help="Task prompt for the policy.")
     parser.add_argument(
         "--max-action-length",
