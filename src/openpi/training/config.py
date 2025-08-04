@@ -1555,12 +1555,12 @@ _CONFIGS = [
     ### BRIDGE LoRA Fine-tuning
     #
     TrainConfig(
-        name="pi0_lora_bridge_1_cam_random",
+        name="pi0_lora_bridge_1_cam",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotBridgeDataConfig(
             repo_id="jesbu1/bridge_v2_lerobot",
             how_many_cameras=1,
-            sample_cameras=True,
+            sample_cameras=False,
             model_type=ModelType.PI0,
             base_config=DataConfig(local_files_only=True),
         ),
@@ -1569,8 +1569,9 @@ _CONFIGS = [
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ).get_freeze_filter(),
         ema_decay=None,
-        num_train_steps=60_000,
+        num_train_steps=30_000,
         batch_size=148,
+        num_workers=28,
         fsdp_devices=2,
         log_interval=50,
         save_interval=1000,
