@@ -42,8 +42,6 @@ class DatasetConfig:
     video_backend: str = None
     # Path and mask specific configs
     path_line_size: int = 2
-    mask_ratio_min: float = 0.08,
-    mask_ratio_max: float = 0.10,
     use_paths_masks: bool = True  # Whether to process and include paths and masks
     apply_rdp: bool = False # Whether to apply RDP to the path and mask output from the VLM
 
@@ -103,6 +101,7 @@ def main(
     *,
     dataset_config: DatasetConfig = DEFAULT_DATASET_CONFIG,
     push_to_hub: bool = False,
+    mask_ratio: float = 0.08,
 ) -> LeRobotDataset:
     # TODO(user): Verify motor names and count for WidowX.
     state = [
@@ -198,7 +197,7 @@ def main(
                     next_mask_timestep_idx = 0
 
 
-                    mask_ratio = np.random.uniform(dataset_config.mask_ratio_min, dataset_config.mask_ratio_max)
+                    #mask_ratio = np.random.uniform(dataset_config.mask_ratio_min, dataset_config.mask_ratio_max)
 
                     for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
                         frame = {
