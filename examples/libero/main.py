@@ -53,7 +53,7 @@ class Args:
     draw_mask: bool = False
 
     flip_image_horizontally: bool = True
-    mask_ratio: float = 0.08
+    mask_ratio: float = 0.1
 
     #################################################################################################################
     # Utils
