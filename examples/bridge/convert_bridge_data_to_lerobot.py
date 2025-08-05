@@ -288,9 +288,10 @@ def main(
                             else:
                                 frame["camera_present"][cameras.index(cam)] = False
                         frame["camera_present"] = np.array(frame["camera_present"], dtype=bool)
-                        if not OLD_LEROBOT:
-                            frame["task"] = step["language_instruction"].decode() # new lerobot requires task in frame
-                        dataset.add_frame(frame) 
+                        if OLD_LEROBOT:
+                            dataset.add_frame(frame)
+                        else:
+                            dataset.add_frame(frame, task=step["language_instruction"].decode())
                     if OLD_LEROBOT:
                         dataset.save_episode(task=step["language_instruction"].decode())
                     else:
