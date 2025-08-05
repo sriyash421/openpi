@@ -760,6 +760,42 @@ _CONFIGS = [
         ema_decay=None,
     ),
     TrainConfig(
+        name="pi0_libero_low_mem_finetune_path_90",
+        # Here is an example of loading a pi0 model for LoRA fine-tuning.
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_90_lerobot_pathmask_rdp",
+            #repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
+            #repo_id="jesbu1/libero_test_lerobot_pathmask_vlm_preds_max_ep_per_task_5",
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+            obs_type="path",
+        ),
+        validation_data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            base_config=DataConfig(
+                local_files_only=True,
+                prompt_from_task=True,
+            ),
+            obs_type="path",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=100_000,
+        fsdp_devices=2,
+        batch_size=148,
+        # The freeze filter defines which parameters should be frozen during training.
+        # We have a convenience function in the model config that returns the default freeze filter
+        # for the given model config for LoRA finetuning. Just make sure it matches the model config
+        # you chose above.
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        # Turn off EMA for LoRA finetuning.
+        ema_decay=None,
+    ),
+    TrainConfig(
         name="pi0_libero_low_mem_finetune_path",
         # Here is an example of loading a pi0 model for LoRA fine-tuning.
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
@@ -890,6 +926,41 @@ _CONFIGS = [
             ),
             obs_type="masked",
         ),
+        # The freeze filter defines which parameters should be frozen during training.
+        # We have a convenience function in the model config that returns the default freeze filter
+        # for the given model config for LoRA finetuning. Just make sure it matches the model config
+        # you chose above.
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        # Turn off EMA for LoRA finetuning.
+        ema_decay=None,
+    ),
+    TrainConfig(
+        name="pi0_libero_low_mem_finetune_path_masked_90",
+        # Here is an example of loading a pi0 model for LoRA fine-tuning.
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotLiberoDataConfig(
+            # repo_id="jesbu1/libero_90_lerobot_pathmask_rdp",
+            repo_id="jesbu1/libero_test_lerobot_pathmask_vlm_preds_max_ep_per_task_5",
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+            obs_type="path_masked",
+        ),
+        validation_data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            base_config=DataConfig(
+                local_files_only=True,
+                prompt_from_task=True,
+            ),
+            obs_type="path_masked",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=100_000,
+        fsdp_devices=2,
+        batch_size=148,
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
         # for the given model config for LoRA finetuning. Just make sure it matches the model config
