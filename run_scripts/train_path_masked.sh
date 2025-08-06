@@ -35,13 +35,14 @@ export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
 #EXP_NAME=pi0_libero_90_path_masked_bs164_rdp
 #EXP_NAME=pi0_libero_low_mem_finetune_path_masked_mask0.01_0.12
-EXP_NAME=pi0_libero_low_mem_finetune_path_masked_mask_maxep5
+#EXP_NAME=pi0_libero_low_mem_finetune_path_masked_mask_maxep5
+EXP_NAME=pi0_libero_low_mem_finetune_path_masked_90
 #EXP_NAME=pi0_libero_low_mem_finetune_vlm_path_masked_bs148
 # --- End Environment Setup ---
 
 # --- Training Command Setup ---
 # Define the base training command as a variable
-BASE_TRAIN_CMD="uv run scripts/train.py pi0_libero_low_mem_finetune_path_masked --exp-name=$EXP_NAME"
+BASE_TRAIN_CMD="uv run scripts/train.py pi0_libero_low_mem_finetune_path_masked_90 --exp-name=$EXP_NAME"
 #BASE_TRAIN_CMD="uv run scripts/train.py pi0_libero_low_mem_finetune_vlm_path_masked --exp-name=$EXP_NAME"
 
 # Conditionally add --resume flag based on relaunch count
