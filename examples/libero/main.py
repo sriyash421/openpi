@@ -279,6 +279,7 @@ def eval_libero(args: Args) -> None:
                             vlm_server_ip=args.vlm_server_ip,
                             path=path,
                             mask=mask,
+                            mask_ratio=args.mask_ratio,
                         )
                     img = image_tools.convert_to_uint8(
                         image_tools.resize_with_pad(img, args.resize_size, args.resize_size)
