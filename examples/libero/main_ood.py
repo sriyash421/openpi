@@ -56,7 +56,7 @@ class Args:
     flip_image_horizontally: bool = True
     mask_ratio: float = 0.1
 
-    distribution_name: str # name of the distribution to use from distractor_variations, visual_variations
+    distribution_name: str = "distractor_variations" # name of the distribution to use from distractor_variations, visual_variations
 
 
     
