@@ -102,7 +102,7 @@ def eval_libero(args: Args) -> None:
     )
 
     # Find all variation pairs (BDDL + XML)
-    variations_dir = os.path.join(get_libero_path("benchmark_root"), "../", f"test_all_tasks_{distribution.name.split('_')[0]}")
+    variations_dir = os.path.join(get_libero_path("benchmark_root"), "../ood", f"test_all_tasks_{distribution.name.split('_')[0]}")
     entries = [
         d for d in os.listdir(variations_dir) if d.startswith(distribution.name + "_")
     ] # list of folders for each variation, one for each task
