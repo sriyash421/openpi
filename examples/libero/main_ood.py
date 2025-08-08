@@ -122,7 +122,12 @@ def eval_libero(args: Args) -> None:
     for i, (bddl_file, xml_file) in enumerate(tqdm.tqdm(variations)):
         # Copy XML to assets directory for proper loading
         assets_dir = os.path.join(
-            get_libero_path("benchmark_root"),
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "third_party",
+            "libero",
+            "libero",
             "assets",
             "scenes",
         )
