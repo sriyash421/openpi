@@ -109,15 +109,14 @@ def eval_libero(args: Args) -> None:
     variations = []
     for entry in entries:
         task_dir = os.path.join(variations_dir, entry)
-    for i in range(distribution.num_variations):
-        bddl_file = os.path.join(task_dir, f"variation_{i}.bddl")
-        xml_file = os.path.join(task_dir, f"variation_{i}.xml")
-        if os.path.exists(bddl_file) and os.path.exists(xml_file):
-            variations.append((bddl_file, xml_file))
-        else:   
-            print(f"No BDDL or XML file found for variation {i} in {task_dir}")
+        for i in range(distribution.num_variations):
+            bddl_file = os.path.join(task_dir, f"variation_{i}.bddl")
+            xml_file = os.path.join(task_dir, f"variation_{i}.xml")
+            if os.path.exists(bddl_file) and os.path.exists(xml_file):
+                variations.append((bddl_file, xml_file))
+            else:   
+                print(f"No BDDL or XML file found for variation {i} in {task_dir}")
 
-    
     # Start evaluation
     total_episodes, total_successes = 0, 0
     for i, (bddl_file, xml_file) in enumerate(tqdm.tqdm(variations)):
@@ -148,7 +147,7 @@ def eval_libero(args: Args) -> None:
 
         # Start episodes
         task_episodes, task_successes = 0, 0
-        for _ in tqdm.tqdm(range(args.num_trials_per_task)):
+        for _ in range(args.num_trials_per_task):
             logging.info(f"\nTask: {task_description}")
 
             # Reset environment
