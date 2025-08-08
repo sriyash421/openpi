@@ -322,7 +322,7 @@ def _get_libero_env(bddl_file, xml_file_name, distribution, resolution, seed):
     task_description_cut = task_description_uncut.replace(distribution.name + "_", "") # looks like KITCHEN_SCENE3_turn... or just put_the_bowl...
     if "SCENE" in task_description_cut:
         task_description_cut = task_description_cut.split("SCENE")[1] # looks like 3_turn... or 10_task_name......
-        task_description_cut = task_description_cut.split("_")[1] # looks like task name
+        task_description_cut = "_".join(task_description_cut.split("_")[1:]) # looks like task name
     task_description = task_description_cut.replace("_", " ")
 
     # env args
