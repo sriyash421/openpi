@@ -119,6 +119,7 @@ def eval_libero(args: Args) -> None:
 
     
     # Start evaluation
+    total_episodes, total_successes = 0, 0
     for i, (bddl_file, xml_file) in enumerate(tqdm.tqdm(variations)):
         # Copy XML to assets directory for proper loading
         assets_dir = os.path.join(
