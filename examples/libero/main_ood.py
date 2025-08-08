@@ -86,7 +86,7 @@ def eval_libero(args: Args) -> None:
 
 
     if args.use_wandb:
-        run_name = f"eval-pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}{args.mask_ratio}-{args.wandb_name_suffix}"
+        run_name = f"eval-pi0-{args.distribution_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}{args.mask_ratio}-{args.wandb_name_suffix}"
         if args.wandb_group_prefix:
             group = f"{args.wandb_group_prefix}_vlmfreq{args.vlm_query_frequency}_replan{args.replan_steps}_draw{args.draw_path}_mask{args.draw_mask}{args.mask_ratio}"
         else:
