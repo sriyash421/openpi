@@ -1,4 +1,6 @@
 import collections
+import uuid
+import shutil
 import datetime
 import wandb
 import dataclasses
@@ -12,6 +14,7 @@ import imageio
 from libero.libero import benchmark
 from libero.libero import get_libero_path
 from libero.libero.envs import OffScreenRenderEnv
+from libero.ood.task_distributions import TaskDistribution, AVAILABLE_DISTRIBUTIONS
 import numpy as np
 from openpi_client import image_tools
 from openpi_client import websocket_client_policy as _websocket_client_policy
@@ -21,6 +24,7 @@ import tyro
 import sys
 import os
 import h5py
+
 
 from src.openpi.policies.eval_maskpath_utils import get_path_mask_from_vlm
 
@@ -43,17 +47,19 @@ class Args:
     #################################################################################################################
     # LIBERO environment-specific parameters
     #################################################################################################################
-    task_suite_name: str = (
-        "libero_spatial"  # Task suite. Options: libero_spatial, libero_object, libero_goal, libero_10, libero_90
-    )
     num_steps_wait: int = 10  # Number of steps to wait for objects to stabilize in sim
-    num_trials_per_task: int = 50  # Number of rollouts per task
+    num_trials_per_task: int = 1  # Number of rollouts per task
 
     draw_path: bool = False
     draw_mask: bool = False
 
     flip_image_horizontally: bool = True
     mask_ratio: float = 0.1
+
+    distribution_name: str # name of the distribution to use from distractor_variations, visual_variations
+
+
+    
 
     #################################################################################################################
     # Utils
@@ -104,34 +110,61 @@ def eval_libero(args: Args) -> None:
 
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
 
-    # Start evaluation
-    total_episodes, total_successes = 0, 0
-    for task_id in tqdm.tqdm(range(num_tasks_in_suite)):
-        # Get task
-        task = task_suite.get_task(task_id)
-        task_description = task.language
+    # Find the requested distribution
+    distribution = next(
+        (dist for dist in AVAILABLE_DISTRIBUTIONS if dist.name == args.distribution_name),
+        None,
+    )
 
+    # Find all variation pairs (BDDL + XML)
+    variations_dir = os.path.join(get_libero_path("benchmark_root"), "../", f"test_all_tasks_{distribution.name.split('_')[0]}")
+    entries = [
+        d for d in os.listdir(variations_dir) if d.startswith(distribution.name + "_")
+    ] # list of folders for each variation, one for each task
+    variations = []
+    for entry in entries:
+        task_dir = os.path.join(variations_dir, entry)
+    for i in range(distribution.num_variations):
+        bddl_file = os.path.join(task_dir, f"variation_{i}.bddl")
+        xml_file = os.path.join(task_dir, f"variation_{i}.xml")
+        if os.path.exists(bddl_file) and os.path.exists(xml_file):
+            variations.append((bddl_file, xml_file))
+        else:   
+            print(f"No BDDL or XML file found for variation {i} in {task_dir}")
+
+    
+    # Start evaluation
+    for i, (bddl_file, xml_file) in enumerate(tqdm.tqdm(variations)):
+        # Copy XML to assets directory for proper loading
+        assets_dir = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "libero",
+            "libero",
+            "assets",
+            "scenes",
+        )
+        temp_xml_name = f"temp_variation_{uuid.uuid4()}.xml"
+        temp_xml = os.path.join(assets_dir, temp_xml_name)
+        print(f"  Copying XML to: {temp_xml}")
+        shutil.copy2(xml_file, temp_xml)
+
+    
         # Initialize video tracking for this task
         success_videos_saved = 0
         failure_videos_saved = 0
 
-        # Get default LIBERO initial states
-        initial_states = task_suite.get_task_init_states(task_id)
-
         # Initialize LIBERO environment and task description
-        env, task_description = _get_libero_env(task, LIBERO_ENV_RESOLUTION, args.seed)
+        env, task_description = _get_libero_env(bddl_file, temp_xml_name, distribution, LIBERO_ENV_RESOLUTION, args.seed)
 
         # Start episodes
         task_episodes, task_successes = 0, 0
-        for episode_idx in tqdm.tqdm(range(args.num_trials_per_task)):
+        for _ in tqdm.tqdm(range(args.num_trials_per_task)):
             logging.info(f"\nTask: {task_description}")
 
             # Reset environment
             env.reset()
             action_plan = collections.deque()
-
-            # Set initial states
-            obs = env.set_init_state(initial_states[episode_idx])
 
             # Setup
             t = 0
@@ -279,6 +312,10 @@ def eval_libero(args: Args) -> None:
             logging.info(f"# episodes completed so far: {total_episodes}")
             logging.info(f"# successes: {total_successes} ({total_successes / total_episodes * 100:.1f}%)")
 
+            # remove the temp xml file
+            if os.path.exists(temp_xml):
+                os.remove(temp_xml)
+
         # Log final results
         logging.info(f"Current task success rate: {float(task_successes) / float(task_episodes)}")
         logging.info(f"Current total success rate: {float(total_successes) / float(total_episodes)}")
@@ -290,11 +327,18 @@ def eval_libero(args: Args) -> None:
         wandb.log({f"{args.task_suite_name}/success_rate": float(total_successes) / float(total_episodes)})
         wandb.finish()
 
-def _get_libero_env(task, resolution, seed):
+def _get_libero_env(bddl_file, xml_file_name, distribution, resolution, seed):
     """Initializes and returns the LIBERO environment, along with the task description."""
-    task_description = task.language
-    task_bddl_file = pathlib.Path(get_libero_path("bddl_files")) / task.problem_folder / task.bddl_file
-    env_args = {"bddl_file_name": task_bddl_file, "camera_heights": resolution, "camera_widths": resolution}
+    # get the task description from the folder for the bddl/xml file
+    task_description_uncut = os.path.basename(os.path.dirname(bddl_file))
+    task_description_cut = task_description_uncut.replace(distribution.name + "_", "") # looks like KITCHEN_SCENE3_turn... or just put_the_bowl...
+    if "SCENE" in task_description_cut:
+        task_description_cut = task_description_cut.split("SCENE")[1] # looks like 3_turn... or 10_task_name......
+        task_description_cut = task_description_cut.split("_")[1] # looks like task name
+    task_description = task_description_cut.replace("_", " ")
+
+    # env args
+    env_args = {"bddl_file_name": bddl_file, "camera_heights": resolution, "camera_widths": resolution, "scene_xml": f"scenes/{xml_file_name}"}
     env = OffScreenRenderEnv(**env_args)
     env.seed(seed)  # IMPORTANT: seed seems to affect object positions even when using fixed initial state
     return env, task_description
