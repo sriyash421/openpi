@@ -79,26 +79,11 @@ def eval_libero(args: Args) -> None:
     # Set random seed
     np.random.seed(args.seed)
 
-    # Initialize LIBERO task suite
-    benchmark_dict = benchmark.get_benchmark_dict()
-    task_suite = benchmark_dict[args.task_suite_name]()
-    num_tasks_in_suite = task_suite.n_tasks
-    logging.info(f"Task suite: {args.task_suite_name}")
-
     pathlib.Path(args.video_out_path).mkdir(parents=True, exist_ok=True)
 
-    if args.task_suite_name == "libero_spatial":
-        max_steps = 220  # longest training demo has 193 steps
-    elif args.task_suite_name == "libero_object":
-        max_steps = 280  # longest training demo has 254 steps
-    elif args.task_suite_name == "libero_goal":
-        max_steps = 300  # longest training demo has 270 steps
-    elif args.task_suite_name == "libero_10":
-        max_steps = 520  # longest training demo has 505 steps
-    elif args.task_suite_name == "libero_90":
-        max_steps = 400  # longest training demo has 373 steps
-    else:
-        raise ValueError(f"Unknown task suite: {args.task_suite_name}")
+    # set the max steps for the task suite to 500
+    max_steps = 500
+
 
     if args.use_wandb:
         run_name = f"eval-pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}_replan-{args.replan_steps}-draw{args.draw_path}-mask{args.draw_mask}{args.mask_ratio}-{args.wandb_name_suffix}"
