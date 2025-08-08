@@ -313,7 +313,7 @@ def eval_libero(args: Args) -> None:
     logging.info(f"Total episodes: {total_episodes}")
 
     if args.use_wandb:
-        wandb.log({f"{args.task_suite_name}/success_rate": float(total_successes) / float(total_episodes)})
+        wandb.log({f"{args.distribution_name}/success_rate": float(total_successes) / float(total_episodes)})
         wandb.finish()
 
 def _get_libero_env(bddl_file, xml_file_name, distribution, resolution, seed):
