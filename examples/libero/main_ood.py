@@ -128,6 +128,7 @@ def eval_libero(args: Args) -> None:
             "third_party",
             "libero",
             "libero",
+            "libero",
             "assets",
             "scenes",
         )
