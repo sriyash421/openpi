@@ -18,7 +18,7 @@ python examples/usc_widowx/convert_pathmask_uw_data_to_lerobot.py \
 
 python examples/usc_widowx/convert_pathmask_uw_data_to_lerobot.py \
     --source-repo-id jesbu1/uw_widowx_8_8_lerobot \
-    --paths-masks-file ./uw_widowx_labels_3b/uw_widowx_8_8_lerobot_paths_masks.h5 \
+    --paths-masks-file ~/VILA/uw_widowx_labels_3b/uw_widowx_8_8_lerobot_paths_masks.h5 \
     --repo-id jesbu1/uw_widowx_8_8_pathmask_lerobot \
     --push-to-hub
 
