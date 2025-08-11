@@ -18,7 +18,7 @@ POLICY_GPU_ID=0
 VILA_GPU_ID=0
 
 VLM_QUERY_FREQUENCY=10 # how many times to call the VLM per action chunk
-WANDB_PREFIX="eval-pi0-test5ep_8-5-20k"
+WANDB_PREFIX="eval-ood-pi0-test5ep_8-8-20k"
 MASK_RATIO=0.08
 
 source ~/.bashrc
@@ -41,7 +41,7 @@ if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
 elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
     SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_low_mem_finetune_path_masked_mask_maxep5/20000/"
 else
-  SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_low_mem_finetune/pi0_libero_test_5ep/30000"
+  SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune --policy.dir=checkpoints/pi0_libero_low_mem_finetune/pi0_libero_test_5ep/20000/"
 fi
 
 # Construct the full serving command with CUDA_VISIBLE_DEVICES
@@ -52,22 +52,18 @@ bash -c "$SERVE_CMD" &
 sleep 30
 
 # Determine task suite based on EVAL_SET
-if [ "$EVAL_SET" = "10" ]; then
-  TASK_SUITE="libero_10"
-elif [ "$EVAL_SET" = "spatial" ]; then
-  TASK_SUITE="libero_spatial"
-elif [ "$EVAL_SET" = "object" ]; then
-  TASK_SUITE="libero_object"
-elif [ "$EVAL_SET" = "goal" ]; then
-  TASK_SUITE="libero_goal"
+if [ "$EVAL_SET" = "distractor" ]; then
+  TASK_SUITE="distractor_variations"
+elif [ "$EVAL_SET" = "visual" ]; then
+  TASK_SUITE="visual_variations"
 else
-  echo "Invalid EVAL_SET: $EVAL_SET. Using default libero_10."
-  TASK_SUITE="libero_10"
+  echo "Invalid EVAL_SET: $EVAL_SET. Using default distractor_variations."
+  TASK_SUITE="distractor_variations"
 fi
 
 
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8000 --args.port 8001 --args.vlm_query_frequency=$VLM_QUERY_FREQUENCY --args.wandb_name_suffix=-vlmfreq${VLM_QUERY_FREQUENCY}_test5ep --args.wandb_group_prefix=$WANDB_PREFIX --args.mask_ratio=$MASK_RATIO"
+EVAL_CMD="python examples/libero/main_ood.py --args.distribution_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8000 --args.port 8001 --args.vlm_query_frequency=$VLM_QUERY_FREQUENCY --args.wandb_name_suffix=-vlmfreq${VLM_QUERY_FREQUENCY}_test5ep --args.wandb_group_prefix=$WANDB_PREFIX --args.mask_ratio=$MASK_RATIO"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then

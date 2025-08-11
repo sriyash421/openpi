@@ -505,7 +505,7 @@ class TrainConfig:
     batch_size: int = 96 # 64 uses 31GB of memory on 1 GPU when doing LoRA fine-tuning, 96 uses 41GB of memory on 1 GPU when doing LoRA fine-tuning.
     # Number of workers to use for the data loader. Increasing this number will speed up data loading but
     # will increase memory and CPU usage.
-    num_workers: int = 24
+    num_workers: int = 28
     # Number of train steps (batches) to run.
     num_train_steps: int = 30_000
 
@@ -760,6 +760,42 @@ _CONFIGS = [
         ema_decay=None,
     ),
     TrainConfig(
+        name="pi0_libero_low_mem_finetune_path_90",
+        # Here is an example of loading a pi0 model for LoRA fine-tuning.
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_90_lerobot_pathmask_rdp",
+            #repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
+            #repo_id="jesbu1/libero_test_lerobot_pathmask_vlm_preds_max_ep_per_task_5",
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+            obs_type="path",
+        ),
+        validation_data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            base_config=DataConfig(
+                local_files_only=True,
+                prompt_from_task=True,
+            ),
+            obs_type="path",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=100_000,
+        fsdp_devices=2,
+        batch_size=148,
+        # The freeze filter defines which parameters should be frozen during training.
+        # We have a convenience function in the model config that returns the default freeze filter
+        # for the given model config for LoRA finetuning. Just make sure it matches the model config
+        # you chose above.
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        # Turn off EMA for LoRA finetuning.
+        ema_decay=None,
+    ),
+    TrainConfig(
         name="pi0_libero_low_mem_finetune_path",
         # Here is an example of loading a pi0 model for LoRA fine-tuning.
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
@@ -890,6 +926,41 @@ _CONFIGS = [
             ),
             obs_type="masked",
         ),
+        # The freeze filter defines which parameters should be frozen during training.
+        # We have a convenience function in the model config that returns the default freeze filter
+        # for the given model config for LoRA finetuning. Just make sure it matches the model config
+        # you chose above.
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        # Turn off EMA for LoRA finetuning.
+        ema_decay=None,
+    ),
+    TrainConfig(
+        name="pi0_libero_low_mem_finetune_path_masked_90",
+        # Here is an example of loading a pi0 model for LoRA fine-tuning.
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_90_lerobot_pathmask_rdp",
+            #repo_id="jesbu1/libero_test_lerobot_pathmask_vlm_preds_max_ep_per_task_5",
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+            obs_type="path_masked",
+        ),
+        validation_data=LeRobotLiberoDataConfig(
+            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            base_config=DataConfig(
+                local_files_only=True,
+                prompt_from_task=True,
+            ),
+            obs_type="path_masked",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=100_000,
+        fsdp_devices=2,
+        batch_size=148,
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
         # for the given model config for LoRA finetuning. Just make sure it matches the model config
@@ -1555,12 +1626,12 @@ _CONFIGS = [
     ### BRIDGE LoRA Fine-tuning
     #
     TrainConfig(
-        name="pi0_lora_bridge_1_cam_random",
+        name="pi0_lora_bridge_1_cam",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotBridgeDataConfig(
             repo_id="jesbu1/bridge_v2_lerobot",
             how_many_cameras=1,
-            sample_cameras=True,
+            sample_cameras=False,
             model_type=ModelType.PI0,
             base_config=DataConfig(local_files_only=True),
         ),
@@ -1569,8 +1640,9 @@ _CONFIGS = [
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ).get_freeze_filter(),
         ema_decay=None,
-        num_train_steps=60_000,
+        num_train_steps=30_000,
         batch_size=148,
+        num_workers=28,
         fsdp_devices=2,
         log_interval=50,
         save_interval=1000,

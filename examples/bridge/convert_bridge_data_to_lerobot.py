@@ -37,13 +37,11 @@ class DatasetConfig:
     image_writer_processes: int = 12
     image_writer_threads: int = 7
     # TODO(user): Define image shape expected by LeRobot
-    image_height: int = 224
-    image_width: int = 224
+    image_height: int = 256
+    image_width: int = 256
     video_backend: str = None
     # Path and mask specific configs
     path_line_size: int = 2
-    mask_ratio_min: float = 0.08,
-    mask_ratio_max: float = 0.10,
     use_paths_masks: bool = True  # Whether to process and include paths and masks
     apply_rdp: bool = False # Whether to apply RDP to the path and mask output from the VLM
 
@@ -103,6 +101,7 @@ def main(
     *,
     dataset_config: DatasetConfig = DEFAULT_DATASET_CONFIG,
     push_to_hub: bool = False,
+    mask_ratio: float = 0.08,
 ) -> LeRobotDataset:
     # TODO(user): Verify motor names and count for WidowX.
     state = [
@@ -198,7 +197,7 @@ def main(
                     next_mask_timestep_idx = 0
 
 
-                    mask_ratio = np.random.uniform(dataset_config.mask_ratio_min, dataset_config.mask_ratio_max)
+                    #mask_ratio = np.random.uniform(dataset_config.mask_ratio_min, dataset_config.mask_ratio_max)
 
                     for step_idx, step in enumerate(episode["steps"].as_numpy_iterator()):
                         frame = {
@@ -289,9 +288,10 @@ def main(
                             else:
                                 frame["camera_present"][cameras.index(cam)] = False
                         frame["camera_present"] = np.array(frame["camera_present"], dtype=bool)
-                        if not OLD_LEROBOT:
-                            frame["task"] = step["language_instruction"].decode() # new lerobot requires task in frame
-                        dataset.add_frame(frame) 
+                        if OLD_LEROBOT:
+                            dataset.add_frame(frame)
+                        else:
+                            dataset.add_frame(frame, task=step["language_instruction"].decode())
                     if OLD_LEROBOT:
                         dataset.save_episode(task=step["language_instruction"].decode())
                     else:
