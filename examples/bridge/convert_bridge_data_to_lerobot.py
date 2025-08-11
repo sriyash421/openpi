@@ -34,14 +34,14 @@ import h5py
 @dataclasses.dataclass(frozen=True)
 class DatasetConfig:
     use_videos: bool = True
-    image_writer_processes: int = 12
-    image_writer_threads: int = 7
+    image_writer_processes: int = 0
+    image_writer_threads: int = 16
     # TODO(user): Define image shape expected by LeRobot
     image_height: int = 256
     image_width: int = 256
     video_backend: str = None
     # Path and mask specific configs
-    path_line_size: int = 2
+    path_line_size: int = 3
     use_paths_masks: bool = True  # Whether to process and include paths and masks
     apply_rdp: bool = False # Whether to apply RDP to the path and mask output from the VLM
 
