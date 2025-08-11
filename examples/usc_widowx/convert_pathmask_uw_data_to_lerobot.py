@@ -15,6 +15,13 @@ python examples/usc_widowx/convert_pathmask_uw_data_to_lerobot.py \
     --paths-masks-file /Volumes/Sandisk\ 1TB/uw_widowx_labels_3b/uw_widowx_8_8_lerobot_paths_masks.h5 \
     --repo-id jesbu1/uw_widowx_8_8_pathmask_lerobot \
     --push-to-hub
+
+python examples/usc_widowx/convert_pathmask_uw_data_to_lerobot.py \
+    --source-repo-id jesbu1/uw_widowx_8_8_lerobot \
+    --paths-masks-file ./uw_widowx_labels_3b/uw_widowx_8_8_lerobot_paths_masks.h5 \
+    --repo-id jesbu1/uw_widowx_8_8_pathmask_lerobot \
+    --push-to-hub
+
 """
 
 from __future__ import annotations
@@ -46,6 +53,8 @@ from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 # Path/Mask utilities adapted from `convert_pathmask_libero_data_to_lerobot_vlm_preds.py`
 from vila_utils.utils.decode import add_path_2d_to_img_alt_fast, add_mask_2d_to_img
 from vila_utils.utils.encode import scale_path, smooth_path_rdp
+
+EXTRA_KEYS_TO_REMOVE = ['task_index', 'timestamp', 'index', 'episode_index', 'frame_index']
 
 
 @dataclasses.dataclass(frozen=True)
@@ -288,6 +297,11 @@ def convert_from_lerobot_with_paths_masks(
                 else:
                     frame_out[f"observation.images.{path_cam_name}"] = path_img
                     frame_out[f"observation.images.{masked_path_cam_name}"] = masked_path_img
+
+                for key in EXTRA_KEYS_TO_REMOVE:
+                    # remove extra lerobot keys that aren't needed for frame creation
+                    if key in frame_out:
+                        del frame_out[key]
 
                 if OLD_LEROBOT:
                     dataset_out.add_frame(frame_out)
