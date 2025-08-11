@@ -82,7 +82,7 @@ class DatasetConfig:
     use_videos: bool = True
     tolerance_s: float = 0.0001  # Adjust based on data timestamp precision
     image_writer_processes: int = 0
-    image_writer_threads: int = 4
+    image_writer_threads: int = 8
     video_backend: str | None = None
     # TODO(user): Define image shape expected by LeRobot
     image_height: int = 256
