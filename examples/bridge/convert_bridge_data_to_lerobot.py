@@ -13,6 +13,7 @@ uv run examples/bridge/convert_bridge_data_to_lerobot.py --data_dir /data/shared
 
 import dataclasses
 from pathlib import Path
+import cv2
 import shutil
 import tensorflow_datasets as tfds
 import numpy as np
@@ -285,6 +286,10 @@ def main(
                                             path_line_size=dataset_config.path_line_size,
                                         )
                                         frame[f"observation.masked_path.{cam}"] = masked_path_img
+                                # downsize everything to 224x224
+                                frame[f"observation.images.{cam}"] = cv2.resize(frame[f"observation.images.{cam}"], (224, 224))
+                                frame[f"observation.path.{cam}"] = cv2.resize(frame[f"observation.path.{cam}"], (224, 224))
+                                frame[f"observation.masked_path.{cam}"] = cv2.resize(frame[f"observation.masked_path.{cam}"], (224, 224))
                             else:
                                 frame["camera_present"][cameras.index(cam)] = False
                         frame["camera_present"] = np.array(frame["camera_present"], dtype=bool)
