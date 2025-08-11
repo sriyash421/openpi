@@ -33,7 +33,8 @@ except ImportError as e:
     print("Please ensure widowx_envs is installed correctly.")
     exit(1)
 
-resolution = 256
+resolution = 224
+
 
 # --- Globals for keyboard listener ---
 key_pressed = None
@@ -49,16 +50,8 @@ class WidowXConfigs:
             [0.45, 0.25, 0.25, 1.57, 0],
         ],
         "catch_environment_except": False,
-        "start_state": [
-            0.11865137,
-            -0.01696823,
-            0.24405071,
-            -0.03702571,
-            -0.11837727,
-            0.03907566,
-            0.9994886,
-        ],
-        "skip_move_to_neutral": False,
+        "start_state": [0.3, 0.0, 0.15, 0, 0, 0, 1],
+        "skip_move_to_neutral": True,
         "return_full_image": False,
         "camera_topics": [
             #{"name": "/D435/color/image_raw"},
@@ -249,7 +242,7 @@ def run_inference_loop(
                 # 3. Execute the first action in the chunk
                 action_to_execute = action
                 # change gripper to discrete 0-1
-                action_to_execute[6] = int(action_to_execute[6] > 0)
+                action_to_execute[6] = int(action_to_execute[6] > 0.5)
 
                 # step_action returns next_obs, reward, done, info - we only need next_obs
                 step_result = widowx_client.step_action(action_to_execute)
@@ -278,6 +271,7 @@ def run_inference_loop(
             elif key_pressed == "q":
                 print("\nStopping requested by user")
                 break
+        
         # --- End of loop --- #
 
         rollout_time = time.time() - start_time
