@@ -81,8 +81,8 @@ def load_images(image_dir: Path) -> np.ndarray:
 class DatasetConfig:
     use_videos: bool = True
     tolerance_s: float = 0.0001  # Adjust based on data timestamp precision
-    image_writer_processes: int = 10
-    image_writer_threads: int = 5
+    image_writer_processes: int = 0
+    image_writer_threads: int = 4
     video_backend: str | None = None
     # TODO(user): Define image shape expected by LeRobot
     image_height: int = 256
