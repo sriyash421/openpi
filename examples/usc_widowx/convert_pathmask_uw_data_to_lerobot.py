@@ -10,16 +10,16 @@ paths/masks stored in an HDF5 file using the naming convention from your labelin
 
 Example usage:
 
-python examples/usc_widowx/convert_pathmask_uw_data_to_lerobot.py \
+uv run examples/usc_widowx/convert_pathmask_uw_data_to_lerobot.py \
     --source-repo-id jesbu1/uw_widowx_8_8_lerobot \
     --paths-masks-file /Volumes/Sandisk\ 1TB/uw_widowx_labels_3b/uw_widowx_8_8_lerobot_paths_masks.h5 \
     --repo-id jesbu1/uw_widowx_8_8_pathmask_lerobot \
     --push-to-hub
 
-python examples/usc_widowx/convert_pathmask_uw_data_to_lerobot.py \
-    --source-repo-id jesbu1/uw_widowx_8_8_lerobot \
-    --paths-masks-file ~/VILA/uw_widowx_labels_3b/uw_widowx_8_8_lerobot_paths_masks.h5 \
-    --repo-id jesbu1/uw_widowx_8_8_pathmask_lerobot \
+uv run examples/usc_widowx/convert_pathmask_uw_data_to_lerobot.py \
+    --source-repo-id jesbu1/uw_widowx_8_11_lerobot \
+    --paths-masks-file ~/VILA/uw_widowx_labels_3b/paths_masks.h5 \
+    --repo-id jesbu1/uw_widowx_8_11_pathmask_lerobot \
     --push-to-hub
 
 """
