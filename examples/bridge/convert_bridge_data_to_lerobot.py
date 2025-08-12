@@ -36,7 +36,7 @@ import h5py
 class DatasetConfig:
     use_videos: bool = True
     image_writer_processes: int = 0
-    image_writer_threads: int = 16
+    image_writer_threads: int = 20
     # TODO(user): Define image shape expected by LeRobot
     image_height: int = 224
     image_width: int = 224

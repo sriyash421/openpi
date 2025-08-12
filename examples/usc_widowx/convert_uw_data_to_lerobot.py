@@ -18,6 +18,14 @@ python examples/usc_widowx/convert_uw_data_to_lerobot.py \
     --mode "video" \
     --push-to-hub \
     --dataset-config.use-videos
+
+
+python examples/usc_widowx/convert_uw_data_to_lerobot.py \
+    --save-dir /Volumes/Sandisk\ 1TB/8_11_masked_vla_widowx_data/ \
+    --repo-id "jesbu1/uw_widowx_8_11_lerobot" \
+    --mode "video" \
+    --push-to-hub \
+    --dataset-config.use-videos
 """
 
 import dataclasses
