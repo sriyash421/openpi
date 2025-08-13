@@ -3,11 +3,11 @@
 #SBATCH --nodes=1
 #SBATCH --time=20:00:00
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=185G #185G to get ampere or newer gpus
+#SBATCH --mem=32G #185G to get ampere or newer gpus
 #SBATCH --partition=gpu
 #SBATCH --output=slurm_outputs/%x_%j.out
 #SBATCH --error=slurm_outputs/%x_%j.err
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:l40s:1
 
 # Default parameter values
 EVAL_SET=${1:-10}  # Default to libero_10 if not specified (options: 10, spatial, object, goal)
