@@ -1417,7 +1417,7 @@ _CONFIGS = [
         num_workers=12,
         log_interval=50,
         save_interval=1000,
-        keep_period=5000,
+        keep_period=10000,
     ),
     TrainConfig(
         name="pi0_lora_uw_widowx_expert_data_path",
@@ -1439,7 +1439,7 @@ _CONFIGS = [
         num_workers=12,
         log_interval=50,
         save_interval=1000,
-        keep_period=5000,
+        keep_period=10000,
     ),
     TrainConfig(
         name="pi0_lora_uw_widowx_expert_data_path_masked",
@@ -1461,7 +1461,7 @@ _CONFIGS = [
         num_workers=12,
         log_interval=50,
         save_interval=1000,
-        keep_period=5000,
+        keep_period=10000,
     ),
     TrainConfig(
         name="pi0_lora_usc_widowx_combined_play_data",
