@@ -8,7 +8,6 @@
 #SBATCH --gres=gpu:2
 #SBATCH --output=slurm_outputs/%x_%j.out
 #SBATCH --error=slurm_outputs/%x_%j.err
-#SBATCH --exclude=b17-15
 
 # --- Start Relaunch Logic ---
 MAX_RELAUNCHES=6
