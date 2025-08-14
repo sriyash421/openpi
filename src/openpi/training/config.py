@@ -425,9 +425,10 @@ class LeRobotBridgeDataConfig(DataConfigFactory):
     # If true, will convert joint dimensions to deltas with respect to the current state before passing to the model.
     # Gripper dimensions will remain in absolute values.
     model_type: ModelType = ModelType.PI0
-    how_many_cameras: int = 2
+    how_many_cameras: int = 1
     sample_cameras: bool = False
     default_prompt: str = ""
+    obs_type: str = "regular"
 
     action_sequence_keys: Sequence[str] = ("action",)
 
@@ -445,12 +446,20 @@ class LeRobotBridgeDataConfig(DataConfigFactory):
             ],
             outputs=[bridge_policy.BridgeOutputs(action_dim=model_config.action_dim, use_delta_actions=False)],
         )
+        if self.obs_type == "regular":
+            obs_key = "observation.images.image_0"
+        elif self.obs_type == "path":
+            obs_key = "observation.path.image_0"
+        elif self.obs_type == "path_masked":
+            obs_key = "observation.masked_path.image_0"
+        else:
+            raise ValueError(f"Invalid obs_type: {self.obs_type}")
         repack_dict = {
             "state": "observation.state",
-            "observation.images.image_0": "observation.images.image_0",
-            "observation.images.image_1": "observation.images.image_1",
-            "observation.images.image_2": "observation.images.image_2",
-            "observation.images.image_3": "observation.images.image_3",
+            "observation.images.image_0": obs_key,
+            #"observation.images.image_1": "observation.images.image_1",
+            #"observation.images.image_2": "observation.images.image_2",
+            #"observation.images.image_3": "observation.images.image_3",
             "camera_present": "camera_present",
             "actions": "action",
             "prompt": "prompt",
@@ -1404,7 +1413,7 @@ _CONFIGS = [
             repo_id="jesbu1/uw_widowx_8_8_pathmask_lerobot",
             is_play_data=False,
             model_type=ModelType.PI0,
-            base_config=DataConfig(local_files_only=True),
+            base_config=DataConfig(local_files_only=False),
             obs_type="regular",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
@@ -1426,7 +1435,7 @@ _CONFIGS = [
             repo_id="jesbu1/uw_widowx_8_8_pathmask_lerobot",
             is_play_data=False,
             model_type=ModelType.PI0,
-            base_config=DataConfig(local_files_only=True),
+            base_config=DataConfig(local_files_only=False),
             obs_type="path",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
@@ -1448,7 +1457,7 @@ _CONFIGS = [
             repo_id="jesbu1/uw_widowx_8_8_pathmask_lerobot",
             is_play_data=False,
             model_type=ModelType.PI0,
-            base_config=DataConfig(local_files_only=True),
+            base_config=DataConfig(local_files_only=False),
             obs_type="path_masked",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
@@ -1631,6 +1640,54 @@ _CONFIGS = [
         keep_period=10000,
     ),
     TrainConfig(
+        name="pi0_lora_bridge_1_cam_path",
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot_pathmask",
+            how_many_cameras=1,
+            sample_cameras=False,
+            model_type=ModelType.PI0,
+            base_config=DataConfig(local_files_only=True),
+            obs_type="path_masked",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
+        batch_size=148,
+        num_workers=28,
+        fsdp_devices=2,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=10000,
+    ),
+    TrainConfig(
+        name="pi0_lora_bridge_1_cam_path_masked",
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot_pathmask",
+            how_many_cameras=1,
+            sample_cameras=False,
+            model_type=ModelType.PI0,
+            base_config=DataConfig(local_files_only=True),
+            obs_type="path_masked",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
+        batch_size=148,
+        num_workers=28,
+        fsdp_devices=2,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=10000,
+    ),
+    TrainConfig(
         name="pi0_lora_bridge_2_cam_random",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotBridgeDataConfig(
@@ -1642,80 +1699,6 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         freeze_filter=pi0.Pi0Config(
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
-        ).get_freeze_filter(),
-        ema_decay=None,
-        num_train_steps=60_000,
-        batch_size=148,
-        fsdp_devices=2,
-        log_interval=50,
-        save_interval=1000,
-        keep_period=10000,
-    ),
-    #### BRIDGE FAST LoRA Fine-tuning
-    TrainConfig(
-        name="pi0_fast_lora_bridge_1_cam",
-        model=pi0_fast.Pi0FASTConfig(
-            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
-        ),
-        data=LeRobotBridgeDataConfig(
-            repo_id="jesbu1/bridge_v2_lerobot",
-            how_many_cameras=1,
-            sample_cameras=False,
-            model_type=ModelType.PI0_FAST,
-            base_config=DataConfig(local_files_only=True),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        freeze_filter=pi0_fast.Pi0FASTConfig(
-            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
-        ).get_freeze_filter(),
-        ema_decay=None,
-        num_train_steps=31_000,
-        num_workers=28,
-        batch_size=96,
-        fsdp_devices=2,
-        log_interval=100,
-        save_interval=1000,
-        keep_period=10000,
-    ),
-    TrainConfig(
-        name="pi0_fast_lora_bridge_1_cam_random",
-        model=pi0_fast.Pi0FASTConfig(
-            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
-        ),
-        data=LeRobotBridgeDataConfig(
-            repo_id="jesbu1/bridge_v2_lerobot",
-            how_many_cameras=1,
-            sample_cameras=True,
-            model_type=ModelType.PI0_FAST,
-            base_config=DataConfig(local_files_only=True),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        freeze_filter=pi0_fast.Pi0FASTConfig(
-            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
-        ).get_freeze_filter(),
-        ema_decay=None,
-        num_train_steps=60_000,
-        batch_size=148,
-        fsdp_devices=2,
-        log_interval=50,
-        save_interval=1000,
-        keep_period=10000,
-    ),
-    TrainConfig(
-        name="pi0_fast_lora_bridge_2_cam_random",
-        model=pi0_fast.Pi0FASTConfig(
-            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
-        ),
-        data=LeRobotBridgeDataConfig(
-            repo_id="jesbu1/bridge_v2_lerobot",
-            how_many_cameras=2,
-            sample_cameras=True,
-            model_type=ModelType.PI0_FAST,
-            base_config=DataConfig(local_files_only=True),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        freeze_filter=pi0_fast.Pi0FASTConfig(
-            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
         ).get_freeze_filter(),
         ema_decay=None,
         num_train_steps=60_000,

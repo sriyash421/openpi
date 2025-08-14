@@ -51,14 +51,14 @@ def _decode_bridge(data: dict) -> dict:
 class BridgeInputs(transforms.DataTransformFn):
     """Prepares BRIDGE inputs for the model.
 
-    Assumes input keys: 'observation.images.image_0', 'observation.images.image_1', 'observation.images.image_2', 'observation.images.image_3', 'state', 'actions'.
+    Assumes input keys: 'observation.images.image_0', 'observation.path.image_0', 'observation.masked_path.image_0', 'state', 'actions'.
     The 'state' is expected to be a 7-dim vector (6 joint angles + 1 gripper state).
     The 'action' is expected to be a 7-dim vector (6 joint actions + 1 gripper action).
     """
 
     action_dim: int
     use_delta_actions: bool = False  # already in delta space
-    how_many_cameras: int = 2
+    how_many_cameras: int = 1
     sample_cameras: bool = False
     # Determines which model will be used.
     model_type: _model.ModelType = _model.ModelType.PI0
@@ -71,7 +71,6 @@ class BridgeInputs(transforms.DataTransformFn):
         # Ensure expected keys are present
         required_keys = {
             "observation.images.image_0",
-            "camera_present",
             "state",
         }
         if not required_keys.issubset(sample.keys()):
@@ -82,11 +81,17 @@ class BridgeInputs(transforms.DataTransformFn):
         sample = _decode_bridge(sample)
 
         # other keys include: "observation.images.image_1", "observation.images.image_2", "observation.images.image_3". Check camera_present to see which ones are present and sample.
-        available_cameras = np.count_nonzero(sample["camera_present"])
-        assert available_cameras > 0, "No cameras present in the sample"
-        camera_idx_to_include = np.arange(available_cameras)[: self.how_many_cameras]
-        if self.sample_cameras:
-            camera_idx_to_include = np.random.choice(available_cameras, self.how_many_cameras, replace=False)
+        if "camera_present" in sample:
+            # old bridge sampling
+            available_cameras = np.count_nonzero(sample["camera_present"])
+            assert available_cameras > 0, "No cameras present in the sample"
+            camera_idx_to_include = np.arange(available_cameras)[: self.how_many_cameras]
+            if self.sample_cameras:
+                camera_idx_to_include = np.random.choice(available_cameras, self.how_many_cameras, replace=False)
+        else:
+            # new just 1 cam bridge dataset
+            camera_idx_to_include = [0]
+            self.how_many_cameras = 1
 
         zero_image = np.zeros_like(sample["observation.images.image_0"])
         inputs = {
