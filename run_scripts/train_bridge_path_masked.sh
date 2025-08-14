@@ -8,6 +8,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --output=slurm_outputs/%x_%j.out
 #SBATCH --error=slurm_outputs/%x_%j.err
+#SBATCH --exclude=b17-15
 
 # --- Start Relaunch Logic ---
 MAX_RELAUNCHES=6
@@ -33,15 +34,14 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 export MUJOCO_GL=egl
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
-#EXP_NAME=pi0_fast_bridge_full_fine_tuning_1_cam_random_bs8
-EXP_NAME=pi0_fast_lora_bridge_1_cam
+#EXP_NAME=pi0_bridge_full_fine_tuning_1_cam_random_bs6
+EXP_NAME=pi0_lora_bridge_1_cam_path_masked
 PROJ_NAME=openpi
 # --- End Environment Setup ---
 
 # --- Training Command Setup ---
 # Define the base training command as a variable
-#BASE_TRAIN_CMD="uv run scripts/train.py pi0_fast_bridge_full_fine_tuning_1_cam_random --project_name=$PROJ_NAME --exp-name=$EXP_NAME"
-BASE_TRAIN_CMD="uv run scripts/train.py pi0_fast_lora_bridge_1_cam --project_name=$PROJ_NAME --exp-name=$EXP_NAME"
+BASE_TRAIN_CMD="uv run scripts/train.py pi0_lora_bridge_1_cam_path_masked --project_name=$PROJ_NAME --exp-name=$EXP_NAME"
 
 # Conditionally add --resume flag based on relaunch count
 if [ "$RELAUNCH_COUNT" -eq 0 ]; then
