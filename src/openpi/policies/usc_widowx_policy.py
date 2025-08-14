@@ -60,7 +60,8 @@ class USCWidowXInputs(transforms.DataTransformFn):
         mask_padding = self.model_type == _model.ModelType.PI0
 
         # Ensure expected keys are present
-        required_keys = {"images/external", "images/over_shoulder", "state"}
+        # required_keys = {"images/external", "images/over_shoulder", "state"}
+        required_keys = {"images/external", "state"}
         if not required_keys.issubset(sample.keys()):
             raise ValueError(f"Missing required keys. Found: {sample.keys()}, Required: {required_keys}")
         
@@ -71,7 +72,8 @@ class USCWidowXInputs(transforms.DataTransformFn):
             "state": transforms.pad_to_dim(sample["state"], self.action_dim),
             "image": {
                 "base_0_rgb": sample["images/external"],
-                "base_1_rgb": sample["images/over_shoulder"],
+                # "base_1_rgb": sample["images/over_shoulder"],
+                "base_1_rgb": np.zeros_like(sample["images/external"]),
                 # Pad any non-existent images with zero-arrays of the appropriate shape.
                 "left_wrist_0_rgb": np.zeros_like(sample["images/external"]),
                 # Pad any non-existent images with zero-arrays of the appropriate shape.
@@ -79,7 +81,8 @@ class USCWidowXInputs(transforms.DataTransformFn):
             },
             "image_mask": {
                 "base_0_rgb": np.True_,
-                "base_1_rgb": np.True_,
+                # "base_1_rgb": np.True_,
+                "base_1_rgb": np.False_ if mask_padding else np.True_,
                 "left_wrist_0_rgb": np.False_ if mask_padding else np.True_,
                 # Mask any non-existent images with False (if ``mask_padding`` is True).
                 "right_wrist_0_rgb": np.False_ if mask_padding else np.True_,

@@ -362,6 +362,7 @@ class LeRobotUSCWidowXDataConfig(DataConfigFactory):
     model_type: ModelType = ModelType.PI0
     is_play_data: bool = False
     default_prompt: str = ""
+    obs_type: str = "regular"
 
     action_sequence_keys: Sequence[str] = ("action",)
 
@@ -369,6 +370,14 @@ class LeRobotUSCWidowXDataConfig(DataConfigFactory):
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
         # Use Aloha transforms as WidowX is similar (6-DOF + gripper)
         # Set adapt_to_pi=False as this data is not from the internal PI runtime.
+        if self.obs_type == "regular":
+            obs_key = "observation.images.images0"
+        elif self.obs_type == "path":
+            obs_key = "observation.images.path_image0"
+        elif self.obs_type == "path_masked":
+            obs_key = "observation.images.masked_path_image0"
+        else:
+            raise ValueError(f"Invalid obs_type: {self.obs_type}")
         data_transforms = _transforms.Group(
             # Use the dedicated USC WidowX transforms
             inputs=[
@@ -379,8 +388,8 @@ class LeRobotUSCWidowXDataConfig(DataConfigFactory):
             outputs=[usc_widowx_policy.USCWidowXOutputs(action_dim=model_config.action_dim, use_delta_actions=False)],
         )
         repack_dict = {
-            "images/over_shoulder": "observation.images.over_shoulder",
-            "images/external": "observation.images.external",
+            # "images/over_shoulder": "observation.images.over_shoulder",
+            "images/external": obs_key,
             "state": "observation.state",
             "actions": "action",
             "prompt": "prompt",
@@ -765,8 +774,8 @@ _CONFIGS = [
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotLiberoDataConfig(
             repo_id="jesbu1/libero_90_lerobot_pathmask_rdp",
-            #repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
-            #repo_id="jesbu1/libero_test_lerobot_pathmask_vlm_preds_max_ep_per_task_5",
+            # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
+            # repo_id="jesbu1/libero_test_lerobot_pathmask_vlm_preds_max_ep_per_task_5",
             base_config=DataConfig(
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
@@ -801,7 +810,7 @@ _CONFIGS = [
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotLiberoDataConfig(
             # repo_id="jesbu1/libero_90_lerobot_pathmask_rdp",
-            #repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
+            # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
             repo_id="jesbu1/libero_test_lerobot_pathmask_vlm_preds_max_ep_per_task_5",
             base_config=DataConfig(
                 local_files_only=True,  # Set to True for local-only datasets.
@@ -942,7 +951,7 @@ _CONFIGS = [
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotLiberoDataConfig(
             repo_id="jesbu1/libero_90_lerobot_pathmask_rdp",
-            #repo_id="jesbu1/libero_test_lerobot_pathmask_vlm_preds_max_ep_per_task_5",
+            # repo_id="jesbu1/libero_test_lerobot_pathmask_vlm_preds_max_ep_per_task_5",
             base_config=DataConfig(
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
@@ -1386,89 +1395,17 @@ _CONFIGS = [
         num_train_steps=20_000,
     ),
     #
-    # Fine-tuning USC WidowX config
+    # Fine-tuning WidowX config - LoRA pi0
     #
     TrainConfig(
-        name="pi0_usc_widowx_expert_data",
-        model=pi0.Pi0Config(),
-        data=LeRobotUSCWidowXDataConfig(
-            repo_id="jesbu1/usc_widowx_combined",
-            is_play_data=False,
-            model_type=ModelType.PI0,
-            base_config=DataConfig(local_files_only=True),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        num_train_steps=30_000,
-        batch_size=8,
-        fsdp_devices=2,
-        log_interval=50,
-        save_interval=1000,
-        keep_period=5000,
-    ),
-    TrainConfig(
-        name="pi0_usc_widowx_combined_play_data",
-        model=pi0.Pi0Config(),
-        data=LeRobotUSCWidowXDataConfig(
-            repo_id="jesbu1/usc_widowx_combined_play_data",
-            is_play_data=True,
-            model_type=ModelType.PI0,
-            base_config=DataConfig(local_files_only=True),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        num_train_steps=30_000,
-        batch_size=8,
-        fsdp_devices=2,
-        log_interval=50,
-        save_interval=1000,
-        keep_period=5000,
-    ),
-    #
-    # Fine-tuning USC WidowX config - pi0-FAST
-    #
-    TrainConfig(
-        name="pi0_fast_usc_widowx_expert_data",
-        model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180),
-        data=LeRobotUSCWidowXDataConfig(
-            repo_id="jesbu1/usc_widowx_combined",
-            is_play_data=False,
-            model_type=ModelType.PI0_FAST,
-            base_config=DataConfig(local_files_only=True),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        num_train_steps=30_000,
-        batch_size=16,
-        log_interval=50,
-        save_interval=1000,
-        keep_period=5000,
-    ),
-    TrainConfig(
-        name="pi0_fast_usc_widowx_combined_play_data",
-        model=pi0_fast.Pi0FASTConfig(action_dim=7, action_horizon=10, max_token_len=180),
-        data=LeRobotUSCWidowXDataConfig(
-            repo_id="jesbu1/usc_widowx_combined_play_data",
-            is_play_data=True,
-            model_type=ModelType.PI0_FAST,
-            base_config=DataConfig(local_files_only=True),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        num_train_steps=30_000,
-        batch_size=16,
-        fsdp_devices=2,
-        log_interval=50,
-        save_interval=1000,
-        keep_period=5000,
-    ),
-    #
-    # Fine-tuning USC WidowX config - LoRA pi0
-    #
-    TrainConfig(
-        name="pi0_lora_usc_widowx_expert_data",
+        name="pi0_lora_uw_widowx_expert_data",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotUSCWidowXDataConfig(
-            repo_id="jesbu1/usc_widowx_combined",
+            repo_id="jesbu1/uw_widowx_8_8_pathmask_lerobot",
             is_play_data=False,
             model_type=ModelType.PI0,
-            base_config=DataConfig(local_files_only=True),
+            base_config=DataConfig(local_files_only=False),
+            obs_type="regular",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         freeze_filter=pi0.Pi0Config(
@@ -1477,9 +1414,54 @@ _CONFIGS = [
         ema_decay=None,
         num_train_steps=30_000,
         batch_size=80,
+        num_workers=12,
         log_interval=50,
         save_interval=1000,
-        keep_period=5000,
+        keep_period=10000,
+    ),
+    TrainConfig(
+        name="pi0_lora_uw_widowx_expert_data_path",
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotUSCWidowXDataConfig(
+            repo_id="jesbu1/uw_widowx_8_8_pathmask_lerobot",
+            is_play_data=False,
+            model_type=ModelType.PI0,
+            base_config=DataConfig(local_files_only=False),
+            obs_type="path",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
+        batch_size=80,
+        num_workers=12,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=10000,
+    ),
+    TrainConfig(
+        name="pi0_lora_uw_widowx_expert_data_path_masked",
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotUSCWidowXDataConfig(
+            repo_id="jesbu1/uw_widowx_8_8_pathmask_lerobot",
+            is_play_data=False,
+            model_type=ModelType.PI0,
+            base_config=DataConfig(local_files_only=False),
+            obs_type="path_masked",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
+        batch_size=80,
+        num_workers=12,
+        log_interval=50,
+        save_interval=1000,
+        keep_period=10000,
     ),
     TrainConfig(
         name="pi0_lora_usc_widowx_combined_play_data",

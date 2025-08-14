@@ -10,7 +10,9 @@ VILA_PORT=${6:-8000} # Default VILA port
 POLICY_PORT=${7:-8001} # Default Policy port
 
 
-VLM_QUERY_FREQUENCY=5 # how many times to call the VLM per action chunk
+VLM_QUERY_FREQUENCY=10 # how many times to call the VLM per action chunk
+MASK_RATIO=0.08
+WANDB_PREFIX="eval-pi0-90_8-12-20k"
 
 source ~/.bashrc
 
@@ -28,12 +30,14 @@ SERVE_CMD_BASE="uv run scripts/serve_policy.py --port $POLICY_PORT policy:checkp
 # Append policy specific arguments based on USE_PATH and USE_MASK
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
-    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_low_mem_finetune_path_new/30000/"
+    #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_low_mem_finetune_path_new/30000/"
+    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_90/pi0_libero_low_mem_finetune_path_new_90/20000/"
 elif [ "$USE_PATH" = "0" ] && [ "$USE_MASK" = "1" ]; then
     SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_masked/pi0_libero_90_masked_bs164_rdp/30000/"
 elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
     #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_90_path_masked_bs164_rdp/30000/"
-    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_low_mem_finetune_path_masked_mask0.01_0.12/30000/"
+    #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_low_mem_finetune_path_masked_mask0.01_0.12/30000/"
+    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked_90/pi0_libero_low_mem_finetune_path_masked_90_fix/20000/"
 else
     SERVE_CMD_POLICY_ARGS="" # No specific policy args if neither or only base is used
 fi
@@ -65,7 +69,7 @@ else
 fi
 
 # Build command with optional flags, using VILA_PORT and POLICY_PORT
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:$VILA_PORT --args.port $POLICY_PORT --args.vlm_query_frequency $VLM_QUERY_FREQUENCY"
+EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:$VILA_PORT --args.port $POLICY_PORT --args.vlm_query_frequency $VLM_QUERY_FREQUENCY --args.wandb_name_suffix=-vlmfreq${VLM_QUERY_FREQUENCY}_test5ep --args.wandb_group_prefix=$WANDB_PREFIX --args.mask_ratio=$MASK_RATIO"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
