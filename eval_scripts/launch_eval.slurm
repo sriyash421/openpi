@@ -22,7 +22,7 @@ source ~/.bashrc
 
 cd /home1/jessez/nvidia/VILA
 echo "Running VILA server"
-conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_GPU_ID python -W ignore vila_3b_server.py --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_path_mask_fast/snapshots/12df7a04221a50e88733cd2f1132eb01257aba0d/checkpoint-11700/" &
+conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_GPU_ID python -W ignore vila_3b_server.py --port 8002 --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_path_mask_fast/snapshots/12df7a04221a50e88733cd2f1132eb01257aba0d/checkpoint-11700/" &
 
 # Wait for the model to load
 sleep 60
@@ -30,12 +30,12 @@ sleep 60
 SERVE_CMD_BASE="uv run scripts/serve_policy.py --port 8001 policy:checkpoint"
 if [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "0" ]; then
     #SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_90_path_bs164_rdp/35000/"
-    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_low_mem_finetune_path_new/30000/"
+    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_90 --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path/pi0_libero_low_mem_finetune_path_new/30000/"
 elif [ "$USE_PATH" = "0" ] && [ "$USE_MASK" = "1" ]; then
     SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_masked/pi0_libero_90_masked_bs164_rdp/29000/"
 elif [ "$USE_PATH" = "1" ] && [ "$USE_MASK" = "1" ]; then
     #SERVE_CMD="$SERVE_CMD --policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_90_path_masked_bs164_rdp/29000/"
-    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_low_mem_finetune_path_masked_mask0.01_0.12/30000/"
+    SERVE_CMD_POLICY_ARGS="--policy.config=pi0_libero_low_mem_finetune_path_masked_90 --policy.dir=checkpoints/pi0_libero_low_mem_finetune_path_masked/pi0_libero_low_mem_finetune_path_masked_mask0.01_0.12/30000/"
 fi
 
 cd /home1/jessez/nvidia/openpi
@@ -63,7 +63,7 @@ else
 fi
 
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8000 --args.port 8001 --args.vlm_query_frequency $VLM_QUERY_FREQUENCY"
+EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8002 --args.port 8001 --args.vlm_query_frequency $VLM_QUERY_FREQUENCY"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
