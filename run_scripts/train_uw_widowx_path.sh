@@ -1,9 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=48:00:00
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=20
 #SBATCH --mem=64G
-#SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
 #SBATCH --output=slurm_outputs/%x_%j.out
 #SBATCH --error=slurm_outputs/%x_%j.err
