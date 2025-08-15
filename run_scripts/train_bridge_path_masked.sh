@@ -2,7 +2,7 @@
 #SBATCH --account=biyik_1165
 #SBATCH --nodes=1
 #SBATCH --time=48:00:00
-#SBATCH --cpus-per-task=36
+#SBATCH --cpus-per-task=42
 #SBATCH --mem=185G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:2
