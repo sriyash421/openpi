@@ -2,16 +2,17 @@
 First follow the repo install instructions.
 Setup UV in a virtual environment in this repo before uv installing things.
 Make sure conda is deactivated!!!!!
+#### Basic Install:
+
 ```bash
 uv venv
 source .venv/bin/activate
 GIT_LFS_SKIP_SMUDGE=1 uv sync
-```
-Then:
-```bash
 uv pip install tensorflow tensorflow_datasets shapely openai # openai is for the maskedvla evaluation
+uv pip install git+https://github.com/memmelma/vila_utils.git
 ```
 
+#### Modified LIBERO Dataset:
 Follow the instructions in my openvla repo to install and generate the modified LIBERO dataset: [here](https://github.com/jesbu1/openvla).
 
 There are two ways to convert the LIBERO dataset to a LeRobot dataset:
