@@ -15,7 +15,7 @@ class Args:
     """Arguments for the serve_policy script."""
     
     # VLM image key
-    vlm_img_key: str
+    vlm_img_key: str # example, "observation.images.image_0" for WidowX
 
     # Environment to serve the policy for. This is only used when serving default policies.
     env: EnvMode = EnvMode.ALOHA_SIM
@@ -31,6 +31,9 @@ class Args:
 
     # Specifies how to load the policy. If not provided, the default policy for the environment will be used.
     policy: Checkpoint | Default = dataclasses.field(default_factory=Default)
+
+    # observation remap key
+    obs_remap_key: str | None = None # example, "external/images" for WidowX or None for BRIDGE
 
     # VLM server IP
     vlm_server_ip: str = "localhost:8000" # default to local vlm server
@@ -62,6 +65,7 @@ def main(args: Args) -> None:
         host="0.0.0.0",
         port=args.port,
         metadata=policy_metadata,
+        obs_remap_key=args.obs_remap_key,
         vlm_img_key=args.vlm_img_key,
         vlm_server_ip=args.vlm_server_ip,
         vlm_query_frequency=args.vlm_query_frequency,

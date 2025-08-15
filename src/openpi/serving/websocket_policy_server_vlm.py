@@ -219,6 +219,7 @@ class WebsocketPolicyServer:
         host: str = "0.0.0.0",
         port: int = 8000,
         metadata: dict | None = None,
+        obs_remap_key: str | None = None,
         vlm_img_key: str | None = None,
         vlm_server_ip: str | None = None,
         vlm_query_frequency: int = 10,
@@ -232,6 +233,7 @@ class WebsocketPolicyServer:
         self._metadata = metadata or {}
         logging.getLogger("websockets.server").setLevel(logging.INFO)
 
+        self._obs_remap_key = obs_remap_key
         # VLM integration parameters
         self._vlm_img_key = vlm_img_key
         self._vlm_server_ip = vlm_server_ip
@@ -338,7 +340,12 @@ class WebsocketPolicyServer:
                         
                     finally:
                         self._vlm_step += 1
-                
+
+                # rename keys in observation
+                if self._obs_remap_key is not None:
+                    obs[self._obs_remap_key] = obs[self._vlm_img_key]
+                    del obs[self._vlm_img_key]
+
                 action = self._policy.infer(obs)
                 await websocket.send(packer.pack(action))
             except websockets.ConnectionClosed:
