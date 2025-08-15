@@ -21,14 +21,6 @@ fi
 
 # --- Environment Setup ---
 echo "Starting job... Relaunch attempt: $((RELAUNCH_COUNT + 1))/$MAX_RELAUNCHES"
-source ~/.bashrc
-module load cuda
-module load glew
-module load patchelf
-module load git-lfs
-export PATH="/apps/conda/.local/bin:$PATH"
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
-export MUJOCO_GL=egl
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
 #EXP_NAME=pi0_bridge_full_fine_tuning_1_cam_random_bs6
