@@ -36,7 +36,7 @@ class Args:
     obs_remap_key: str | None = None # example, "external/images" for WidowX or None for BRIDGE
 
     # VLM server IP
-    vlm_server_ip: str = "localhost:8000" # default to local vlm server
+    vlm_server_ip: str = "http://0.0.0.0:8000"  # default to local vlm server
     # VLM query frequency
     vlm_query_frequency: int = 5
     # VLM draw path

@@ -283,8 +283,7 @@ class WebsocketPolicyServer:
                     self._vlm_step = 0
                 
                 # VLM image processing
-                if (self._vlm_img_key is not None and 
-                    self._vlm_img_key in obs.get("images", {})):
+                if self._vlm_img_key is not None and self._vlm_img_key in obs:
                     
                     try:
                         img = obs[self._vlm_img_key]
