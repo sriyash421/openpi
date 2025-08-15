@@ -15,6 +15,7 @@ USE_PATH=${2:-0}   # Default to not using path
 USE_MASK=${3:-0}   # Default to not using mask
 VILA_GPU_ID=0
 POLICY_GPU_ID=0
+VILA_PORT=8002
 
 VLM_QUERY_FREQUENCY=10 # how many times to call the VLM per action chunk
 MASK_RATIO=0.08
@@ -24,7 +25,7 @@ source ~/.bashrc
 
 cd /home1/jessez/nvidia/VILA
 echo "Running VILA server"
-conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_GPU_ID python -W ignore vila_3b_server.py --port=8002 --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_path_mask_fast/snapshots/12df7a04221a50e88733cd2f1132eb01257aba0d/checkpoint-11700/" &
+conda run -n vila --no-capture-output /bin/bash -c "CUDA_VISIBLE_DEVICES=$VILA_GPU_ID python -W ignore vila_3b_server.py --port=$VILA_PORT --model-paths ~/.cache/huggingface/hub/models--memmelma--vila_3b_path_mask_fast/snapshots/12df7a04221a50e88733cd2f1132eb01257aba0d/checkpoint-11700/" &
 
 # Wait for the model to load
 sleep 60
@@ -67,7 +68,7 @@ else
 fi
 
 # Build command with optional flags
-EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:8002 --args.port 8001 --args.vlm_query_frequency $VLM_QUERY_FREQUENCY --args.wandb_name_suffix=-vlmfreq${VLM_QUERY_FREQUENCY} --args.wandb_group_prefix=$WANDB_PREFIX --args.mask_ratio=$MASK_RATIO"
+EVAL_CMD="python examples/libero/main.py --args.task_suite_name=$TASK_SUITE --args.vlm_server_ip=http://0.0.0.0:$VILA_PORT --args.port 8001 --args.vlm_query_frequency $VLM_QUERY_FREQUENCY --args.wandb_name_suffix=-vlmfreq${VLM_QUERY_FREQUENCY} --args.wandb_group_prefix=$WANDB_PREFIX --args.mask_ratio=$MASK_RATIO"
 
 # Add draw_path if USE_PATH is 1
 if [ "$USE_PATH" = "1" ]; then
