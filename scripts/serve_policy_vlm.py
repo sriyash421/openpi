@@ -7,13 +7,15 @@ import tyro
 
 from openpi.policies import policy as _policy
 from openpi.serving import websocket_policy_server_vlm
-from openpi.training import config as _config
-from scripts.serve_policy import EnvMode, Checkpoint, Default, create_policy
+from serve_policy import EnvMode, Checkpoint, Default, create_policy
 
 
 @dataclasses.dataclass
 class Args:
     """Arguments for the serve_policy script."""
+    
+    # VLM image key
+    vlm_img_key: str
 
     # Environment to serve the policy for. This is only used when serving default policies.
     env: EnvMode = EnvMode.ALOHA_SIM
@@ -30,8 +32,6 @@ class Args:
     # Specifies how to load the policy. If not provided, the default policy for the environment will be used.
     policy: Checkpoint | Default = dataclasses.field(default_factory=Default)
 
-    # VLM image key
-    vlm_img_key: str | None = None
     # VLM server IP
     vlm_server_ip: str = "localhost:8000" # default to local vlm server
     # VLM query frequency
