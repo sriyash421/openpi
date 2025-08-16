@@ -18,7 +18,8 @@ from openpi_client import msgpack_numpy
 import websockets.asyncio.server
 import websockets.frames
 
-VLM_DOWNSAMPLE_RESOLUTION = 224
+VLM_DOWNSAMPLE_RESOLUTION = 256
+POLICY_INPUT_RESOLUTION = 224
 PATH_MODEL_NAME_MASK = PATH_MODEL_NAME = "vila_3b_path_mask_fast"
 OLD_PROMPT = False
 
@@ -147,7 +148,7 @@ def draw_onto_image(vlm_path_mask_output, prompt_type, img, mask_ratio=0.15, ver
     if "path" in prompt_type and scaled_path is not None:
         if verbose:
             print("adding path")
-        img = add_path_2d_to_img_alt_fast(img, scaled_path, line_size=2 if h <= 128 else 3)
+        img = add_path_2d_to_img_alt_fast(img, scaled_path, line_size=2)
     return img
 
 
@@ -219,6 +220,7 @@ class WebsocketPolicyServer:
         host: str = "0.0.0.0",
         port: int = 8000,
         metadata: dict | None = None,
+        obs_remap_key: str | None = None,
         vlm_img_key: str | None = None,
         vlm_server_ip: str | None = None,
         vlm_query_frequency: int = 10,
@@ -232,6 +234,7 @@ class WebsocketPolicyServer:
         self._metadata = metadata or {}
         logging.getLogger("websockets.server").setLevel(logging.INFO)
 
+        self._obs_remap_key = obs_remap_key
         # VLM integration parameters
         self._vlm_img_key = vlm_img_key
         self._vlm_server_ip = vlm_server_ip
@@ -281,8 +284,7 @@ class WebsocketPolicyServer:
                     self._vlm_step = 0
                 
                 # VLM image processing
-                if (self._vlm_img_key is not None and 
-                    self._vlm_img_key in obs.get("images", {})):
+                if self._vlm_img_key is not None and self._vlm_img_key in obs:
                     
                     try:
                         img = obs[self._vlm_img_key]
@@ -308,7 +310,7 @@ class WebsocketPolicyServer:
                                     # Save the overlaid image for this fresh query
                                     if self._vlm_save_dir is not None:
                                         try:
-                                            save_name = f"vlm_{self._vlm_img_key}_{self._vlm_step:06d}.png"
+                                            save_name = f"vlm_{obs.get('prompt', '')}_{self._vlm_img_key}_{self._vlm_step:06d}.png"
                                             save_path = os.path.join(self._vlm_save_dir, save_name)
                                             Image.fromarray(img).save(save_path)
                                             logging.info(f"Saved VLM image to {save_path}")
@@ -335,10 +337,17 @@ class WebsocketPolicyServer:
                         
                         # Update the image in the observation
                         obs[self._vlm_img_key] = img
+                        # downsample
+                        obs[self._vlm_img_key] = cv2.resize(obs[self._vlm_img_key], (POLICY_INPUT_RESOLUTION, POLICY_INPUT_RESOLUTION))
                         
                     finally:
                         self._vlm_step += 1
-                
+
+                # rename keys in observation
+                if self._obs_remap_key is not None:
+                    obs[self._obs_remap_key] = obs[self._vlm_img_key]
+                    del obs[self._vlm_img_key]
+
                 action = self._policy.infer(obs)
                 await websocket.send(packer.pack(action))
             except websockets.ConnectionClosed:
