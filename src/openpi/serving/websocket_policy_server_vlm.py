@@ -310,6 +310,7 @@ class WebsocketPolicyServer:
                                     # Save the overlaid image for this fresh query
                                     if self._vlm_save_dir is not None:
                                         try:
+                                            os.makedirs(os.path.join(self._vlm_save_dir, obs.get('prompt', '')), exist_ok=True)
                                             save_name = f"{obs.get('prompt', '')}/{self._vlm_step:06d}.png"
                                             save_path = os.path.join(self._vlm_save_dir, save_name)
                                             Image.fromarray(img).save(save_path)
@@ -338,6 +339,7 @@ class WebsocketPolicyServer:
                                     # Save the overlaid image for this fresh query
                                     if self._vlm_save_dir is not None:
                                         try:
+                                            os.makedirs(os.path.join(self._vlm_save_dir, obs.get('prompt', '')), exist_ok=True)
                                             save_name = f"{obs.get('prompt', '')}/{self._vlm_step:06d}.png"
                                             save_path = os.path.join(self._vlm_save_dir, save_name)
                                             Image.fromarray(img).save(save_path)
