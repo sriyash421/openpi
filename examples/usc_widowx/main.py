@@ -50,8 +50,17 @@ class WidowXConfigs:
             [0.45, 0.25, 0.25, 1.57, 0],
         ],
         "catch_environment_except": False,
-        "start_state": [0.3, 0.0, 0.15, 0, 0, 0, 1],
-        "skip_move_to_neutral": True,
+        "start_state": [0.3, 0.0, 0.15, 0, 0, 0, 1], # bridge-dataset style neutral
+        # "start_state": [
+        #     0.11865137,
+        #     -0.01696823,
+        #     0.24405071,
+        #     -0.03702571,
+        #     -0.11837727,
+        #     0.03907566,
+        #     0.9994886,
+        # ], # data collection neutral
+        "skip_move_to_neutral": False,
         "return_full_image": False,
         "camera_topics": [
             #{"name": "/D435/color/image_raw"},
@@ -136,12 +145,13 @@ def wait_for_observation(client: WidowXClient, timeout: int = 60) -> Dict:
         print(f"⏳ Waiting for robot observation... (elapsed: {elapsed:.1f}s)")
 
 
-def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str) -> Dict[str, Any]:
+def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str, reset=False) -> Dict[str, Any]:
     """Formats raw observation from robot into the structure expected by the policy."""
     obs_for_policy = {
         "state": raw_obs["state"],
         "prompt": prompt,
         "camera_present": [],
+        "reset": reset,
     }
     for cam_name in cameras:
         # Map camera name to the key used in raw_obs
@@ -199,7 +209,7 @@ def run_inference_loop(
         while True:  # Loop until stop, reset, or error
             # 1. Format observation for policy
             try:
-                obs_for_policy = format_observation(raw_obs, args.cameras, args.prompt)
+                obs_for_policy = format_observation(raw_obs, args.cameras, args.prompt, reset=num_steps==0)
             except ValueError as e:
                 print(f"Error formatting observation: {e}. Stopping rollout.")
                 return False, "Error formatting observation"
