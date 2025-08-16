@@ -310,7 +310,7 @@ class WebsocketPolicyServer:
                                     # Save the overlaid image for this fresh query
                                     if self._vlm_save_dir is not None:
                                         try:
-                                            save_name = f"vlm_{obs.get('prompt', '')}_{self._vlm_img_key}_{self._vlm_step:06d}.png"
+                                            save_name = f"{obs.get('prompt', '')}/{self._vlm_step:06d}.png"
                                             save_path = os.path.join(self._vlm_save_dir, save_name)
                                             Image.fromarray(img).save(save_path)
                                             logging.info(f"Saved VLM image to {save_path}")
@@ -334,6 +334,18 @@ class WebsocketPolicyServer:
                                     )
                                 except Exception as e:
                                     logging.warning(f"VLM overlay error on reuse: {e}")
+                                else:
+                                    # Save the overlaid image for this fresh query
+                                    if self._vlm_save_dir is not None:
+                                        try:
+                                            save_name = f"{obs.get('prompt', '')}/{self._vlm_step:06d}.png"
+                                            save_path = os.path.join(self._vlm_save_dir, save_name)
+                                            Image.fromarray(img).save(save_path)
+                                            logging.info(f"Saved VLM image to {save_path}")
+                                            print(f"🖼️ Saved VLM image to {save_path}")
+                                        except Exception as save_err:
+                                            logging.warning(f"Failed to save VLM image: {save_err}")
+                                            print(f"❌ Failed to save VLM image: {save_err}")
                         
                         # Update the image in the observation
                         obs[self._vlm_img_key] = img
