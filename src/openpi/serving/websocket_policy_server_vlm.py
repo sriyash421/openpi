@@ -18,7 +18,8 @@ from openpi_client import msgpack_numpy
 import websockets.asyncio.server
 import websockets.frames
 
-VLM_DOWNSAMPLE_RESOLUTION = 224
+VLM_DOWNSAMPLE_RESOLUTION = 256
+POLICY_INPUT_RESOLUTION = 224
 PATH_MODEL_NAME_MASK = PATH_MODEL_NAME = "vila_3b_path_mask_fast"
 OLD_PROMPT = False
 
@@ -147,7 +148,7 @@ def draw_onto_image(vlm_path_mask_output, prompt_type, img, mask_ratio=0.15, ver
     if "path" in prompt_type and scaled_path is not None:
         if verbose:
             print("adding path")
-        img = add_path_2d_to_img_alt_fast(img, scaled_path, line_size=2 if h <= 128 else 3)
+        img = add_path_2d_to_img_alt_fast(img, scaled_path, line_size=2)
     return img
 
 
@@ -336,6 +337,8 @@ class WebsocketPolicyServer:
                         
                         # Update the image in the observation
                         obs[self._vlm_img_key] = img
+                        # downsample
+                        obs[self._vlm_img_key] = cv2.resize(obs[self._vlm_img_key], (POLICY_INPUT_RESOLUTION, POLICY_INPUT_RESOLUTION))
                         
                     finally:
                         self._vlm_step += 1

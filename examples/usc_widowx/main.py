@@ -153,7 +153,9 @@ def format_observation(raw_obs: Dict[str, Any], cameras: List[str], prompt: str)
         img = raw_obs[img_key]
 
         # Policy expects keys like 'observation.images.image0'
-        obs_for_policy[f"{camera_to_name_map[cam_name]}"] = image_tools.resize_with_pad(img, resolution, resolution)
+        import cv2
+        obs_for_policy["images"][cameras[cam_name]] = cv2.resize(img, (resolution, resolution))
+        #obs_for_policy[f"{camera_to_name_map[cam_name]}"] = image_tools.resize_with_pad(img, resolution, resolution)
         obs_for_policy["camera_present"].append(1)
     return obs_for_policy
 
