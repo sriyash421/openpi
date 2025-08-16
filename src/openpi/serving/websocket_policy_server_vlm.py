@@ -309,7 +309,7 @@ class WebsocketPolicyServer:
                                     # Save the overlaid image for this fresh query
                                     if self._vlm_save_dir is not None:
                                         try:
-                                            save_name = f"vlm_{self._vlm_img_key}_{self._vlm_step:06d}.png"
+                                            save_name = f"vlm_{obs.get("prompt", "")}_{self._vlm_img_key}_{self._vlm_step:06d}.png"
                                             save_path = os.path.join(self._vlm_save_dir, save_name)
                                             Image.fromarray(img).save(save_path)
                                             logging.info(f"Saved VLM image to {save_path}")
