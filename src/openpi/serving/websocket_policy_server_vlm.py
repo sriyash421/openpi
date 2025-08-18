@@ -254,6 +254,31 @@ class WebsocketPolicyServer:
             logging.info(f"VLM images will be saved to: {self._vlm_save_dir}")
             print(f"🖼️ VLM images will be saved to: {self._vlm_save_dir}")
 
+    def _save_vlm_images(self, obs, original_img, img, step):
+        """Save both original and processed VLM images to separate subfolders."""
+        if self._vlm_save_dir is not None:
+            try:
+                # Save original image
+                original_dir = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), 'original')
+                os.makedirs(original_dir, exist_ok=True)
+                original_save_name = f"original/{step:06d}.png"
+                original_save_path = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), original_save_name)
+                Image.fromarray(original_img).save(original_save_path)
+                logging.info(f"Saved original image to {original_save_path}")
+                print(f"🖼️ Saved original image to {original_save_path}")
+                
+                # Save processed image
+                processed_dir = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), 'processed')
+                os.makedirs(processed_dir, exist_ok=True)
+                processed_save_name = f"processed/{step:06d}.png"
+                processed_save_path = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), processed_save_name)
+                Image.fromarray(img).save(processed_save_path)
+                logging.info(f"Saved processed VLM image to {processed_save_path}")
+                print(f"🖼️ Saved processed VLM image to {processed_save_path}")
+            except Exception as save_err:
+                logging.warning(f"Failed to save VLM images: {save_err}")
+                print(f"❌ Failed to save VLM images: {save_err}")
+
     def serve_forever(self) -> None:
         asyncio.run(self.run())
 
@@ -287,13 +312,13 @@ class WebsocketPolicyServer:
                 if self._vlm_img_key is not None and self._vlm_img_key in obs:
                     
                     try:
-                        img = obs[self._vlm_img_key]
+                        original_img = obs[self._vlm_img_key]
                         
                         if self._vlm_draw_path or self._vlm_draw_mask:
                             if self._vlm_step % self._vlm_query_frequency == 0:
                                 try:
                                     img, self._vlm_current_path, self._vlm_current_mask = get_path_mask_from_vlm(
-                                        image=img,
+                                        image=original_img,
                                         crop_type=None,
                                         task_instr=obs.get("prompt", ""),
                                         draw_path=self._vlm_draw_path,
@@ -302,27 +327,21 @@ class WebsocketPolicyServer:
                                         vlm_server_ip=self._vlm_server_ip,
                                         mask_ratio=self._vlm_mask_ratio,
                                     )
+                                    success = True
                                 except Exception as e:
                                     logging.warning(f"VLM overlay error on query: {e}")
                                     self._vlm_current_path = None
                                     self._vlm_current_mask = None
+                                    success = False
+                                if success:
+                                    # Save both the original and overlaid images for this fresh query
+                                    self._save_vlm_images(obs, original_img, img, self._vlm_step)
                                 else:
-                                    # Save the overlaid image for this fresh query
-                                    if self._vlm_save_dir is not None:
-                                        try:
-                                            os.makedirs(os.path.join(self._vlm_save_dir, obs.get('prompt', '')), exist_ok=True)
-                                            save_name = f"{obs.get('prompt', '')}/{self._vlm_step:06d}.png"
-                                            save_path = os.path.join(self._vlm_save_dir, save_name)
-                                            Image.fromarray(img).save(save_path)
-                                            logging.info(f"Saved VLM image to {save_path}")
-                                            print(f"🖼️ Saved VLM image to {save_path}")
-                                        except Exception as save_err:
-                                            logging.warning(f"Failed to save VLM image: {save_err}")
-                                            print(f"❌ Failed to save VLM image: {save_err}")
+                                    img = original_img
                             elif self._vlm_current_path is not None or self._vlm_current_mask is not None:
                                 try:
                                     img, _, _ = get_path_mask_from_vlm(
-                                        image=img,
+                                        image=original_img,
                                         crop_type=None,
                                         task_instr=obs.get("prompt", ""),
                                         draw_path=self._vlm_draw_path,
@@ -333,22 +352,17 @@ class WebsocketPolicyServer:
                                         mask=self._vlm_current_mask,
                                         mask_ratio=self._vlm_mask_ratio,
                                     )
+                                    success = True
                                 except Exception as e:
                                     logging.warning(f"VLM overlay error on reuse: {e}")
+                                    self._vlm_current_path = None
+                                    self._vlm_current_mask = None
+                                    success = False
+                                if success:
+                                    # Save both the original and overlaid images for this fresh query
+                                    self._save_vlm_images(obs, original_img, img, self._vlm_step)
                                 else:
-                                    # Save the overlaid image for this fresh query
-                                    if self._vlm_save_dir is not None:
-                                        try:
-                                            os.makedirs(os.path.join(self._vlm_save_dir, obs.get('prompt', '')), exist_ok=True)
-                                            save_name = f"{obs.get('prompt', '')}/{self._vlm_step:06d}.png"
-                                            save_path = os.path.join(self._vlm_save_dir, save_name)
-                                            Image.fromarray(img).save(save_path)
-                                            logging.info(f"Saved VLM image to {save_path}")
-                                            print(f"🖼️ Saved VLM image to {save_path}")
-                                        except Exception as save_err:
-                                            logging.warning(f"Failed to save VLM image: {save_err}")
-                                            print(f"❌ Failed to save VLM image: {save_err}")
-                        
+                                    img = original_img
                         # Update the image in the observation
                         obs[self._vlm_img_key] = img
                         # downsample
