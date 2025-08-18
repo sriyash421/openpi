@@ -1636,7 +1636,7 @@ _CONFIGS = [
         batch_size=256,
         fsdp_devices=2,
         log_interval=50,
-        save_interval=100,
+        save_interval=250,
         keep_period=10000,
     ),
     TrainConfig(
@@ -1659,7 +1659,7 @@ _CONFIGS = [
         batch_size=256,
         fsdp_devices=2,
         log_interval=50,
-        save_interval=100,
+        save_interval=250,
         keep_period=10000,
     ),
     TrainConfig(
@@ -1682,7 +1682,7 @@ _CONFIGS = [
         batch_size=256,
         fsdp_devices=2,
         log_interval=50,
-        save_interval=100,
+        save_interval=250,
         keep_period=10000,
     ),
     TrainConfig(
