@@ -1620,11 +1620,12 @@ _CONFIGS = [
         name="pi0_lora_bridge_1_cam",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotBridgeDataConfig(
-            repo_id="jesbu1/bridge_v2_lerobot",
+            repo_id="jesbu1/bridge_v2_lerobot_pathmask",
             how_many_cameras=1,
             sample_cameras=False,
             model_type=ModelType.PI0,
             base_config=DataConfig(local_files_only=True),
+            obs_type="regular",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         freeze_filter=pi0.Pi0Config(
