@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import base64
 import logging
 import traceback
@@ -261,7 +262,7 @@ class WebsocketPolicyServer:
                 # Save original image
                 original_dir = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), 'original')
                 os.makedirs(original_dir, exist_ok=True)
-                original_save_name = f"original/{step:06d}.png"
+                original_save_name = f"original/{datetime.now().strftime('%Y-%m-%d_%H-%M')}_{step:06d}.png"
                 original_save_path = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), original_save_name)
                 Image.fromarray(original_img).save(original_save_path)
                 logging.info(f"Saved original image to {original_save_path}")
@@ -270,7 +271,7 @@ class WebsocketPolicyServer:
                 # Save processed image
                 processed_dir = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), 'processed')
                 os.makedirs(processed_dir, exist_ok=True)
-                processed_save_name = f"processed/{step:06d}.png"
+                processed_save_name = f"processed/{datetime.now().strftime('%Y-%m-%d_%H-%M')}_{step:06d}.png"
                 processed_save_path = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), processed_save_name)
                 Image.fromarray(img).save(processed_save_path)
                 logging.info(f"Saved processed VLM image to {processed_save_path}")
