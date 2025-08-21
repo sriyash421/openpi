@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=48:00:00
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G 
+#SBATCH --cpus-per-task=10
+#SBATCH --mem=24G 
 #SBATCH --output=slurm_outputs/%x_%j.out
 #SBATCH --error=slurm_outputs/%x_%j.err
-#SBATCH --gres=shard:40
+#SBATCH --gres=gpu:1
 
 config=pi0_lora_bridge_1_cam_path_masked
 checkpoint=checkpoints/pi0_lora_bridge_1_cam_path_masked/pi0_lora_bridge_1_cam_path_masked/19000/
