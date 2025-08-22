@@ -8,6 +8,8 @@ import numpy as np
 from PIL import Image
 import time
 import cv2
+import concurrent.futures
+from functools import partial
 
 from vila_utils.utils.decode import add_mask_2d_to_img, add_path_2d_to_img_alt_fast, get_path_from_answer
 from vila_utils.utils.encode import scale_path
@@ -254,31 +256,72 @@ class WebsocketPolicyServer:
             os.makedirs(self._vlm_save_dir, exist_ok=True)
             logging.info(f"VLM images will be saved to: {self._vlm_save_dir}")
             print(f"🖼️ VLM images will be saved to: {self._vlm_save_dir}")
+        
+        # Initialize thread pool executor for background image saving
+        self._executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=2,  # Limit to 2 workers to avoid overwhelming the system
+            thread_name_prefix="VLMImageSaver"
+        )
+
+    def __del__(self):
+        """Cleanup method to properly shut down the thread pool executor."""
+        if hasattr(self, '_executor'):
+            self._executor.shutdown(wait=True)
+
+    def cleanup(self):
+        """Explicit cleanup method to shut down the thread pool executor."""
+        if hasattr(self, '_executor'):
+            self._executor.shutdown(wait=True)
+            logging.info("Thread pool executor shut down successfully")
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit with cleanup."""
+        self.cleanup()
 
     def _save_vlm_images(self, obs, original_img, img, step):
-        """Save both original and processed VLM images to separate subfolders."""
+        """Save both original and processed VLM images to separate subfolders in a background thread."""
         if self._vlm_save_dir is not None:
-            try:
-                # Save original image
-                original_dir = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), 'original')
-                os.makedirs(original_dir, exist_ok=True)
-                original_save_name = f"original/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}_{step:06d}.png"
-                original_save_path = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), original_save_name)
-                Image.fromarray(original_img).save(original_save_path)
-                logging.info(f"Saved original image to {original_save_path}")
-                print(f"🖼️ Saved original image to {original_save_path}")
-                
-                # Save processed image
-                processed_dir = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), 'processed')
-                os.makedirs(processed_dir, exist_ok=True)
-                processed_save_name = f"processed/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}_{step:06d}.png"
-                processed_save_path = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), processed_save_name)
-                Image.fromarray(img).save(processed_save_path)
-                logging.info(f"Saved processed VLM image to {processed_save_path}")
-                print(f"🖼️ Saved processed VLM image to {processed_save_path}")
-            except Exception as save_err:
-                logging.warning(f"Failed to save VLM images: {save_err}")
-                print(f"❌ Failed to save VLM images: {save_err}")
+            # Submit the image saving task to the thread pool executor
+            future = self._executor.submit(self._save_vlm_images_sync, obs, original_img, img, step)
+            # Add a callback to log any errors that occur in the thread
+            future.add_done_callback(self._log_save_result)
+
+    def _save_vlm_images_sync(self, obs, original_img, img, step):
+        """Synchronous version of image saving that runs in a separate thread."""
+        try:
+            # Save original image
+            original_dir = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), 'original')
+            os.makedirs(original_dir, exist_ok=True)
+            original_save_name = f"original/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}_{step:06d}.png"
+            original_save_path = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), original_save_name)
+            Image.fromarray(original_img).save(original_save_path)
+            logging.info(f"Saved original image to {original_save_path}")
+            print(f"🖼️ Saved original image to {original_save_path}")
+            
+            # Save processed image
+            processed_dir = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), 'processed')
+            os.makedirs(processed_dir, exist_ok=True)
+            processed_save_name = f"processed/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}_{step:06d}.png"
+            processed_save_path = os.path.join(self._vlm_save_dir, obs.get('prompt', ''), processed_save_name)
+            Image.fromarray(img).save(processed_save_path)
+            logging.info(f"Saved processed VLM image to {processed_save_path}")
+            print(f"🖼️ Saved processed VLM image to {processed_save_path}")
+        except Exception as save_err:
+            logging.warning(f"Failed to save VLM images: {save_err}")
+            print(f"❌ Failed to save VLM images: {save_err}")
+            raise  # Re-raise to be caught by the callback
+
+    def _log_save_result(self, future):
+        """Callback to log the result of the image saving operation."""
+        try:
+            future.result()  # This will raise any exception that occurred
+        except Exception as e:
+            logging.error(f"Error in background image saving thread: {e}")
+            print(f"❌ Error in background image saving thread: {e}")
 
     def serve_forever(self) -> None:
         asyncio.run(self.run())
