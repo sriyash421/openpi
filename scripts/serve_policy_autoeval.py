@@ -64,7 +64,7 @@ class Args:
     draw_path: bool = False
     draw_mask: bool = False
     vlm_img_key: str | None = None  # Image key for VLM processing (e.g., "image")
-    vlm_server_ip: str | None = None  # VLM server address
+    vlm_server_ip: str = "http://0.0.0.0:8000" # VLM server address
     vlm_query_frequency: int = 10  # How often to query VLM for new paths/masks
     vlm_mask_ratio: float = 0.08  # Mask ratio for VLM mask drawing
 

@@ -53,6 +53,7 @@ class HTTPPolicyServer:
         action_chunk_history_size: int = 10,
         ensemble_window_size: int = 5,
         temporal_weight_decay: float = -0.8,
+        setup_act_route: bool = True,
     ) -> None:
         self._policy = policy
         self._host = host
@@ -76,12 +77,12 @@ class HTTPPolicyServer:
         )
         
         # Setup routes
-        self._setup_routes()
+        self._setup_routes(setup_act_route)
         
         logging.getLogger("uvicorn").setLevel(logging.INFO)
         logging.info(f"Initialized HTTP policy server with action chunk history size: {action_chunk_history_size}, ensemble window: {ensemble_window_size}")
 
-    def _setup_routes(self):
+    def _setup_routes(self, setup_act_route: bool = True):
         """Setup FastAPI routes."""
         
         @self._app.get("/")
@@ -138,57 +139,58 @@ class HTTPPolicyServer:
                     detail=f"Failed to reset history: {str(e)}"
                 )
         
-        @self._app.post("/act", response_model=ActionResponse)
-        async def act(request: ObservationRequest):
-            """Main endpoint for policy inference with temporal ensembling."""
-            try:
-                # Convert observation data to the format expected by the policy
-                obs = request.dict() # Convert Pydantic model to a dict
-                # Handle numpy arrays if they're serialized as lists
-                obs = self._deserialize_observation(obs)
-                policy_obs = {}
-                
-                # Extract and validate required fields with flexible naming
-                
-                policy_obs["instruction"] = obs.pop("instruction") 
-                
-                # Transform to policy format
-                policy_obs["observation.images.image_0"] = cv2.resize(obs.pop("image"), (224, 224))
-                policy_obs["state"] = obs.pop("proprio")
-                policy_obs["prompt"] = policy_obs.pop("instruction")
-                # TODO: resize
-                policy_obs["camera_present"] = np.array([1])
+        if setup_act_route:
+            @self._app.post("/act", response_model=ActionResponse)
+            async def act(request: ObservationRequest):
+                """Main endpoint for policy inference with temporal ensembling."""
+                try:
+                    # Convert observation data to the format expected by the policy
+                    obs = request.dict() # Convert Pydantic model to a dict
+                    # Handle numpy arrays if they're serialized as lists
+                    obs = self._deserialize_observation(obs)
+                    policy_obs = {}
+                    
+                    # Extract and validate required fields with flexible naming
+                    
+                    policy_obs["instruction"] = obs.pop("instruction") 
+                    
+                    # Transform to policy format
+                    policy_obs["observation.images.image_0"] = cv2.resize(obs.pop("image"), (224, 224))
+                    policy_obs["state"] = obs.pop("proprio")
+                    policy_obs["prompt"] = policy_obs.pop("instruction")
+                    # TODO: resize
+                    policy_obs["camera_present"] = np.array([1])
 
-                # Get action from policy
-                action = self._policy.infer(policy_obs)
-                
-                # Extract action chunk for history
-                action_chunk = self._extract_action_chunk(action)
-                
-                # Update history
-                self._update_history(obs, action_chunk)
-                
-                # Perform temporal ensembling if we have enough history
-                ensemble_action = self._temporal_ensemble(action, action_chunk)
+                    # Get action from policy
+                    action = self._policy.infer(policy_obs)
+                    
+                    # Extract action chunk for history
+                    action_chunk = self._extract_action_chunk(action)
+                    
+                    # Update history
+                    self._update_history(obs, action_chunk)
+                    
+                    # Perform temporal ensembling if we have enough history
+                    ensemble_action = self._temporal_ensemble(action, action_chunk)
 
-                if "actions" in ensemble_action:    
-                    ensemble_action_array = ensemble_action["actions"]
-                elif "action" in ensemble_action:
-                    ensemble_action_array = ensemble_action["action"]
+                    if "actions" in ensemble_action:    
+                        ensemble_action_array = ensemble_action["actions"]
+                    elif "action" in ensemble_action:
+                        ensemble_action_array = ensemble_action["action"]
 
-                # ret the first action of the ensemble
-                return JSONResponse(ensemble_action_array[0])
-                
-            except HTTPException:
-                # Re-raise HTTP exceptions
-                raise
-            except Exception as e:
-                logging.error(f"Error in policy inference: {e}")
-                logging.error(traceback.format_exc())
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Policy inference failed: {str(e)}"
-                )
+                    # ret the first action of the ensemble
+                    return JSONResponse(ensemble_action_array[0])
+                    
+                except HTTPException:
+                    # Re-raise HTTP exceptions
+                    raise
+                except Exception as e:
+                    logging.error(f"Error in policy inference: {e}")
+                    logging.error(traceback.format_exc())
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Policy inference failed: {str(e)}"
+                    )
 
     def _deserialize_observation(self, obs: Dict[str, Any]) -> Dict[str, Any]:
         """Convert observation data to the format expected by the policy."""
