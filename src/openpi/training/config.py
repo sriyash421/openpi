@@ -1672,7 +1672,7 @@ _CONFIGS = [
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ).get_freeze_filter(),
         ema_decay=None,
-        num_train_steps=30_000,
+        num_train_steps=50_000,
         batch_size=256,
         fsdp_devices=2,
         log_interval=50,
@@ -1717,7 +1717,7 @@ _CONFIGS = [
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ).get_freeze_filter(),
         ema_decay=None,
-        num_train_steps=30_000,
+        num_train_steps=50_000,
         batch_size=256,
         fsdp_devices=2,
         log_interval=50,
