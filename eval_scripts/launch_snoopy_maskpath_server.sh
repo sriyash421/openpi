@@ -10,12 +10,15 @@
 
 #config=pi0_lora_bridge_1_cam_path_masked
 #config=pi0_bridge
-temporal_weight_decay=0.2
 config=pi0_bridge_path_mask
+temporal_weight_decay=0.5
+policy_port=8001
 #checkpoint=checkpoints/pi0_lora_bridge_1_cam_path_masked/pi0_lora_bridge_1_cam_path_masked/29999/
 #checkpoint=checkpoints/pi0_bridge/pi0_bridge/pi0_bridge_fft/35000/
 checkpoint=checkpoints/pi0_bridge_path_mask/pi0_bridge_path_mask/pi0_fft_bridge_path_masked/35000/
-vlm_freq=20
+serve_policy_vlm_freq=3
+http_vlm_freq=25
+use_http_server=0
 
 if [[ "$config" == *"path"* ]]; then
     cd ~/VILA
@@ -27,27 +30,35 @@ fi
 cd ~/openpi
 if [[ "$config" == *"path"* ]]; then                
     echo "Running autoeval server with path mask"
-    #uv run scripts/serve_policy_vlm.py --port 8001 --vlm_img_key="observation.images.image_0" --vlm-query-frequency=$vlm_freq policy:checkpoint --policy.config=$config --policy.dir $checkpoint &
-    uv run scripts/serve_policy_autoeval.py --port 8001 \
-    --vlm_img_key="observation.images.image_0" \
-    --vlm-query-frequency=$vlm_freq \
-    --vlm-server-ip=http://0.0.0.0:8000 \
-    --draw-path \
-    --draw-mask \
-    --vlm-mask-ratio=0.08 \
-    --temporal-weight-decay=$temporal_weight_decay \
-    --action-chunk-history-size=10 \
-    --ensemble-window-size=5 \
-    policy:checkpoint --policy.config=$config --policy.dir $checkpoint
+    if [[ "$use_http_server" == 1 ]]; then
+        uv run scripts/serve_policy_autoeval.py --port $policy_port \
+        --vlm_img_key="observation.images.image_0" \
+        --vlm-query-frequency=$http_vlm_freq \
+        --vlm-server-ip=http://0.0.0.0:8000 \
+        --draw-path \
+        --draw-mask \
+        --vlm-mask-ratio=0.08 \
+        --temporal-weight-decay=$temporal_weight_decay \
+        --action-chunk-history-size=10 \
+        --ensemble-window-size=5 \
+        policy:checkpoint --policy.config=$config --policy.dir $checkpoint
+    else
+        uv run scripts/serve_policy_vlm.py --port $policy_port --vlm_img_key="observation.images.image_0" --vlm-query-frequency=$serve_policy_vlm_freq policy:checkpoint --policy.config=$config --policy.dir $checkpoint &
+    fi
 else
-    #uv run scripts/serve_policy.py --port 8001 policy:checkpoint --policy.config=$config --policy.dir $checkpoint 
-    uv run scripts/serve_policy_autoeval.py --port 8001 \
-    --action-chunk-history-size=10 \
-    --ensemble-window-size=5 \
-    --temporal-weight-decay=$temporal_weight_decay \
-    policy:checkpoint --policy.config=$config --policy.dir $checkpoint
+    if [[ "$use_http_server" == 1 ]]; then
+    uv run scripts/serve_policy_autoeval.py --port $policy_port \
+        --action-chunk-history-size=10 \
+        --ensemble-window-size=5 \
+        --temporal-weight-decay=$temporal_weight_decay \
+        policy:checkpoint --policy.config=$config --policy.dir $checkpoint
+    else
+        uv run scripts/serve_policy.py --port 8001 policy:checkpoint --policy.config=$config --policy.dir $checkpoint &
+    fi
 fi
 
 sleep 15
 
-ssh -p 443 -R0:localhost:8001 -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 1GC4MlSDYxt@pro.pinggy.io
+if [[ "$use_http_server" == 0 ]]; then
+    ssh -p 443 -R0:localhost:${policy_port} -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 1GC4MlSDYxt@pro.pinggy.io
+fi
