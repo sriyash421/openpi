@@ -10,6 +10,8 @@ import time
 import cv2
 import concurrent.futures
 from functools import partial
+from collections import deque
+from typing import Dict, Any
 
 from vila_utils.utils.decode import add_mask_2d_to_img, add_path_2d_to_img_alt_fast, get_path_from_answer
 from vila_utils.utils.encode import scale_path
@@ -212,9 +214,10 @@ def get_path_mask_from_vlm(
 
 
 class WebsocketPolicyServer:
-    """Serves a policy using the websocket protocol. See websocket_client_policy.py for a client implementation.
-
-    Currently only implements the `load` and `infer` methods.
+    """Serves a policy using the websocket protocol with VLM integration and temporal ensembling.
+    
+    Provides temporal ensembling of action predictions similar to the HTTP server for improved
+    prediction stability and reduced noise in action outputs.
     """
 
     def __init__(
@@ -230,6 +233,9 @@ class WebsocketPolicyServer:
         vlm_draw_path: bool = True,
         vlm_draw_mask: bool = True,
         vlm_mask_ratio: float = 0.08,
+        action_chunk_history_size: int = 10,
+        ensemble_window_size: int = 5,
+        temporal_weight_decay: float = 0.5,
     ) -> None:
         self._policy = policy
         self._host = host
@@ -249,6 +255,15 @@ class WebsocketPolicyServer:
         self._vlm_current_mask = None
         self._vlm_step = 0
         
+        # Temporal ensembling parameters
+        self._action_chunk_history_size = action_chunk_history_size
+        self._ensemble_window_size = ensemble_window_size
+        self._temporal_weight_decay = temporal_weight_decay
+        
+        # Rolling buffer for action chunks and observations
+        self._action_chunk_history = deque(maxlen=action_chunk_history_size)
+        self._observation_history = deque(maxlen=action_chunk_history_size)
+        
         # VLM save directory setup
         self._vlm_save_dir = None
         if self._vlm_img_key is not None:
@@ -262,6 +277,8 @@ class WebsocketPolicyServer:
             max_workers=2,  # Limit to 2 workers to avoid overwhelming the system
             thread_name_prefix="VLMImageSaver"
         )
+        
+        logging.info(f"Initialized VLM websocket policy server with action chunk history size: {action_chunk_history_size}, ensemble window: {ensemble_window_size}")
 
     def __del__(self):
         """Cleanup method to properly shut down the thread pool executor."""
@@ -323,6 +340,80 @@ class WebsocketPolicyServer:
             logging.error(f"Error in background image saving thread: {e}")
             print(f"❌ Error in background image saving thread: {e}")
 
+    def _extract_action_chunk(self, action: Dict[str, Any]) -> np.ndarray:
+        """Extract action chunk from policy response."""
+        if "actions" in action:
+            return np.array(action["actions"])
+        elif "action" in action:
+            return np.array(action["action"])
+        else:
+            # If no clear action chunk, use the entire action dict
+            return np.array(list(action.values()))
+
+    def _update_history(self, observation: Dict[str, Any], action_chunk: np.ndarray):
+        """Update action chunk and observation history."""
+        self._action_chunk_history.append(action_chunk.copy())
+        self._observation_history.append(observation.copy())
+        logging.debug(f"Updated history. Current size: {len(self._action_chunk_history)}")
+
+    def _temporal_ensemble(self, current_action: Dict[str, Any], current_action_chunk: np.ndarray) -> Dict[str, Any]:
+        """Perform temporal ensembling of action predictions."""
+        if len(self._action_chunk_history) < self._ensemble_window_size:
+            # Not enough history for ensembling, return current action
+            return current_action
+        
+        # Get recent action chunks for ensemble
+        recent_chunks = list(self._action_chunk_history)[-self._ensemble_window_size:]
+        
+        # Apply temporal weighting with decay
+        weights = np.array([self._temporal_weight_decay ** i for i in range(len(recent_chunks))])
+        weights = weights / weights.sum()  # Normalize weights
+        
+        # Weighted ensemble of action chunks
+        ensemble_chunk = np.zeros_like(current_action_chunk)
+        for i, chunk in enumerate(recent_chunks):
+            if chunk.shape == current_action_chunk.shape:
+                ensemble_chunk += weights[i] * chunk
+            else:
+                # Handle shape mismatches by using current chunk
+                ensemble_chunk += weights[i] * current_action_chunk
+        
+        # Create ensemble action response
+        ensemble_action = current_action.copy()
+        if "actions" in ensemble_action:
+            ensemble_action["actions"] = ensemble_chunk
+        elif "action" in ensemble_action:
+            ensemble_action["action"] = ensemble_chunk
+        else:
+            # Update all numeric values with ensemble
+            for key, value in ensemble_action.items():
+                if isinstance(value, (int, float, np.number)):
+                    ensemble_action[key] = float(ensemble_chunk[0] if len(ensemble_chunk) > 0 else value)
+        
+        logging.info(f"Applied temporal ensemble with {len(recent_chunks)} chunks, weights: {weights}")
+        return ensemble_action
+
+    def get_ensemble_info(self) -> Dict[str, Any]:
+        """Get information about temporal ensembling state."""
+        return {
+            "action_chunk_history_size": len(self._action_chunk_history),
+            "observation_history_size": len(self._observation_history),
+            "max_history_size": self._action_chunk_history_size,
+            "ensemble_window_size": self._ensemble_window_size,
+            "temporal_weight_decay": self._temporal_weight_decay,
+            "recent_action_chunks": list(self._action_chunk_history)[-5:] if self._action_chunk_history else []
+        }
+
+    def reset_ensemble_history(self) -> Dict[str, Any]:
+        """Reset temporal ensembling history programmatically."""
+        self._action_chunk_history.clear()
+        self._observation_history.clear()
+        logging.info("Temporal ensembling history has been reset programmatically")
+        return {
+            "action_chunk_history_size": len(self._action_chunk_history),
+            "observation_history_size": len(self._observation_history)
+        }
+
     def serve_forever(self) -> None:
         asyncio.run(self.run())
 
@@ -351,6 +442,10 @@ class WebsocketPolicyServer:
                     logging.info(f"Resetting policy and VLM step")
                     self._policy.reset()
                     self._vlm_step = 0
+                    # Also reset temporal ensembling history
+                    self._action_chunk_history.clear()
+                    self._observation_history.clear()
+                    logging.info("Temporal ensembling history has been reset")
                 
                 # VLM image processing
                 if self._vlm_img_key is not None and self._vlm_img_key in obs:
@@ -421,7 +516,17 @@ class WebsocketPolicyServer:
                     del obs[self._vlm_img_key]
 
                 action = self._policy.infer(obs)
-                await websocket.send(packer.pack(action))
+                
+                # Extract action chunk for history
+                action_chunk = self._extract_action_chunk(action)
+                
+                # Update history
+                self._update_history(obs, action_chunk)
+                
+                # Perform temporal ensembling if we have enough history
+                ensemble_action = self._temporal_ensemble(action, action_chunk)
+                
+                await websocket.send(packer.pack(ensemble_action))
             except websockets.ConnectionClosed:
                 logging.info(f"Connection from {websocket.remote_address} closed")
                 break

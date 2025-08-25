@@ -11,12 +11,12 @@
 #config=pi0_lora_bridge_1_cam_path_masked
 #config=pi0_bridge
 config=pi0_bridge_path_mask
-temporal_weight_decay=0.5
+temporal_weight_decay=0
 policy_port=8001
 #checkpoint=checkpoints/pi0_lora_bridge_1_cam_path_masked/pi0_lora_bridge_1_cam_path_masked/29999/
 #checkpoint=checkpoints/pi0_bridge/pi0_bridge/pi0_bridge_fft/35000/
-checkpoint=checkpoints/pi0_bridge_path_mask/pi0_bridge_path_mask/pi0_fft_bridge_path_masked/35000/
-serve_policy_vlm_freq=3
+checkpoint=checkpoints/pi0_bridge_path_mask/pi0_bridge_path_mask/pi0_fft_bridge_path_masked/99999/
+serve_policy_vlm_freq=5
 http_vlm_freq=25
 use_http_server=0
 
@@ -43,7 +43,11 @@ if [[ "$config" == *"path"* ]]; then
         --ensemble-window-size=5 \
         policy:checkpoint --policy.config=$config --policy.dir $checkpoint
     else
-        uv run scripts/serve_policy_vlm.py --port $policy_port --vlm_img_key="observation.images.image_0" --vlm-query-frequency=$serve_policy_vlm_freq policy:checkpoint --policy.config=$config --policy.dir $checkpoint &
+        uv run scripts/serve_policy_vlm.py --port $policy_port --vlm_img_key="observation.images.image_0" --vlm-query-frequency=$serve_policy_vlm_freq \
+        --action-chunk-history-size=10 \
+        --ensemble-window-size=5 \
+        --temporal-weight-decay=$temporal_weight_decay \
+        policy:checkpoint --policy.config=$config --policy.dir $checkpoint &
     fi
 else
     if [[ "$use_http_server" == 1 ]]; then
@@ -53,7 +57,13 @@ else
         --temporal-weight-decay=$temporal_weight_decay \
         policy:checkpoint --policy.config=$config --policy.dir $checkpoint
     else
-        uv run scripts/serve_policy.py --port 8001 policy:checkpoint --policy.config=$config --policy.dir $checkpoint &
+        uv run scripts/serve_policy_vlm.py --port $policy_port \
+        --vlm-draw-mask=False \
+        --vlm-draw-path=False \
+        --action-chunk-history-size=10 \
+        --ensemble-window-size=5 \
+        --temporal-weight-decay=$temporal_weight_decay \
+        policy:checkpoint --policy.config=$config --policy.dir $checkpoint &
     fi
 fi
 

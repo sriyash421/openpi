@@ -1680,6 +1680,28 @@ _CONFIGS = [
         keep_period=10000,
     ),
     TrainConfig(
+        name="pi0_fast_bridge",
+        model=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b"
+        ),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot_15freq_pathmask",
+            how_many_cameras=1,
+            sample_cameras=False,
+            model_type=ModelType.PI0_FAST,
+            base_config=DataConfig(local_files_only=True),
+            obs_type="regular",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        ema_decay=None,
+        num_train_steps=50_000,
+        batch_size=96,
+        fsdp_devices=4,
+        log_interval=50,
+        save_interval=250,
+        keep_period=10000,
+    ),
+    TrainConfig(
         name="pi0_lora_bridge_1_cam_path",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotBridgeDataConfig(
@@ -1741,9 +1763,34 @@ _CONFIGS = [
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ).get_freeze_filter(),
         ema_decay=None,
-        num_train_steps=30_000,
+        num_train_steps=50_000,
         batch_size=256,
         fsdp_devices=2,
+        log_interval=50,
+        save_interval=250,
+        keep_period=10000,
+    ),
+    TrainConfig(
+        name="pi0_fast_bridge_path_mask_15freq",
+        model=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b"
+        ),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot_15freq_pathmask",
+            how_many_cameras=1,
+            sample_cameras=False,
+            model_type=ModelType.PI0_FAST,
+            base_config=DataConfig(local_files_only=True),
+            obs_type="path_masked",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        freeze_filter=pi0_fast.Pi0FASTConfig(
+            action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b"
+        ).get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=50_000,
+        batch_size=96,
+        fsdp_devices=4,
         log_interval=50,
         save_interval=250,
         keep_period=10000,

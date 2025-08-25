@@ -46,6 +46,11 @@ class Args:
     # VLM mask ratio
     vlm_mask_ratio: float = 0.08
 
+    # Temporal ensembling parameters
+    action_chunk_history_size: int = 10
+    ensemble_window_size: int = 5
+    temporal_weight_decay: float = 0.5
+
 
 # Default checkpoints that should be used for each environment.
 def main(args: Args) -> None:
@@ -72,6 +77,9 @@ def main(args: Args) -> None:
         vlm_draw_path=args.vlm_draw_path,
         vlm_draw_mask=args.vlm_draw_mask,
         vlm_mask_ratio=args.vlm_mask_ratio,
+        action_chunk_history_size=args.action_chunk_history_size,
+        ensemble_window_size=args.ensemble_window_size,
+        temporal_weight_decay=args.temporal_weight_decay,
     )
     server.serve_forever()
 
