@@ -8,15 +8,17 @@
 ##SBATCH --gres=gpu:1
 #SBATCH --gres=shard:30
 
-#config=pi0_lora_bridge_1_cam_path_masked
+config=pi0_lora_bridge_1_cam_path_masked
 #config=pi0_bridge
-config=pi0_bridge_path_mask
-temporal_weight_decay=0
+#config=pi0_lora_bridge_1_cam
+#config=pi0_bridge_path_mask
+temporal_weight_decay=0.0
 policy_port=8001
-#checkpoint=checkpoints/pi0_lora_bridge_1_cam_path_masked/pi0_lora_bridge_1_cam_path_masked/29999/
-#checkpoint=checkpoints/pi0_bridge/pi0_bridge/pi0_bridge_fft/35000/
-checkpoint=checkpoints/pi0_bridge_path_mask/pi0_bridge_path_mask/pi0_fft_bridge_path_masked/99999/
-serve_policy_vlm_freq=5
+checkpoint=checkpoints/pi0_lora_bridge_1_cam_path_masked/pi0_lora_bridge_1_cam_path_masked/29999/
+#checkpoint=checkpoints/pi0_bridge/pi0_bridge/pi0_bridge_fft/99999/
+#checkpoint=checkpoints/pi0_lora_bridge_1_cam/pi0_lora_bridge_1_cam/29999/
+#checkpoint=checkpoints/pi0_bridge_path_mask/pi0_bridge_path_mask/pi0_fft_bridge_path_masked/99999/
+serve_policy_vlm_freq=10
 http_vlm_freq=25
 use_http_server=0
 
@@ -47,28 +49,28 @@ if [[ "$config" == *"path"* ]]; then
         --action-chunk-history-size=10 \
         --ensemble-window-size=5 \
         --temporal-weight-decay=$temporal_weight_decay \
-        policy:checkpoint --policy.config=$config --policy.dir $checkpoint &
+        policy:checkpoint --policy.config=$config --policy.dir $checkpoint 
     fi
 else
     if [[ "$use_http_server" == 1 ]]; then
-    uv run scripts/serve_policy_autoeval.py --port $policy_port \
+	uv run scripts/serve_policy_autoeval.py --port $policy_port \
         --action-chunk-history-size=10 \
         --ensemble-window-size=5 \
         --temporal-weight-decay=$temporal_weight_decay \
         policy:checkpoint --policy.config=$config --policy.dir $checkpoint
     else
-        uv run scripts/serve_policy_vlm.py --port $policy_port \
-        --vlm-draw-mask=False \
-        --vlm-draw-path=False \
+        uv run scripts/serve_policy_vlm.py --port $(($policy_port+1)) \
+        --no-vlm-draw-mask \
+        --no-vlm-draw-path \
         --action-chunk-history-size=10 \
         --ensemble-window-size=5 \
         --temporal-weight-decay=$temporal_weight_decay \
-        policy:checkpoint --policy.config=$config --policy.dir $checkpoint &
+        policy:checkpoint --policy.config=$config --policy.dir $checkpoint 
     fi
 fi
 
-sleep 15
 
-if [[ "$use_http_server" == 0 ]]; then
-    ssh -p 443 -R0:localhost:${policy_port} -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 1GC4MlSDYxt@pro.pinggy.io
-fi
+#if [[ "$use_http_server" == 0 ]]; then
+#    sleep 15
+#    ssh -p 443 -R0:localhost:${policy_port} -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 1GC4MlSDYxt@pro.pinggy.io
+#fi

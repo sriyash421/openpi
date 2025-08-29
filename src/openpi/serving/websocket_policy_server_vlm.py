@@ -519,12 +519,15 @@ class WebsocketPolicyServer:
                 
                 # Extract action chunk for history
                 action_chunk = self._extract_action_chunk(action)
-                
-                # Update history
-                self._update_history(obs, action_chunk)
-                
-                # Perform temporal ensembling if we have enough history
-                ensemble_action = self._temporal_ensemble(action, action_chunk)
+
+                if self._temporal_weight_decay != 0: 
+                    # Update history
+                    self._update_history(obs, action_chunk)
+                    
+                    # Perform temporal ensembling if we have enough history
+                    ensemble_action = self._temporal_ensemble(action, action_chunk)
+                else:
+                    ensemble_action = action
                 
                 await websocket.send(packer.pack(ensemble_action))
             except websockets.ConnectionClosed:

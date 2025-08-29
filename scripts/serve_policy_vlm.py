@@ -15,7 +15,7 @@ class Args:
     """Arguments for the serve_policy script."""
     
     # VLM image key
-    vlm_img_key: str # example, "observation.images.image_0" for WidowX
+    vlm_img_key: str | None = None # example, "observation.images.image_0" for WidowX
 
     # Environment to serve the policy for. This is only used when serving default policies.
     env: EnvMode = EnvMode.ALOHA_SIM
