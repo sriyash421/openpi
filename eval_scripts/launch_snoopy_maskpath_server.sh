@@ -8,17 +8,15 @@
 ##SBATCH --gres=gpu:1
 #SBATCH --gres=shard:30
 
-config=pi0_lora_bridge_1_cam_path_masked
+#config=pi0_lora_bridge_1_cam_path_masked
 #config=pi0_bridge
 #config=pi0_lora_bridge_1_cam
-#config=pi0_bridge_path_mask
+config=pi0_bridge_path_mask
 temporal_weight_decay=0.0
 policy_port=8001
-checkpoint=checkpoints/pi0_lora_bridge_1_cam_path_masked/pi0_lora_bridge_1_cam_path_masked/29999/
 #checkpoint=checkpoints/pi0_bridge/pi0_bridge/pi0_bridge_fft/99999/
-#checkpoint=checkpoints/pi0_lora_bridge_1_cam/pi0_lora_bridge_1_cam/29999/
 #checkpoint=checkpoints/pi0_bridge_path_mask/pi0_bridge_path_mask/pi0_fft_bridge_path_masked/99999/
-serve_policy_vlm_freq=10
+serve_policy_vlm_freq=5
 http_vlm_freq=25
 use_http_server=0
 
@@ -32,6 +30,7 @@ fi
 cd ~/openpi
 if [[ "$config" == *"path"* ]]; then                
     echo "Running autoeval server with path mask"
+    checkpoint=checkpoints/pi0_lora_bridge_1_cam_path_masked/pi0_lora_bridge_1_cam_path_masked/29999/
     if [[ "$use_http_server" == 1 ]]; then
         uv run scripts/serve_policy_autoeval.py --port $policy_port \
         --vlm_img_key="observation.images.image_0" \
@@ -52,6 +51,7 @@ if [[ "$config" == *"path"* ]]; then
         policy:checkpoint --policy.config=$config --policy.dir $checkpoint 
     fi
 else
+    checkpoint=checkpoints/pi0_lora_bridge_1_cam/pi0_lora_bridge_1_cam/29999/
     if [[ "$use_http_server" == 1 ]]; then
 	uv run scripts/serve_policy_autoeval.py --port $policy_port \
         --action-chunk-history-size=10 \
