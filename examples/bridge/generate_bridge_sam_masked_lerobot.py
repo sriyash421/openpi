@@ -13,7 +13,7 @@ pip install -e ~/lerobot
 pip install -e ~/vila_utils
 pip install torchcodec --index-url=https://download.pytorch.org/whl/cu128
 python -m spacy download en_core_web_sm
-python generate_bridge_sam_masked_lerobot.py --data-dir /scr/jesse --repo-id jesbu1/bridge_v2_lerobot_dinosam_masked
+python generate_bridge_sam_masked_lerobot.py --data-dir /scr/jesse --repo-id jesbu1/bridge_v2_lerobot_dinosam_masked --push-to-hub
 
 """
 
@@ -200,12 +200,17 @@ def main(
 
                 # now apply the tracker
                 masks_list = []
-                tracker.reset(init_frame=Image.fromarray(rgbs[0]), text=dino_instr)
-                for rgb in rgbs:
-                    t, masks = tracker.step(Image.fromarray(rgb))
-                    masks_list.append(masks)
+                try:
+                    tracker.reset(init_frame=Image.fromarray(rgbs[0]), text=dino_instr)
+                    for rgb in rgbs:
+                        t, masks = tracker.step(Image.fromarray(rgb))
+                        masks_list.append(masks)
+                    rgbs_masked = tracker.apply_masks_to_frames(rgbs, masks_list)
+                except Exception as e:
+                    print(f"Error with tracker: {e}. Continuing anyway...")
+                    rgbs_masked = rgbs  # use the unmasked images
 
-                rgbs_masked = tracker.apply_masks_to_frames(rgbs, masks_list)
+
                 for rgb_masked, frame in zip(rgbs_masked, frames):
                     # downsize to 224x224
                     rgb_masked = cv2.resize(rgb_masked, (224, 224))
