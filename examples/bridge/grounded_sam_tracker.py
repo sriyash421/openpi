@@ -14,29 +14,33 @@ from transformers import (
 class GroundedSam2Tracker:
     def __init__(self,
                  dino_id="IDEA-Research/grounding-dino-tiny",
+                 sam_device="cuda:0",
+                 dino_device="cuda:1",
                  sam2_id="facebook/sam2.1-hiera-small",
                  box_thresh=0.35, text_thresh=0.25):
         """
         Initialize models once. Use reset(init_frame, text) to start a new tracking session.
         """
-        self.device = infer_device()
+        #self.device = infer_device()
 
         # Cache config
         self.dino_id = dino_id
         self.sam2_id = sam2_id
         self.box_thresh = box_thresh
         self.text_thresh = text_thresh
+        self.dino_device = dino_device
+        self.sam_device = sam_device
 
         # ---- Load models once ----
         self.dino_proc = AutoProcessor.from_pretrained(self.dino_id)
-        self.dino = AutoModelForZeroShotObjectDetection.from_pretrained(self.dino_id).to(self.device)
+        self.dino = AutoModelForZeroShotObjectDetection.from_pretrained(self.dino_id).to(self.dino_device) 
 
         self.s2_proc = Sam2Processor.from_pretrained(self.sam2_id)
-        self.s2 = Sam2Model.from_pretrained(self.sam2_id).to(self.device)
+        self.s2 = Sam2Model.from_pretrained(self.sam2_id).to(self.sam_device)
 
         self.vproc = Sam2VideoProcessor.from_pretrained(self.sam2_id)
         self.vmodel = Sam2VideoModel.from_pretrained(self.sam2_id).to(
-            self.device, dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32
+            self.sam_device, dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32
         )
 
         self.box_thresh = box_thresh
@@ -59,7 +63,7 @@ class GroundedSam2Tracker:
         """
 
         # ---- GroundingDINO: language → boxes on init_frame ----
-        din = self.dino_proc(images=init_frame, text=text, return_tensors="pt").to(self.device)
+        din = self.dino_proc(images=init_frame, text=text, return_tensors="pt").to(self.dino_device)
         dout = self.dino(**din)
         det = self.dino_proc.post_process_grounded_object_detection(
             dout, din.input_ids, threshold=self.box_thresh, text_threshold=self.text_thresh,
@@ -75,7 +79,7 @@ class GroundedSam2Tracker:
 
         # ---- SAM2 image: boxes → masks on init_frame ----
         input_boxes = [self.boxes_xyxy.tolist()]  # [image][objects][4]
-        sin = self.s2_proc(images=init_frame, input_boxes=input_boxes, return_tensors="pt").to(self.device)
+        sin = self.s2_proc(images=init_frame, input_boxes=input_boxes, return_tensors="pt").to(self.sam_device)
         sout = self.s2(**sin, multimask_output=False)
         masks = self.s2_proc.post_process_masks(sout.pred_masks.cpu(), sin["original_sizes"])[0]
         if masks.dim() == 4 and masks.size(0) == 1:
@@ -84,7 +88,7 @@ class GroundedSam2Tracker:
 
         # ---- SAM2 Video: create fresh streaming session and seed with init masks ----
         self.session = self.vproc.init_video_session(
-            inference_device=self.device,
+            inference_device=self.sam_device,
             dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32
         )
         self.obj_ids = list(range(1, self.init_masks.shape[0] + 1))
