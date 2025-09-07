@@ -30,7 +30,7 @@ def instruction_to_dino_instr(instruction):
     # find all the nouns in the image and use gripper via spacy
     doc = nlp(instruction)
     nouns = [token.text for token in doc if token.pos_ == "NOUN"]
-    nouns = nouns + ["gripper"]
+    nouns = nouns + ["robot gripper"]
 
     # add "a " prefix to each object
     objects = ["a " + o for o in nouns]
@@ -165,8 +165,6 @@ def main(
                 skipped_episodes += 1
                 warnings.warn(f"Skipping corrupted episode at index {episode_count}: {e}")
                 continue
-            if episode_count > 10:  
-                break
 
             frames_buffer: list[dict] = []
             masks_list = []
