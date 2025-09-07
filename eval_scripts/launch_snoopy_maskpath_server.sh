@@ -8,10 +8,10 @@
 ##SBATCH --gres=gpu:1
 #SBATCH --gres=shard:30
 
-#config=pi0_lora_bridge_1_cam_path_masked
-#config=pi0_bridge
 #config=pi0_lora_bridge_1_cam
-config=pi0_bridge_path_mask
+config=pi0_lora_bridge_1_cam_path_masked
+#config=pi0_bridge
+#config=pi0_bridge_path_mask
 temporal_weight_decay=0.0
 policy_port=8001
 #checkpoint=checkpoints/pi0_bridge/pi0_bridge/pi0_bridge_fft/99999/

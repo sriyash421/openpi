@@ -5,18 +5,16 @@ Can accept either directories containing task data (inferring trajectories withi
 or explicit paths to individual trajectory directories.
 
 Example usage (by task directories):
-source .venv/bin/activate
 # create a new venv for this script
-uv venv
-source .venv/bin/activate
-uv pip install tensorflow_datasets shapely openai transformers torch torchvision tensorflow opencv-python-headless pillow tyro spacy
-uv pip install -e ~/nvidia/my_lerobot
-uv pip install -e ~/nvidia/vila_utils
-uv run python -m spacy download en_core_web_sm
-uv run generate_bridge_sam_masked_lerobot.py --raw-dirs /data/shared/openx_rlds_data/ --repo-id jesbu1/bridge_v2_lerobot_dinosam_masked
+conda create -n bridge_sam_masked python=3.10
+conda activate bridge_sam_masked
+pip install tensorflow_datasets shapely openai transformers torch torchvision tensorflow opencv-python-headless pillow tyro spacy
+pip install -e ~/lerobot
+pip install -e ~/vila_utils
+pip install torchcodec --index-url=https://download.pytorch.org/whl/cu128
+python -m spacy download en_core_web_sm
+python generate_bridge_sam_masked_lerobot.py --data-dir /scr/jesse --repo-id jesbu1/bridge_v2_lerobot_dinosam_masked
 
-Example usage for path masks:
-uv run examples/bridge/convert_bridge_data_to_lerobot.py --data_dir /data/shared/openx_rlds_data/ --repo_id jesbu1/bridge_v2_lerobot_pathmask --paths-masks-file ~/VILA/test_bridge_labeling_5x/bridge_paths_masks_merged.h5 --push_to_hub
 """
 
 import dataclasses
@@ -25,6 +23,7 @@ import shutil
 import tensorflow_datasets as tfds
 from PIL import Image
 import spacy
+import cv2
 nlp = spacy.load("en_core_web_sm")
 
 def instruction_to_dino_instr(instruction):
@@ -112,8 +111,8 @@ def main(
         },
         "camera_present": {
             "dtype": "bool",
-            "shape": (len(cameras),),
-            "names": cameras,
+            "shape": (1,),
+            "names": ["image_0"],
         },
     }
 
@@ -166,6 +165,8 @@ def main(
                 skipped_episodes += 1
                 warnings.warn(f"Skipping corrupted episode at index {episode_count}: {e}")
                 continue
+            if episode_count > 10:  
+                break
 
             frames_buffer: list[dict] = []
             masks_list = []
@@ -188,7 +189,7 @@ def main(
                     frame = {
                         "observation.state": step["observation"]["state"],
                         "action": step["action"],
-                        "camera_present": [True],
+                        "camera_present": np.array([True]),
                     }
                     frames.append(frame)
                     rgbs.append(img)
@@ -206,8 +207,11 @@ def main(
 
                 rgbs_masked = tracker.apply_masks_to_frames(rgbs, masks_list)
                 for rgb_masked, frame in zip(rgbs_masked, frames):
+                    # downsize to 224x224
+                    rgb_masked = cv2.resize(rgb_masked, (224, 224))
                     frame[f"observation.images.image_0"] = rgb_masked
                     frames_buffer.append(frame)
+            
                 
 
             except (tf.errors.DataLossError, tf.errors.InvalidArgumentError, tf.errors.OutOfRangeError) as e:
@@ -221,7 +225,7 @@ def main(
 
             for frame in frames_buffer:
                 if not OLD_LEROBOT:
-                    frame["task"] = instr
+                    #frame["task"] = instr
                     dataset.add_frame(frame, task=instr)
                 else:
                     dataset.add_frame(frame)
