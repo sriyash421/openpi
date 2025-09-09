@@ -1796,6 +1796,33 @@ _CONFIGS = [
         keep_period=10000,
     ),
     #
+    # BRIDGE Lora fine-tuning on dinosam masked
+    #
+    TrainConfig(
+        name="pi0_lora_bridge_1_cam_arro",
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotBridgeDataConfig(
+            repo_id="jesbu1/bridge_v2_lerobot_dinosam_masked",
+            how_many_cameras=1,
+            sample_cameras=False,
+            model_type=ModelType.PI0,
+            base_config=DataConfig(local_files_only=False),
+            obs_type="regular",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
+        batch_size=256,
+        fsdp_devices=2,
+        log_interval=50,
+        save_interval=250,
+        keep_period=10000,
+    ),
+    #
+    #
     # Debugging configs.
     #
     TrainConfig(
