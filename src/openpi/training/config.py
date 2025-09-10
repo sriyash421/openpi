@@ -1806,7 +1806,7 @@ _CONFIGS = [
             how_many_cameras=1,
             sample_cameras=False,
             model_type=ModelType.PI0,
-            base_config=DataConfig(local_files_only=False),
+            base_config=DataConfig(local_files_only=True),
             obs_type="regular",
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
