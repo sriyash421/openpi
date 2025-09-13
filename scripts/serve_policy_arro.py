@@ -1,0 +1,77 @@
+import dataclasses
+import enum
+import logging
+import socket
+
+import tyro
+
+from openpi.policies import policy as _policy
+from openpi.serving import websocket_policy_server_arro
+from serve_policy import EnvMode, Checkpoint, Default, create_policy
+
+
+@dataclasses.dataclass
+class Args:
+    """Arguments for the serve_policy script."""
+    
+    # VLM image key
+    arro_img_key: str | None = None # example, "observation.images.image_0" for WidowX
+
+    # Environment to serve the policy for. This is only used when serving default policies.
+    env: EnvMode = EnvMode.ALOHA_SIM
+
+    # If provided, will be used in case the "prompt" key is not present in the data, or if the model doesn't have a default
+    # prompt.
+    default_prompt: str | None = None
+
+    # Port to serve the policy on.
+    port: int = 8000
+    # Record the policy's behavior for debugging.
+    record: bool = False
+
+    # Specifies how to load the policy. If not provided, the default policy for the environment will be used.
+    policy: Checkpoint | Default = dataclasses.field(default_factory=Default)
+
+    # observation remap key
+    obs_remap_key: str | None = None # example, "external/images" for WidowX or None for BRIDGE
+
+    # ARRO server IP
+    arro_server_ip: str = "tcp://0.0.0.0:8000"  # default to local arro server
+
+    # Temporal ensembling parameters
+    action_chunk_history_size: int = 10
+    ensemble_window_size: int = 5
+    temporal_weight_decay: float = 0.5
+
+
+# Default checkpoints that should be used for each environment.
+def main(args: Args) -> None:
+    policy = create_policy(args)
+    policy_metadata = policy.metadata
+
+    # Record the policy's behavior.
+    if args.record:
+        policy = _policy.PolicyRecorder(policy, "policy_records")
+
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    logging.info("Creating server (host: %s, ip: %s)", hostname, local_ip)
+
+    server = websocket_policy_server_arro.WebsocketPolicyServer(
+        policy=policy,
+        host="0.0.0.0",
+        port=args.port,
+        metadata=policy_metadata,
+        obs_remap_key=args.obs_remap_key,
+        arro_img_key=args.arro_img_key,
+        arro_server_ip=args.arro_server_ip,
+        action_chunk_history_size=args.action_chunk_history_size,
+        ensemble_window_size=args.ensemble_window_size,
+        temporal_weight_decay=args.temporal_weight_decay,
+    )
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, force=True)
+    main(tyro.cli(Args))
