@@ -16,7 +16,7 @@ from collections import deque
 from typing import Dict, Any
 from openpi_client import base_policy as _base_policy
 from openpi_client import msgpack_numpy
-from serving.arro_client import GroundedSam2TrackerClient
+from openpi.serving.arro_client import GroundedSam2TrackerClient
 
 
 import spacy
@@ -94,7 +94,7 @@ class WebsocketPolicyServer:
         self._arro_server_ip = arro_server_ip
 
         # ARRO client
-        self._arro_client = GroundedSam2TrackerClient(self._arro_server_address)
+        self._arro_client = GroundedSam2TrackerClient(self._arro_server_ip)
         
         # Temporal ensembling parameters
         self._action_chunk_history_size = action_chunk_history_size
