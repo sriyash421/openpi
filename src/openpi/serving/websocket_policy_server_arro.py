@@ -94,7 +94,9 @@ class WebsocketPolicyServer:
         self._arro_server_ip = arro_server_ip
 
         # ARRO client
+        print(f"🔄 Initializing ARRO client with server IP: {self._arro_server_ip}")
         self._arro_client = GroundedSam2TrackerClient(self._arro_server_ip)
+        print(f"✅ ARRO client initialized")
         
         # Temporal ensembling parameters
         self._action_chunk_history_size = action_chunk_history_size
@@ -284,7 +286,12 @@ class WebsocketPolicyServer:
                     logging.info(f"Resetting policy and VLM step")
                     self._policy.reset()
                     self._arro_step = 0
-                    self._arro_client.reset(init_frame=obs[self._arro_img_key], text=instruction_to_dino_instr(obs["prompt"]))
+                    print(f"🔄 Resetting ARRO client")
+                    print(f"Original image shape: {original_img.shape}")
+                    dino_instruction = instruction_to_dino_instr(obs["prompt"])
+                    print(f"Instruction: {dino_instruction}")
+                    self._arro_client.reset(init_frame=Image.fromarray(original_img), text=dino_instruction)
+                    print(f"✅ ARRO client reset")
                     # Also reset temporal ensembling history
                     self._action_chunk_history.clear()
                     self._observation_history.clear()
@@ -309,6 +316,8 @@ class WebsocketPolicyServer:
                 obs[self._arro_img_key] = img
                 # downsample
                 obs[self._arro_img_key] = cv2.resize(obs[self._arro_img_key], (POLICY_INPUT_RESOLUTION, POLICY_INPUT_RESOLUTION))
+
+                self._arro_step += 1
                     
 
                 # rename keys in observation
