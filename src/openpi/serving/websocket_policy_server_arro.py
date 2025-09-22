@@ -108,12 +108,10 @@ class WebsocketPolicyServer:
         self._observation_history = deque(maxlen=action_chunk_history_size)
         
         # ARRO save directory setup
-        self._vlm_save_dir = None
-        if self._arro_server_ip is not None:
-            self._arro_save_dir = os.path.join(os.getcwd(), "arro_tmp")
-            os.makedirs(self._arro_save_dir, exist_ok=True)
-            logging.info(f"ARRO images will be saved to: {self._arro_save_dir}")
-            print(f"🖼️ ARRO images will be saved to: {self._arro_save_dir}")
+        self._arro_save_dir = os.path.join(os.getcwd(), "arro_tmp")
+        os.makedirs(self._arro_save_dir, exist_ok=True)
+        logging.info(f"ARRO images will be saved to: {self._arro_save_dir}")
+        print(f"🖼️ ARRO images will be saved to: {self._arro_save_dir}")
         
         # Initialize thread pool executor for background image saving
         self._executor = concurrent.futures.ThreadPoolExecutor(
@@ -144,13 +142,13 @@ class WebsocketPolicyServer:
 
     def _save_vlm_images(self, obs, original_img, img, step):
         """Save both original and processed VLM images to separate subfolders in a background thread."""
-        if self._vlm_save_dir is not None:
+        if self._arro_save_dir is not None:
             # Submit the image saving task to the thread pool executor
-            future = self._executor.submit(self._save_vlm_images_sync, obs, original_img, img, step)
+            future = self._executor.submit(self._save_arro_images_sync, obs, original_img, img, step)
             # Add a callback to log any errors that occur in the thread
             future.add_done_callback(self._log_save_result)
 
-    def _save_vlm_images_sync(self, obs, original_img, img, step):
+    def _save_arro_images_sync(self, obs, original_img, img, step):
         """Synchronous version of image saving that runs in a separate thread."""
         try:
             # Save original image

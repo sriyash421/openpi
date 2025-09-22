@@ -11,7 +11,7 @@ config=pi0_lora_bridge_1_cam_arro
 temporal_weight_decay=0.0
 policy_port=8001
 checkpoint=checkpoints/pi0_lora_bridge_1_cam_arro/27600/
-arro_server_ip=tcp://tsedk-2607-4000-200-1e-7fae-c22-f6c5-98d5.a.free.pinggy.link:42211
+arro_server_ip=tcp://edclduajln.a.pinggy.link:21379
 
 cd ~/openpi
                 
