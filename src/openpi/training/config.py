@@ -668,13 +668,14 @@ _CONFIGS = [
         num_train_steps=30_000,
     ),
     TrainConfig(
-        name="pi0_libero_low_mem_finetune",
+        name="pi0_libero_low_mem_finetune_sriyash",
         # Here is an example of loading a pi0 model for LoRA fine-tuning.
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotLiberoDataConfig(
             # repo_id="jesbu1/libero_90_lerobot",
+            repo_id="/home/sriyash/Projects/openpi/data/task_57_libero",
             # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
-            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_5",
+            # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_5",
             base_config=DataConfig(
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
@@ -682,7 +683,9 @@ _CONFIGS = [
             obs_type="regular",
         ),
         validation_data=LeRobotLiberoDataConfig(
-            repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+            # repo_id="jesbu1/libero_90_lerobot",
+            repo_id="/home/sriyash/Projects/openpi/data/task_57_libero",
             base_config=DataConfig(
                 local_files_only=True,
                 prompt_from_task=True,

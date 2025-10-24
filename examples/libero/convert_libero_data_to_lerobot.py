@@ -14,20 +14,22 @@ Note: to run the script, you need to install tensorflow_datasets:
 `uv pip install tensorflow tensorflow_datasets`
 
 You can download the raw Libero datasets from https://huggingface.co/datasets/openvla/modified_libero_rlds
-The resulting dataset will get saved to the $LEROBOT_HOME directory.
+The resulting dataset will get saved to the $HF_LEROBOT_HOME directory.
 Running this conversion script will take approximately 30 minutes.
 """
 
 import shutil
 
-from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
+from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import tensorflow_datasets as tfds
 import tyro
 
-REPO_NAME = "jesbu1/libero_90_original"  # Name of the output dataset, also used for the Hugging Face Hub
+REPO_NAME = "sriyash421/libero_90"  # Name of the output dataset, also used for the Hugging Face Hub
 RAW_DATASET_NAMES = [
-    "libero_90_openvla_processed"
+    "libero_90_lerobot"
+    # "libero_90_openvla_processed",
+    # "libero_90_openvla_processed"
     #"libero_90_rlds_original" # TEMP
     #"libero_10_no_noops",
     #"libero_goal_no_noops",
@@ -38,7 +40,7 @@ RAW_DATASET_NAMES = [
 
 def main(data_dir: str, *, push_to_hub: bool = False):
     # Clean up any existing dataset in the output directory
-    output_path = LEROBOT_HOME / REPO_NAME
+    output_path = HF_LEROBOT_HOME / REPO_NAME
     if output_path.exists():
         shutil.rmtree(output_path)
 
