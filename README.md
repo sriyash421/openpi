@@ -262,3 +262,38 @@ uv run examples/libero/convert_libero_data_to_lerobot.py --data_dir /path/to/you
 To fine-tune a base model on your own data, you need to define configs for data processing and training. We provide example configs with detailed comments for Libero below, which you can modify for your own dataset:
 
 - [`LiberoInputs` and `LiberoOutputs`](src/openpi/policies/libero_policy.py): Defines the data mapping from the Libero environment to the model and vice versa. Will be used for both, training and inference.
+
+
+### Online Dataset
+
+```
+[listener] Started on 127.0.0.1:50111
+[features] Expecting frame keys: ['image', 'wrist_image', 'state', 'actions', 'timestamp', 'frame_index']
+[episodes] Selected indices: [0, 1]
+Generating train split: 152 examples [00:00, 8929.55 examples/s]
+```
+
+
+### Script for testing data transmission
+
+```
+python scripts/online_stream_two_episodes.py \
+  --base-repo /gscratch/socialrl/sriyash/openpi/data/task_44 \
+  --online-dir /tmp/online_test_task_44 \
+  --host 127.0.0.1 \
+  --port 50111 \
+  --delay 0.02
+```
+
+### Script for running online finetuning
+```
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python scripts/test_online_dataset_training.py \
+    --config-name pi0_libero_low_mem_finetune_online_sriyash \
+    --source-online-dir /gscratch/socialrl/sriyash/openpi/data/task_44 \
+    --online-dir /tmp/openpi-online-task44 \
+    --exp-name online-test \
+    --num-train-steps 200 \
+    --copy-delay 0.2 \
+    --online-host 127.0.0.1 \
+    --online-port 9999
+```

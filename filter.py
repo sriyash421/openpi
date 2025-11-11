@@ -93,6 +93,7 @@ def main():
     ap.add_argument("--task-id", action="append", required=True,
                     help="Task id(s) to keep. Can repeat, comma-separate, or pass a file path with one id per line.")
     ap.add_argument("--dry-run", action="store_true", help="Plan only; do not write any files.")
+    ap.add_argument("--max-episodes", type=int, default=-1, help="If >0, limit to this many episodes (for testing).")
     args = ap.parse_args()
 
     in_root  = os.path.abspath(args.in_root)
@@ -134,7 +135,11 @@ def main():
     total_frames = 0
     kept_task_ids_present = set()
 
-    for ep_path in iter_episode_parquets(in_root):
+    patt1 = os.path.join(in_root, "data", "chunk-*", "episode_*.parquet")
+    parquets = sorted(glob.glob(patt1))
+    import tqdm
+    num_episodes_added = 0
+    for ep_path in tqdm.tqdm(parquets):
         # Parse old episode_index from filename
         base = os.path.basename(ep_path)
         # expects episode_{index}.parquet
@@ -147,7 +152,9 @@ def main():
         ti = read_task_index_for_episode(ep_path)
         if ti is None or ti not in keep_task_ids:
             continue
-
+        if 0 < args.max_episodes <= num_episodes_added:
+            break
+        num_episodes_added += 1
         # Read once to get length
         meta_tab = pq.read_table(ep_path, columns=["frame_index"])
         length = meta_tab.num_rows

@@ -247,6 +247,7 @@ def main(config: _config.TrainConfig):
         sharding=data_sharding,
         num_workers=config.num_workers,
         shuffle=True,
+        num_batches=config.num_batches
     )
     data_iter = iter(data_loader)
     batch = next(data_iter)
@@ -300,6 +301,15 @@ def main(config: _config.TrainConfig):
     )
 
     infos = []
+    def log_data_stats(dataloader, step):
+        print("Logging data stats")
+        print(f"Current step: {step}")
+        torch_loader = data_loader._data_loader.torch_loader  # type: ignore[attr-defined]
+        dataset_obj = torch_loader.dataset
+        print(f"Dataset size: {len(dataset_obj)}")
+        print(f" ")
+
+    log_data_stats(data_loader, start_step)
     for step in pbar:
         with sharding.set_mesh(mesh):
             train_state, info = ptrain_step(train_rng, train_state, batch)
@@ -355,7 +365,14 @@ def main(config: _config.TrainConfig):
             wandb.log(log_data, step=step)
 
         # Get next training batch
-        batch = next(data_iter)
+        try:
+            batch = next(data_iter)
+        except StopIteration:
+            # Training dataset exhausted, reset iterator and get first batch
+            logging.info("Training dataset iterator reset.")
+            data_iter = iter(data_loader)
+            log_data_stats(data_loader, step)
+            batch = next(data_iter)
 
         # Save checkpoint
         if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:

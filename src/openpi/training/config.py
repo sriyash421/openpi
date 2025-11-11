@@ -92,6 +92,10 @@ class DataConfig:
     # not used anymore in my code as i updated lerobot
     local_files_only: bool = False
 
+    # for online lerobot datasets
+    online_dataset_dir: str | None = None
+    server_host: str = "localhost"
+    server_port: int = 50051
 
 class GroupFactory(Protocol):
     def __call__(self, model_config: _model.BaseModelConfig) -> _transforms.Group:
@@ -551,6 +555,9 @@ class TrainConfig:
     # data parallel between 2 groups of devices.
     fsdp_devices: int = 1
 
+    # Number of batches to use for online dataset training
+    num_batches: int = 20
+
     @property
     def assets_dirs(self) -> pathlib.Path:
         """Get the assets directory for this config."""
@@ -673,7 +680,7 @@ _CONFIGS = [
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotLiberoDataConfig(
             # repo_id="jesbu1/libero_90_lerobot",
-            repo_id="/home/sriyash/Projects/openpi/data/task_57_libero",
+            repo_id="/gscratch/socialrl/sriyash/openpi/data/task_44",
             # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
             # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_5",
             base_config=DataConfig(
@@ -685,7 +692,7 @@ _CONFIGS = [
         validation_data=LeRobotLiberoDataConfig(
             # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
             # repo_id="jesbu1/libero_90_lerobot",
-            repo_id="/home/sriyash/Projects/openpi/data/task_57_libero",
+            repo_id="/gscratch/socialrl/sriyash/openpi/data/task_44",
             base_config=DataConfig(
                 local_files_only=True,
                 prompt_from_task=True,
@@ -695,7 +702,7 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=50_000,
         fsdp_devices=1,
-        batch_size=148,
+        batch_size=64,
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
         # for the given model config for LoRA finetuning. Just make sure it matches the model config
@@ -705,6 +712,37 @@ _CONFIGS = [
         ).get_freeze_filter(),
         # Turn off EMA for LoRA finetuning.
         ema_decay=None,
+    ),
+    TrainConfig(
+        name="pi0_libero_low_mem_finetune_online_sriyash",
+        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
+        data=LeRobotLiberoDataConfig(
+            repo_id="/gscratch/socialrl/sriyash/openpi/data/task_44",
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+                online_dataset_dir="/gscratch/socialrl/sriyash/openpi/data/online_lerobot_datasets/task_44",
+            ),
+            obs_type="regular",
+        ),
+        validation_data=LeRobotLiberoDataConfig(
+            repo_id="/gscratch/socialrl/sriyash/openpi/data/task_44",
+            base_config=DataConfig(
+                local_files_only=True,
+                prompt_from_task=True,
+            ),
+            obs_type="regular",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=5000,
+        fsdp_devices=1,
+        batch_size=64,
+        num_batches=20,
+        freeze_filter=pi0.Pi0Config(
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        ema_decay=None,
+        num_workers=0
     ),
     TrainConfig(
         name="pi0_libero_low_mem_finetune_path_debug",

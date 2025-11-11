@@ -1,9 +1,11 @@
 from collections.abc import Iterator, Sequence
+# import dataclasses
 import multiprocessing
 import os
 import typing
 from typing import Protocol, SupportsIndex, TypeVar
 
+# import logging
 import jax
 import jax.numpy as jnp
 import lerobot.common.datasets.lerobot_dataset as lerobot_dataset
@@ -13,6 +15,9 @@ import torch
 import openpi.models.model as _model
 import openpi.training.config as _config
 import openpi.transforms as _transforms
+# New dynamic online dataset subclass with socket updates
+from openpi.training.online_lerobot import OnlineLeRobotDataset
+# import openpi.shared.normalize as _normalize
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -89,15 +94,41 @@ def create_dataset(data_config: _config.DataConfig, model_config: _model.BaseMod
     if repo_id == "fake":
         return FakeDataset(model_config, num_samples=1024)
 
-    dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id)  # , #local_files_only=data_config.local_files_only)
-    dataset = lerobot_dataset.LeRobotDataset(
-        data_config.repo_id,
-        delta_timestamps={
-            key: [t / dataset_meta.fps for t in range(model_config.action_horizon)]
-            for key in data_config.action_sequence_keys
-        },
-        # local_files_only=data_config.local_files_only,
+    # Prepare metadata; pass root if repo_id refers to a local directory.
+    dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(
+        repo_id, root=repo_id if os.path.isdir(str(repo_id)) else None
     )
+
+    # Choose dataset implementation
+    if data_config.online_dataset_dir:
+        # Online dataset mode: create the dataset and start a background socket server which ingests
+        # frame-level payloads. We derive delta timestamps from the base metadata fps.
+        dataset = OnlineLeRobotDataset(
+            repo_id=data_config.repo_id,
+            root=repo_id if os.path.isdir(str(repo_id)) else None,
+            delta_timestamps={
+                key: [t / dataset_meta.fps for t in range(model_config.action_horizon)]
+                for key in data_config.action_sequence_keys
+            },
+            online_dataset_path=data_config.online_dataset_dir,
+            server_host=data_config.server_host,
+            server_port=data_config.server_port,
+        )
+        # Start the socket server immediately so the streaming process can connect.
+        try:
+            dataset.start_socket_server()
+        except Exception as e:
+            raise RuntimeError(f"Failed to start OnlineLeRobotDataset socket server: {e}")
+    else:
+        # Standard static dataset
+        dataset = lerobot_dataset.LeRobotDataset(
+            data_config.repo_id,
+            root=repo_id if os.path.isdir(str(repo_id)) else None,
+            delta_timestamps={
+                key: [t / dataset_meta.fps for t in range(model_config.action_horizon)]
+                for key in data_config.action_sequence_keys
+            },
+        )
 
     if data_config.prompt_from_task:
         dataset = TransformedDataset(dataset, [_transforms.PromptFromLeRobotTask(dataset_meta.tasks)])
@@ -151,6 +182,19 @@ def create_data_loader(
             execute in the main process.
     """
     data_config = config.data.create(config.assets_dirs, config.model)
+
+    # Fallback: if norm_stats were not loaded from assets, try loading from the base repo root
+    # when it is a local directory. This helps fine-tuning runs that point repo_id to a local
+    # LeRobot dataset directory containing norm_stats.json.
+    # if not skip_norm_stats and data_config.repo_id not in (None, "fake") and data_config.norm_stats is None:
+    #     try:
+    #         if isinstance(data_config.repo_id, str) and os.path.isdir(str(data_config.repo_id)):
+    #             local_root = str(data_config.repo_id)
+    #             norm_stats = _normalize.load(local_root)
+    #             data_config = dataclasses.replace(data_config, norm_stats=norm_stats)
+    #             logging.info("Loaded norm stats from local dataset root: %s", local_root)
+    #     except FileNotFoundError:
+    #         logging.info("Norm stats not found at %s/norm_stats.json; proceeding without.", str(data_config.repo_id))
 
     dataset = create_dataset(data_config, config.model)
     dataset = transform_dataset(dataset, data_config, skip_norm_stats=skip_norm_stats)
