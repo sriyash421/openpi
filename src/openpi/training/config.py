@@ -717,16 +717,16 @@ _CONFIGS = [
         name="pi0_libero_low_mem_finetune_online_sriyash",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotLiberoDataConfig(
-            repo_id="/gscratch/socialrl/sriyash/openpi/data/task_44",
+            repo_id="/gscratch/socialrl/scrubbed/openpi/data/task_44",
             base_config=DataConfig(
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
-                online_dataset_dir="/gscratch/socialrl/sriyash/openpi/data/online_lerobot_datasets/task_44",
+                online_dataset_dir="/gscratch/socialrl/scrubbed/openpi/data/online_lerobot_datasets/task_44",
             ),
             obs_type="regular",
         ),
         validation_data=LeRobotLiberoDataConfig(
-            repo_id="/gscratch/socialrl/sriyash/openpi/data/task_44",
+            repo_id="/gscratch/socialrl/scrubbed/openpi/data/task_44",
             base_config=DataConfig(
                 local_files_only=True,
                 prompt_from_task=True,

@@ -289,7 +289,7 @@ python scripts/online_stream_two_episodes.py \
 ```
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python scripts/test_online_dataset_training.py \
     --config-name pi0_libero_low_mem_finetune_online_sriyash \
-    --source-online-dir /gscratch/socialrl/sriyash/openpi/data/task_44_src \
+    --source-online-dir /gscratch/scrubbed/sriyash/openpi/data/task_44_src \
     --online-dir /tmp/openpi-online-task44 \
     --exp-name online-test \
     --num-train-steps 200 \
