@@ -83,6 +83,7 @@ def main(data_dir: str, *, push_to_hub: bool = False):
     # You can modify this for your own data format
     for raw_dataset_name in RAW_DATASET_NAMES:
         raw_dataset = tfds.load(raw_dataset_name, data_dir=data_dir, split="train")
+        breakpoint()
         for episode in raw_dataset:
             for step in episode["steps"].as_numpy_iterator():
                 dataset.add_frame(

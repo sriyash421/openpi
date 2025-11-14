@@ -12,6 +12,7 @@ from openpi.models import model as _model
 import openpi.models.gemma as _gemma
 import openpi.models.siglip as _siglip
 from openpi.shared import array_typing as at
+from openpi.shared import download
 import openpi.shared.nnx_utils as nnx_utils
 
 logger = logging.getLogger("openpi")
@@ -237,11 +238,6 @@ class Pi0(_model.BaseModel):
         ar_mask = jnp.array(ar_mask)
         return tokens, input_mask, ar_mask
 
-    def compute_extra_loss_info(self, preds: at.Float[at.Array, "*b ah"], targets: at.Float[at.Array, "*b ah"]) -> dict:
-        thresholds = [0.05, 0.1, 0.2]
-        difference = jnp.sqrt(jnp.sum(jnp.square(preds[..., :3] - targets[..., :3]), axis=-1))
-        return {f"accuracy_l2_pos<{threshold}": jnp.mean(difference < threshold) for threshold in thresholds}
-
     @override
     def compute_loss(
         self, rng: at.KeyArrayLike, observation: _model.Observation, actions: _model.Actions, *, train: bool = False
@@ -268,17 +264,14 @@ class Pi0(_model.BaseModel):
         )
         v_t = self.action_out_proj(suffix_out[:, -self.action_horizon :])
 
-        # get the predicted action, detached from the graph
-        pred_actions = (noise - v_t).at[:, :, 0].set(0)
-
-        return jnp.mean(jnp.square(v_t - u_t), axis=-1), self.compute_extra_loss_info(pred_actions, actions)
+        return jnp.mean(jnp.square(v_t - u_t), axis=-1)
 
     @override
     def sample_actions(
         self,
-        rng: at.KeyArrayLike,
         observation: _model.Observation,
         *,
+        noise: jnp.ndarray,
         num_steps: int | at.Int[at.Array, ""] = 10,
     ) -> _model.Actions:
         observation = _model.preprocess_observation(None, observation, train=False)
@@ -286,14 +279,11 @@ class Pi0(_model.BaseModel):
         # distribution. yes, this is the opposite of the pi0 paper, and I'm sorry.
         dt = -1.0 / num_steps
         batch_size = observation.state.shape[0]
-        noise = jax.random.normal(rng, (batch_size, self.action_horizon, self.action_dim))
-
         # first fill KV cache with a forward pass of the prefix
         prefix_tokens, prefix_mask, prefix_ar_mask = self.embed_prefix(observation)
         prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask)
         positions = jnp.cumsum(prefix_mask, axis=1) - 1
         _, kv_cache = self.PaliGemma.llm([prefix_tokens, None], mask=prefix_attn_mask, positions=positions)
-
         def step(carry):
             x_t, time = carry
             suffix_tokens, suffix_mask, suffix_ar_mask = self.embed_suffix(
@@ -328,6 +318,156 @@ class Pi0(_model.BaseModel):
             x_t, time = carry
             # robust to floating-point error
             return time >= -dt / 2
-
         x_0, _ = jax.lax.while_loop(cond, step, (noise, 1.0))
         return x_0
+
+    def action_to_noise(
+        self,
+        observation: _model.Observation,
+        actions: _model.Actions,
+        num_steps: int = 10
+    ) -> jnp.ndarray:
+        """
+        Inverts the flow: goes from actions (t=0) to noise (t=1).
+        This is the reverse direction of sample_actions.
+        """
+        observation = _model.preprocess_observation(None, observation, train=False)
+
+        # Positive dt! Going forward in flow time: 0 → 1
+        dt = +1.0 / num_steps
+        batch_size = observation.state.shape[0]
+
+        # Fill KV cache with prefix (same as sample_actions)
+        prefix_tokens, prefix_mask, prefix_ar_mask = self.embed_prefix(observation)
+        prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask)
+        positions = jnp.cumsum(prefix_mask, axis=1) - 1
+        _, kv_cache = self.PaliGemma.llm(
+            [prefix_tokens, None], mask=prefix_attn_mask, positions=positions
+        )
+
+        def step(carry):
+            x_t, time = carry
+            # Query network at current position (same as sample_actions)
+            suffix_tokens, suffix_mask, suffix_ar_mask = self.embed_suffix(
+                observation, x_t, jnp.broadcast_to(time, batch_size)
+            )
+            suffix_attn_mask = make_attn_mask(suffix_mask, suffix_ar_mask)
+            prefix_attn_mask = einops.repeat(
+                prefix_mask, "b p -> b s p", s=suffix_tokens.shape[1]
+            )
+            full_attn_mask = jnp.concatenate([prefix_attn_mask, suffix_attn_mask], axis=-1)
+            positions = (
+                jnp.sum(prefix_mask, axis=-1)[:, None]
+                + jnp.cumsum(suffix_mask, axis=-1) - 1
+            )
+
+            (_, suffix_out), _ = self.PaliGemma.llm(
+                [None, suffix_tokens],
+                mask=full_attn_mask,
+                positions=positions,
+                kv_cache=kv_cache
+            )
+            v_t = self.action_out_proj(suffix_out[:, -self.action_horizon:])
+
+            # Integrate FORWARD: x_t + (+dt) * v_t
+            return x_t + dt * v_t, time + dt
+
+        def cond(carry):
+            x_t, time = carry
+            # Stop when we reach t=1 (noise)
+            return time <= 1.0 + dt / 2
+
+        # Start at t=0 with actions, integrate to t=1
+        noise, _ = jax.lax.while_loop(cond, step, (actions, 0.0))
+        return noise
+
+    # get the prfix representation
+    def get_prefix_rep(self, observation: _model.Observation):
+        """
+        Returns the Gemma (VLM) hidden‐state representations for images + language.
+        Output shape is [B, S_prefix, W], where:
+          B = batch size,
+          S_prefix = total # of image tokens + text tokens,
+          W = Gemma hidden‑width.
+        """
+        observation = _model.preprocess_observation(None, observation, train=False)
+        prefix_tokens, prefix_mask, prefix_ar_mask = self.embed_prefix(observation)
+        prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask)
+        positions = jnp.cumsum(prefix_mask, axis=1) - 1
+        (hidden_state, _), kv_cache = self.PaliGemma.llm([prefix_tokens, None], mask=prefix_attn_mask, positions=positions)
+        return hidden_state, kv_cache
+
+def main(checkpoint_path: str, dataset_config_name: str):
+    """Verify consistency between noise→actions and actions→noise.
+
+    Args:
+        checkpoint_path: Path to checkpoint directory or S3 URL (e.g.,
+            "s3://openpi-assets/checkpoints/pi0_base" or "s3://openpi-assets/checkpoints/pi0_aloha_sim").
+            The code will append "/params" to this path.
+        dataset_config_name: Training config name to load real data from (e.g., "pi0_aloha_sim").
+            For best results, use a checkpoint trained on the same dataset.
+    """
+    config = Pi0Config()
+    rng = jax.random.PRNGKey(42)
+
+    checkpoint_dir = download.maybe_download(checkpoint_path)
+    model = config.load(_model.restore_params(checkpoint_dir / "params", dtype=jnp.bfloat16))
+
+    # Load observations from dataset
+    # Import here to avoid circular import
+    from openpi.training import config as _config
+    import openpi.training.data_loader as _data_loader
+    import openpi.training.checkpoints as _checkpoints
+
+    train_config = _config.get_config(dataset_config_name)
+    train_config = dataclasses.replace(train_config, batch_size=2)
+
+    # Load norm stats from checkpoint assets if available, otherwise use config assets
+    data_config = train_config.data.create(train_config.assets_dirs, train_config.model)
+    data_config = dataclasses.replace(
+        data_config,
+        norm_stats=_checkpoints.load_norm_stats(checkpoint_dir / "assets", data_config.asset_id),
+    )
+
+    # Create data loader with the updated data_config
+    dataset = _data_loader.create_dataset(data_config, train_config.model)
+    dataset = _data_loader.transform_dataset(dataset, data_config, skip_norm_stats=False)
+    loader = _data_loader.TorchDataLoader(dataset, local_batch_size=2, num_batches=1, num_workers=0, seed=train_config.seed)
+
+    batch = next(iter(loader))
+    observation = _model.Observation.from_dict(batch)
+
+    num_steps = 100
+
+    rng, noise_rng = jax.random.split(rng)
+    original_noise = jax.random.normal(noise_rng, (2, config.action_horizon, config.action_dim))
+
+    actions = model.sample_actions(observation, noise=original_noise, num_steps=num_steps)
+    reconstructed_noise = model.action_to_noise(observation, actions, num_steps=num_steps)
+
+    print(original_noise)
+    print("--------------------------------")
+    print(reconstructed_noise)
+    print("--------------------------------")
+
+    mse = float(jnp.mean(jnp.square(original_noise - reconstructed_noise)))
+    print(f"MSE(noise, reconstructed_noise): {mse:.6f}")
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Test Pi0 flow matching invertibility")
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="s3://openpi-assets/checkpoints/pi0_aloha_sim",
+        help="Path to checkpoint directory or S3 URL (default: 's3://openpi-assets/checkpoints/pi0_aloha_sim').",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="pi0_aloha_sim",
+        help="Training config name to load real data from (default: 'pi0_aloha_sim').",
+    )
+    args = parser.parse_args()
+    main(checkpoint_path=args.checkpoint, dataset_config_name=args.dataset)

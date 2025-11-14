@@ -5,6 +5,7 @@ will compute the mean and standard deviation of the data in the dataset and save
 to the config assets directory.
 """
 
+import jax
 import numpy as np
 import tqdm
 import tyro
@@ -48,9 +49,12 @@ def main(config_name: str, max_frames: int | None = None):
         num_frames = max_frames
         shuffle = True
 
+    # Use batch size that matches the number of devices to satisfy sharding requirements
+    local_batch_size = max(1, len(jax.devices()))
+
     data_loader = _data_loader.TorchDataLoader(
         dataset,
-        local_batch_size=1,
+        local_batch_size=local_batch_size,
         num_workers=1,
         shuffle=shuffle,
         num_batches=num_frames,
@@ -61,8 +65,12 @@ def main(config_name: str, max_frames: int | None = None):
 
     for batch in tqdm.tqdm(data_loader, total=num_frames, desc="Computing stats"):
         for key in keys:
-            values = np.asarray(batch[key][0])
-            stats[key].update(values.reshape(-1, values.shape[-1]))
+            # Handle batch dimension - batch[key] has shape (batch_size, ...)
+            values = np.asarray(batch[key])
+            # Reshape to (batch_size * seq_len, feature_dim) for each item in batch
+            batch_size = values.shape[0]
+            for i in range(batch_size):
+                stats[key].update(values[i].reshape(-1, values[i].shape[-1]))
 
     norm_stats = {key: stats.get_statistics() for key, stats in stats.items()}
 
