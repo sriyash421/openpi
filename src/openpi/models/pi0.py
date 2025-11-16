@@ -269,9 +269,10 @@ class Pi0(_model.BaseModel):
     @override
     def sample_actions(
         self,
+        rng: at.KeyArrayLike,
         observation: _model.Observation,
         *,
-        noise: jnp.ndarray,
+        noise: jnp.ndarray | None = None,
         num_steps: int | at.Int[at.Array, ""] = 10,
     ) -> _model.Actions:
         observation = _model.preprocess_observation(None, observation, train=False)
@@ -279,6 +280,11 @@ class Pi0(_model.BaseModel):
         # distribution. yes, this is the opposite of the pi0 paper, and I'm sorry.
         dt = -1.0 / num_steps
         batch_size = observation.state.shape[0]
+
+        # Generate noise from rng if not provided
+        if noise is None:
+            noise = jax.random.normal(rng, (batch_size, self.action_horizon, self.action_dim))
+
         # first fill KV cache with a forward pass of the prefix
         prefix_tokens, prefix_mask, prefix_ar_mask = self.embed_prefix(observation)
         prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask)
@@ -413,8 +419,6 @@ def main(checkpoint_path: str, dataset_config_name: str):
     checkpoint_dir = download.maybe_download(checkpoint_path)
     model = config.load(_model.restore_params(checkpoint_dir / "params", dtype=jnp.bfloat16))
 
-    # Load observations from dataset
-    # Import here to avoid circular import
     from openpi.training import config as _config
     import openpi.training.data_loader as _data_loader
     import openpi.training.checkpoints as _checkpoints
@@ -422,14 +426,12 @@ def main(checkpoint_path: str, dataset_config_name: str):
     train_config = _config.get_config(dataset_config_name)
     train_config = dataclasses.replace(train_config, batch_size=2)
 
-    # Load norm stats from checkpoint assets if available, otherwise use config assets
     data_config = train_config.data.create(train_config.assets_dirs, train_config.model)
     data_config = dataclasses.replace(
         data_config,
         norm_stats=_checkpoints.load_norm_stats(checkpoint_dir / "assets", data_config.asset_id),
     )
 
-    # Create data loader with the updated data_config
     dataset = _data_loader.create_dataset(data_config, train_config.model)
     dataset = _data_loader.transform_dataset(dataset, data_config, skip_norm_stats=False)
     loader = _data_loader.TorchDataLoader(dataset, local_batch_size=2, num_batches=1, num_workers=0, seed=train_config.seed)
@@ -437,21 +439,56 @@ def main(checkpoint_path: str, dataset_config_name: str):
     batch = next(iter(loader))
     observation = _model.Observation.from_dict(batch)
 
-    num_steps = 100
+    num_steps = 10
+
+    # TEST 1: noise → actions → reconstructed noise
+    print("=" * 60)
+    print("TEST 1: noise → actions → reconstructed noise")
+    print("=" * 60)
 
     rng, noise_rng = jax.random.split(rng)
     original_noise = jax.random.normal(noise_rng, (2, config.action_horizon, config.action_dim))
 
-    actions = model.sample_actions(observation, noise=original_noise, num_steps=num_steps)
+    rng, sample_rng = jax.random.split(rng)
+    actions = model.sample_actions(sample_rng, observation, noise=original_noise, num_steps=num_steps)
     reconstructed_noise = model.action_to_noise(observation, actions, num_steps=num_steps)
 
-    print(original_noise)
+    print(f"Original noise (first sample, first 3 timesteps):")
+    print(original_noise[0, :3, :])
     print("--------------------------------")
-    print(reconstructed_noise)
+    print(f"Reconstructed noise (first sample, first 3 timesteps):")
+    print(reconstructed_noise[0, :3, :])
     print("--------------------------------")
 
     mse = float(jnp.mean(jnp.square(original_noise - reconstructed_noise)))
     print(f"MSE(noise, reconstructed_noise): {mse:.6f}")
+    print()
+
+    # TEST 2: dataset actions → noise → reconstructed actions
+    print("=" * 60)
+    print("TEST 2: actions → noise → reconstructed actions")
+    print("=" * 60)
+
+    # Get actions from the batch
+    dataset_actions = batch["actions"]
+    print(f"Original actions shape: {dataset_actions.shape}")
+
+    # Convert actions to noise
+    noise_from_actions = model.action_to_noise(observation, dataset_actions, num_steps=num_steps)
+
+    # Convert noise back to actions
+    rng, sample_rng = jax.random.split(rng)
+    reconstructed_actions = model.sample_actions(sample_rng, observation, noise=noise_from_actions, num_steps=num_steps)
+
+    print(f"Dataset actions (first sample, first 3 timesteps):")
+    print(dataset_actions[0, :3, :])
+    print("--------------------------------")
+    print(f"Reconstructed actions (first sample, first 3 timesteps):")
+    print(reconstructed_actions[0, :3, :])
+    print("--------------------------------")
+
+    mse_actions = float(jnp.mean(jnp.square(dataset_actions - reconstructed_actions)))
+    print(f"MSE(actions, reconstructed_actions): {mse_actions:.6f}")
 
 
 if __name__ == "__main__":

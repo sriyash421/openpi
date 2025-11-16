@@ -1,6 +1,9 @@
 import flax.nnx as nnx
 import jax
+import jax.numpy as jnp
+import pytest
 
+import openpi.models.model as _model
 import openpi.models.pi0 as _pi0
 
 
@@ -44,3 +47,27 @@ def test_pi0_all_lora():
     assert len(state) == 17
     assert all("lora" not in p for p in state)
     assert all("llm" in p for p in state)
+
+@pytest.mark.manual
+def test_pi0_actions_recon_mse():
+    from openpi.conftest import load_checkpoint_and_dataset
+
+    checkpoint_path = "s3://openpi-assets/checkpoints/pi0_aloha_sim"
+    dataset_config_name = "pi0_aloha_sim"
+
+    test_data = load_checkpoint_and_dataset(checkpoint_path, dataset_config_name)
+    model = test_data.model
+    observation = test_data.observation
+    dataset_actions = test_data.dataset_actions
+
+    num_steps = 10
+    rng = jax.random.PRNGKey(42)
+
+    noise_from_actions = model.action_to_noise(observation, dataset_actions, num_steps=num_steps)
+
+    rng, sample_rng = jax.random.split(rng)
+    reconstructed_actions = model.sample_actions(sample_rng, observation, noise=noise_from_actions, num_steps=num_steps)
+
+    assert dataset_actions.shape == reconstructed_actions.shape
+    mse = float(jnp.mean(jnp.square(dataset_actions - reconstructed_actions)))
+    assert mse < 1e-2
