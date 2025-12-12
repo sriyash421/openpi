@@ -672,8 +672,8 @@ _CONFIGS = [
         # Here is an example of loading a pi0 model for LoRA fine-tuning.
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
         data=LeRobotLiberoDataConfig(
-            # repo_id="jesbu1/libero_90_lerobot",
-            repo_id="/home/sriyash/Projects/openpi/data/task_57_libero",
+            repo_id="/gscratch/socialrl/sriyash/openpi/data/libero_90_lerobot",
+            # repo_id="/home/sriyash/Projects/openpi/data/task_57_libero",
             # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_10",
             # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp_max_ep_per_task_5",
             base_config=DataConfig(
@@ -682,20 +682,20 @@ _CONFIGS = [
             ),
             obs_type="regular",
         ),
-        validation_data=LeRobotLiberoDataConfig(
-            # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
-            # repo_id="jesbu1/libero_90_lerobot",
-            repo_id="/home/sriyash/Projects/openpi/data/task_57_libero",
-            base_config=DataConfig(
-                local_files_only=True,
-                prompt_from_task=True,
-            ),
-            obs_type="regular",
-        ),
+        # validation_data=LeRobotLiberoDataConfig(
+        #     # repo_id="jesbu1/libero_test_lerobot_pathmask_rdp",  # Your validation dataset
+        #     repo_id="/gscratch/socialrl/sriyash/openpi/data/libero_90_lerobot",
+        #     # repo_id="/home/sriyash/Projects/openpi/data/task_57_libero",
+        #     base_config=DataConfig(
+        #         local_files_only=True,
+        #         prompt_from_task=True,
+        #     ),
+        #     obs_type="regular",
+        # ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        num_train_steps=50_000,
+        num_train_steps=30_000,
         fsdp_devices=1,
-        batch_size=148,
+        batch_size=128,
         # The freeze filter defines which parameters should be frozen during training.
         # We have a convenience function in the model config that returns the default freeze filter
         # for the given model config for LoRA finetuning. Just make sure it matches the model config
@@ -1341,9 +1341,9 @@ _CONFIGS = [
             action_dim=7, action_horizon=10, max_token_len=180, paligemma_variant="gemma_2b_lora"
         ),
         data=LeRobotLiberoDataConfig(
-            repo_id="physical-intelligence/libero",
+            repo_id="/gscratch/socialrl/sriyash/openpi/data/libero_90_lerobot",
             base_config=DataConfig(
-                local_files_only=False,  # Set to True for local-only datasets.
+                local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
             ),
         ),
@@ -1356,6 +1356,7 @@ _CONFIGS = [
         ).get_freeze_filter(),
         # Turn off EMA for LoRA finetuning.
         ema_decay=None,
+        num_workers=48,
     ),
     #
     # Fine-tuning Aloha configs.
