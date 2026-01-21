@@ -1,8 +1,12 @@
 import collections
+import datetime
+import wandb
 import dataclasses
 import logging
 import math
 import pathlib
+from pathlib import Path
+from typing import Union
 
 import imageio
 from libero.libero import benchmark
@@ -13,9 +17,15 @@ from openpi_client import image_tools
 from openpi_client import websocket_client_policy as _websocket_client_policy
 import tqdm
 import tyro
+import sys
+import os
+import h5py
 
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
 LIBERO_ENV_RESOLUTION = 256  # resolution used to render training data
+
+import faulthandler
+faulthandler.enable()
 
 
 @dataclasses.dataclass
@@ -32,10 +42,10 @@ class Args:
     # LIBERO environment-specific parameters
     #################################################################################################################
     task_suite_name: str = (
-        "libero_spatial"  # Task suite. Options: libero_spatial, libero_object, libero_goal, libero_10, libero_90
+        "libero_90"  # Task suite. Options: libero_spatial, libero_object, libero_goal, libero_10, libero_90
     )
     num_steps_wait: int = 10  # Number of steps to wait for objects to stabilize i n sim
-    num_trials_per_task: int = 50  # Number of rollouts per task
+    num_trials_per_task: int = 1  # Number of rollouts per task
 
     #################################################################################################################
     # Utils
@@ -43,6 +53,14 @@ class Args:
     video_out_path: str = "data/libero/videos"  # Path to save videos
 
     seed: int = 7  # Random Seed (for reproducibility)
+
+    use_wandb: bool = True  # Whether to also log results in Weights & Biases
+    wandb_project: str = "pi0-libero-eval"  # Name of W&B project to log to (use default!)
+    wandb_group_prefix: str = None
+    wandb_entity: str = "sriyash-uw"  # Name of entity to log under
+    wandb_name_suffix: str = ""
+
+    test_invert: bool = True  # Whether to test the policy with invert set to True
 
 
 def eval_libero(args: Args) -> None:
@@ -70,6 +88,11 @@ def eval_libero(args: Args) -> None:
     else:
         raise ValueError(f"Unknown task suite: {args.task_suite_name}")
 
+    if args.use_wandb:
+        run_name = f"eval-pi0-{args.task_suite_name}_date-{datetime.datetime.now().strftime('%Y-%m-%d')}_seed-{args.seed}"
+        group = None
+        wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name, config=args, group=group)
+
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
 
     # Start evaluation
@@ -77,6 +100,11 @@ def eval_libero(args: Args) -> None:
     for task_id in tqdm.tqdm(range(num_tasks_in_suite)):
         # Get task
         task = task_suite.get_task(task_id)
+        task_description = task.language
+
+        # Initialize video tracking for this task
+        success_videos_saved = 0
+        failure_videos_saved = 0
 
         # Get default LIBERO initial states
         initial_states = task_suite.get_task_init_states(task_id)
@@ -86,6 +114,7 @@ def eval_libero(args: Args) -> None:
 
         # Start episodes
         task_episodes, task_successes = 0, 0
+        recontructed_errors = []
         for episode_idx in tqdm.tqdm(range(args.num_trials_per_task)):
             logging.info(f"\nTask: {task_description}")
 
@@ -138,13 +167,28 @@ def eval_libero(args: Args) -> None:
                                 )
                             ),
                             "prompt": str(task_description),
+                            "noise": None,
+                            "invert": False,
                         }
 
                         # Query model to get action
                         action_chunk = client.infer(element)["actions"]
-                        assert (
-                            len(action_chunk) >= args.replan_steps
-                        ), f"We want to replan every {args.replan_steps} steps, but policy only predicts {len(action_chunk)} steps."
+                        
+                        if args.test_invert:
+                            element["actions"] = action_chunk
+                            element["invert"] = True
+                            return_dict = client.infer(element)
+                            reconstructed_action = return_dict["reconstructed_actions"][:, :7]
+                            diff = np.linalg.norm(np.array(reconstructed_action) - np.array(action_chunk), axis=-1)
+                            recontructed_errors.extend(diff)
+                            # assert diff < 1e-3, f"Inversion test failed at step {t} with diff {diff}"
+                            # if diff >= 1e-3:
+                            #     logging.warning(f"Inversion test failed at step {t} with diff {diff}")
+                            action_chunk = reconstructed_action
+
+                            assert (
+                                len(action_chunk) >= args.replan_steps
+                            ), f"We want to replan every {args.replan_steps} steps, but policy only predicts {len(action_chunk)} steps."
                         action_plan.extend(action_chunk[: args.replan_steps])
 
                     action = action_plan.popleft()
@@ -167,11 +211,25 @@ def eval_libero(args: Args) -> None:
             # Save a replay video of the episode
             suffix = "success" if done else "failure"
             task_segment = task_description.replace(" ", "_")
+            video_path = pathlib.Path(args.video_out_path) / f"rollout_{task_segment}_{suffix}.mp4"
             imageio.mimwrite(
-                pathlib.Path(args.video_out_path) / f"rollout_{task_segment}_{suffix}.mp4",
+                video_path,
                 [np.asarray(x) for x in replay_images],
                 fps=10,
             )
+
+            # Log video to wandb if we haven't reached the limit for this category
+            if args.use_wandb:
+                if done and success_videos_saved <= 2:
+                    success_videos_saved += 1
+                    wandb.log({
+                        f"videos/{task_description}/success_{success_videos_saved}": wandb.Video(str(video_path), fps=10)
+                    })
+                elif not done and failure_videos_saved <= 2:
+                    failure_videos_saved += 1
+                    wandb.log({
+                        f"videos/{task_description}/failure_{failure_videos_saved}": wandb.Video(str(video_path), fps=10)
+                    })
 
             # Log current results
             logging.info(f"Success: {done}")
@@ -185,6 +243,15 @@ def eval_libero(args: Args) -> None:
     logging.info(f"Total success rate: {float(total_successes) / float(total_episodes)}")
     logging.info(f"Total episodes: {total_episodes}")
 
+    if args.use_wandb:
+        wandb.log({f"{args.task_suite_name}/success_rate": float(total_successes) / float(total_episodes)})
+
+        errors = np.asarray(recontructed_errors, dtype=float).reshape(-1, 1)
+        table = wandb.Table(data=errors, columns=["errors"])
+        hist_plot = wandb.plot.histogram(table, "errors", title="Reconstructed Action Errors Histogram")
+        wandb.log({f"{args.task_suite_name}/recon_error_hist": hist_plot})
+
+        wandb.finish()
 
 def _get_libero_env(task, resolution, seed):
     """Initializes and returns the LIBERO environment, along with the task description."""

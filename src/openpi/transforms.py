@@ -159,6 +159,12 @@ class Unnormalize(DataTransformFn):
         if self.norm_stats is None:
             return data
 
+        flat_stats = flatten_dict(self.norm_stats)
+        # if "reconstructed_actions" in data and data["reconstructed_actions"] is not None:
+        #     if "actions" in flat_stats:
+        unnorm_fn = self._unnormalize_quantile if self.use_quantiles else self._unnormalize
+        data["reconstructed_actions"] = unnorm_fn(data["reconstructed_actions"], flat_stats["actions"])
+            
         # Make sure that all the keys in the norm stats are present in the data.
         return apply_tree(
             data,

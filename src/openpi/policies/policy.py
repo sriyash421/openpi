@@ -59,9 +59,12 @@ class Policy(BasePolicy):
             self._model = self._model.to(pytorch_device)
             self._model.eval()
             self._sample_actions = model.sample_actions
+            self._invert_actions = model.invert_actions
+            # self._output_transform.transforms[0].norm_stats['reconstructed_actions'] = self._output_transform.transforms[0].norm_stats['actions']
         else:
             # JAX model setup
             self._sample_actions = nnx_utils.module_jit(model.sample_actions)
+            self._invert_actions = nnx_utils.module_jit(model.invert_actions)
             self._rng = rng or jax.random.key(0)
 
     @override
@@ -80,6 +83,7 @@ class Policy(BasePolicy):
 
         # Prepare kwargs for sample_actions
         sample_kwargs = dict(self._sample_kwargs)
+        noise = obs.get("noise")  # Fixed: use .get() to avoid KeyError
         if noise is not None:
             noise = torch.from_numpy(noise).to(self._pytorch_device) if self._is_pytorch_model else jnp.asarray(noise)
 
@@ -93,12 +97,58 @@ class Policy(BasePolicy):
             "state": inputs["state"],
             "actions": self._sample_actions(sample_rng_or_pytorch_device, observation, **sample_kwargs),
         }
+        actions = outputs["actions"] if "actions" not in inputs else inputs["actions"]
+        if not self._is_pytorch_model:
+            self._rng, sample_rng_or_pytorch_device = jax.random.split(self._rng)
+        target_noise = self._invert_actions(
+                    sample_rng_or_pytorch_device,
+                    observation,
+                    actions,
+                    **sample_kwargs,
+                )
+        outputs["target_noise"] = target_noise
+        if not self._is_pytorch_model:
+            self._rng, sample_rng_or_pytorch_device = jax.random.split(self._rng)
+        reconstructed_actions = self._sample_actions(
+            sample_rng_or_pytorch_device,
+            observation,
+            noise=target_noise,
+            **sample_kwargs,
+        )
+        outputs["reconstructed_actions"] = reconstructed_actions
+
+        # invert = obs.get("invert", False)  # Fixed: use .get() with default False
+        # if invert:
+        #     actions = inputs.get("actions")  # Fixed: use .get() for safety
+        #     if actions is None:
+        #         logging.warning("invert=True but no 'actions' found in inputs, skipping inversion")
+        #     else:
+        #         if not self._is_pytorch_model:
+        #             self._rng, sample_rng_or_pytorch_device = jax.random.split(self._rng)
+        #         target_noise = self._invert_actions(
+        #             sample_rng_or_pytorch_device,
+        #             observation,
+        #             actions,
+        #             **sample_kwargs,
+        #         )
+        #         outputs["target_noise"] = target_noise
+
+        #         if not self._is_pytorch_model:
+        #             self._rng, sample_rng_or_pytorch_device = jax.random.split(self._rng)
+        #         # reconstruct actions from target_noise to verify correctness
+        #         reconstructed_actions = self._sample_actions(
+        #             sample_rng_or_pytorch_device,
+        #             observation,
+        #             noise=target_noise,
+        #             **sample_kwargs,
+        #         )
+        #         outputs["reconstructed_actions"] = reconstructed_actions
+                
         model_time = time.monotonic() - start_time
         if self._is_pytorch_model:
             outputs = jax.tree.map(lambda x: np.asarray(x[0, ...].detach().cpu()), outputs)
         else:
             outputs = jax.tree.map(lambda x: np.asarray(x[0, ...]), outputs)
-
         outputs = self._output_transform(outputs)
         outputs["policy_timing"] = {
             "infer_ms": model_time * 1000,
@@ -122,8 +172,8 @@ class PolicyRecorder(_base_policy.BasePolicy):
         self._record_step = 0
 
     @override
-    def infer(self, obs: dict) -> dict:  # type: ignore[misc]
-        results = self._policy.infer(obs)
+    def infer(self, obs: dict, *, noise: np.ndarray | None = None, invert: bool = False) -> dict:  # type: ignore[misc]
+        results = self._policy.infer(obs, noise=noise, invert=invert)
 
         data = {"inputs": obs, "outputs": results}
         data = flax.traverse_util.flatten_dict(data, sep="/")
