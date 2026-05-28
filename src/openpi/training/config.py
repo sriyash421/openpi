@@ -20,6 +20,7 @@ import openpi.models.tokenizer as _tokenizer
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
+import openpi.policies.yam_policy as yam_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.droid_rlds_dataset as droid_rlds_dataset
@@ -356,6 +357,55 @@ class LeRobotLiberoDataConfig(DataConfigFactory):
 
 
 @dataclasses.dataclass(frozen=True)
+class LeRobotYAMDataConfig(DataConfigFactory):
+    """Config for YAM bimanual robot datasets."""
+
+    # If true, converts joint dimensions to deltas with respect to the current state before passing to the model.
+    # Gripper dimensions remain absolute.
+    use_delta_joint_actions: bool = True
+    # If provided, injected into the input data if the "prompt" key is not present.
+    default_prompt: str | None = None
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        "observation/image_head": "observation.images.head",
+                        "observation/image_left_wrist": "observation.images.left_wrist",
+                        "observation/image_right_wrist": "observation.images.right_wrist",
+                        "observation/state": "observation.state",
+                        "actions": "action",
+                        "prompt": "prompt",
+                    }
+                )
+            ]
+        )
+
+        data_transforms = _transforms.Group(
+            inputs=[yam_policy.YAMInputs(model_type=model_config.model_type)],
+            outputs=[yam_policy.YAMOutputs()],
+        )
+        if self.use_delta_joint_actions:
+            delta_action_mask = _transforms.make_bool_mask(6, -1, 6, -1)
+            data_transforms = data_transforms.push(
+                inputs=[_transforms.DeltaActions(delta_action_mask)],
+                outputs=[_transforms.AbsoluteActions(delta_action_mask)],
+            )
+
+        model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs, model_config),
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=("action",),
+        )
+
+
+@dataclasses.dataclass(frozen=True)
 class RLDSDroidDataConfig(DataConfigFactory):
     """
     Config for training on DROID, using RLDS data format (for efficient training on larger datasets).
@@ -640,6 +690,24 @@ _CONFIGS = [
             ),
         ),
     ),
+    # memmelma/ethernet_05_26_optimal
+    #CUDA_VISIBLE_DEVICESS=1 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python scripts/train.py pi05_ethernet_05_26_optimal --exp-name=pi05_ethernet_05_26_finetune --overwrite
+    TrainConfig(
+        name="pi05_ethernet_05_26_optimal",
+        model=pi0_config.Pi0Config(pi05=True, paligemma_variant="gemma_2b_lora"),
+        data=LeRobotYAMDataConfig(
+            repo_id="memmelma/ethernet_05_26_optimal",
+            base_config=DataConfig(prompt_from_task=True),
+            default_prompt="put_the_box_on_the_shelf_and_unplug_the_ethernet_cable",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        num_train_steps=50_000,
+        batch_size=64,
+        num_workers=16,
+        freeze_filter=pi0_config.Pi0Config(pi05=True, paligemma_variant="gemma_2b_lora").get_freeze_filter(),
+        ema_decay=None,
+    ),
+    #
     #
     # Fine-tuning Libero configs.
     #
