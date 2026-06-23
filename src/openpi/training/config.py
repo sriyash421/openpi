@@ -707,6 +707,26 @@ _CONFIGS = [
         freeze_filter=pi0_config.Pi0Config(pi05=True, paligemma_variant="gemma_2b_lora").get_freeze_filter(),
         ema_decay=None,
     ),
+    TrainConfig(
+        name="pi05_yam_book_pick_shelf_place",
+        model=pi0_config.Pi0Config(pi05=True, paligemma_variant="gemma_2b_lora"),
+        data=LeRobotYAMDataConfig(
+            repo_id="/gscratch/scrubbed/sriyash/yam_book_pick_shelf_place_lerobot",
+            #repo_id="/tmp/sriyash/yam_book_pick_shelf_place_lerobot/yam_book_pick_shelf_place_lerobot",
+            assets=AssetsConfig(
+                assets_dir="/gscratch/scrubbed/sriyash",
+                asset_id="yam_book_pick_shelf_place_lerobot",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+            default_prompt="Pick up the book and place it on the shelf",
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        num_train_steps=50_000,
+        batch_size=64,
+        num_workers=16,
+        freeze_filter=pi0_config.Pi0Config(pi05=True, paligemma_variant="gemma_2b_lora").get_freeze_filter(),
+        ema_decay=None,
+    ),
     #
     #
     # Fine-tuning Libero configs.
