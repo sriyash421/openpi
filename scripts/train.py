@@ -142,20 +142,42 @@ def train_step(
 ) -> tuple[training_utils.TrainState, dict[str, at.Array]]:
     model = nnx.merge(state.model_def, state.params)
     model.train()
+    if config.anchor_no_context:  # zeroing every lora_b makes each adapter the identity: the frozen base model
+        base_model = nnx.merge(state.model_def, jax.tree_util.tree_map_with_path(
+            lambda path, x: jnp.zeros_like(x) if "lora_b" in jax.tree_util.keystr(path) else x, state.params))
 
     @at.typecheck
     def loss_fn(
-        model: _model.BaseModel, rng: at.KeyArrayLike, observation: _model.Observation, actions: _model.Actions
+        model: _model.BaseModel, rng: at.KeyArrayLike, observation: _model.Observation, actions: _model.Actions,
+        base_model: _model.BaseModel | None = None,
     ):
-        chunked_loss = model.compute_loss(rng, observation, actions, train=True)
-        return jnp.mean(chunked_loss)
+        if not config.anchor_no_context:
+            return jnp.mean(model.compute_loss(rng, observation, actions, train=True))
+        # DiT-style anchor: rows without a past-attempt context are held at the frozen base (LoRA off) by matching
+        # velocities at the same (x_t, t), plus a small (anchor_draft_weight) flow loss to the demo actions.
+        loss, v = model.compute_loss(rng, observation, actions, train=True, return_velocity=True)
+        loss_base, v_base = base_model.compute_loss(rng, observation, actions, train=True, return_velocity=True)
+        anchor = jnp.mean(jnp.square(v - jax.lax.stop_gradient(v_base)), axis=-1)
+        no_context = ~observation.image_masks["right_wrist_0_rgb"]
+        rows = jnp.where(no_context[:, None], config.anchor_beta * anchor + config.anchor_draft_weight * loss, loss)
+        if config.negative_weight <= 0:
+            return jnp.mean(rows)
+        # Negatives (failed attempt i's own (s_i, a_i) under its context (r_i, f_i)): don't fit a_i better than the
+        # frozen base does, relu(mse_base - mse_theta), at the same noise and time. Zero at init and bounded.
+        neg = jnp.maximum(jax.lax.stop_gradient(jnp.mean(loss_base, -1)) - jnp.mean(loss, -1), 0.0)
+        return jnp.mean(jnp.where(negative, config.negative_weight * neg, jnp.mean(rows, -1)))
 
     train_rng = jax.random.fold_in(rng, state.step)
     observation, actions = batch
+    # onpolicy/pool.py flags negative rows in the last (always zero-padded) action dim; clear it before the loss.
+    negative = actions[:, 0, -1] > 0.5
+    actions = actions.at[..., -1].set(0.0)
 
     # Filter out frozen params.
     diff_state = nnx.DiffState(0, config.trainable_filter)
-    loss, grads = nnx.value_and_grad(loss_fn, argnums=diff_state)(model, train_rng, observation, actions)
+    loss, grads = nnx.value_and_grad(loss_fn, argnums=diff_state)(
+        model, train_rng, observation, actions, base_model if config.anchor_no_context else None
+    )
 
     params = state.params.filter(config.trainable_filter)
     updates, new_opt_state = state.tx.update(grads, state.opt_state, params)

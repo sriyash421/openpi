@@ -136,6 +136,10 @@ def create_torch_dataset(
         raise ValueError("Repo ID is not set. Cannot create dataset.")
     if repo_id == "fake":
         return FakeDataset(model_config, num_samples=1024)
+    if repo_id.startswith("pool:"):  # on-policy (past attempt + feedback -> demo action), sampled on the fly: onpolicy/pool.py
+        from onpolicy.pool import ContextPoolDataset
+
+        return ContextPoolDataset(repo_id.removeprefix("pool:"))
 
     dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id)
     dataset = lerobot_dataset.LeRobotDataset(

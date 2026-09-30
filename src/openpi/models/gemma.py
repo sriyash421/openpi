@@ -52,7 +52,13 @@ class Config:
     lora_configs: dict[str, lora.LoRAConfig] = dataclasses.field(default_factory=dict)
 
 
-Variant = Literal["dummy", "gemma_300m", "gemma_300m_lora", "gemma_2b", "gemma_2b_lora"]
+Variant = Literal["dummy", "gemma_300m", "gemma_300m_lora", "gemma_300m_lora128", "gemma_2b", "gemma_2b_lora", "gemma_2b_lora128"]
+
+
+# Built once: initializers are static model metadata, and a fresh closure per get_config call would make two
+# creations of the same model (eval_shape vs jit in scripts/train.py) look structurally different.
+_LORA_128 = lora.LoRAConfig(rank=128, alpha=128.0, init_fn=nn.initializers.normal(stddev=1 / 128),
+                            b_init_fn=nn.initializers.zeros)
 
 
 def get_config(variant: Variant) -> Config:
@@ -106,6 +112,11 @@ def get_config(variant: Variant) -> Config:
             head_dim=256,
             lora_configs={"attn": lora.LoRAConfig(rank=32, alpha=32.0), "ffn": lora.LoRAConfig(rank=32, alpha=32.0)},
         )
+    if variant in ("gemma_2b_lora128", "gemma_300m_lora128"):
+        # DiT on-policy LoRA recipe: rank = alpha = 128 on every attention and MLP projection, PEFT "gaussian" init
+        # (A ~ N(0, 1/rank), B = 0), so the adapter starts as the identity.
+        base = get_config(variant.removesuffix("_lora128"))
+        return dataclasses.replace(base, lora_configs={"attn": _LORA_128, "ffn": _LORA_128})
     raise ValueError(f"Unknown variant: {variant}")
 
 

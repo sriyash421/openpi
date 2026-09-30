@@ -19,9 +19,11 @@ import openpi.models.pi0_fast as pi0_fast
 import openpi.models.tokenizer as _tokenizer
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
+import openpi.policies.libero_ctx_policy as libero_ctx_policy
 import openpi.policies.libero_policy as libero_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
+import openpi.shared.nnx_utils as nnx_utils
 import openpi.training.droid_rlds_dataset as droid_rlds_dataset
 import openpi.training.misc.polaris_config as polaris_config
 import openpi.training.misc.roboarena_config as roboarena_config
@@ -355,6 +357,22 @@ class LeRobotLiberoDataConfig(DataConfigFactory):
         )
 
 
+
+@dataclasses.dataclass(frozen=True)
+class LiberoContextDataConfig(DataConfigFactory):
+    """On-policy samples (onpolicy/pool.py) already carry final observation/* keys and prompts, so no repack step."""
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs, model_config),
+            data_transforms=_transforms.Group(
+                inputs=[libero_ctx_policy.LiberoContextInputs(model_type=model_config.model_type)],
+                outputs=[libero_policy.LiberoOutputs()],
+            ),
+            model_transforms=ModelTransformFactory()(model_config).push(inputs=[libero_ctx_policy.NegativeFlagToActions()]),
+        )
+
 @dataclasses.dataclass(frozen=True)
 class RLDSDroidDataConfig(DataConfigFactory):
     """
@@ -488,6 +506,13 @@ class TrainConfig:
     lr_schedule: _optimizer.LRScheduleConfig = dataclasses.field(default_factory=_optimizer.CosineDecaySchedule)
     optimizer: _optimizer.OptimizerConfig = dataclasses.field(default_factory=_optimizer.AdamW)
     ema_decay: float | None = 0.99
+    # On-policy (onpolicy/): hold rows without a past-attempt context at the frozen base (LoRA off) via velocity
+    # matching (DiT's anchor), weighted anchor_beta, plus anchor_draft_weight x the flow loss to the demo actions.
+    anchor_no_context: bool = False
+    anchor_beta: float = 1.0
+    anchor_draft_weight: float = 0.0
+    # Weight of the failed-attempt suppression term (scripts/train.py); rows flagged by onpolicy/pool.py.
+    negative_weight: float = 0.0
 
     # Specifies which weights should be frozen.
     freeze_filter: tyro.conf.Suppress[Filter] = dataclasses.field(default_factory=nnx.Nothing)
@@ -760,6 +785,99 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
         pytorch_weight_path="/path/to/your/pytorch_weight_path",
         num_train_steps=30_000,
+    ),
+    # Identical to pi05_libero, trained on LIBERO-90 (no-noops, LeRobot v2.1) instead of Spatial/Object/Goal/10.
+    TrainConfig(
+        name="pi05_libero90",
+        model=pi0_config.Pi0Config(pi05=True, action_horizon=10, discrete_state_input=False),
+        data=LeRobotLiberoDataConfig(
+            repo_id="ryanhoangt/libero_90_lerobot_v21",
+            base_config=DataConfig(prompt_from_task=True),
+            extra_delta_transform=False,
+        ),
+        batch_size=256,
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=10_000,
+            peak_lr=5e-5,
+            decay_steps=1_000_000,
+            decay_lr=5e-5,
+        ),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+        ema_decay=0.999,
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        num_train_steps=30_000,
+    ),
+    # On-policy LoRA fine-tuning of pi05_libero with a past attempt (context image) + VLM feedback (prompt).
+    # repo_id is set via --data.repo-id pool:<experiment root>; norm stats are pi05_libero's own.
+    TrainConfig(
+        name="pi05_libero_ctx",
+        model=pi0_config.Pi0Config(
+            pi05=True, action_horizon=10, discrete_state_input=False,
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora",
+        ),
+        data=LiberoContextDataConfig(
+            repo_id="ctx:",
+            assets=AssetsConfig(assets_dir="gs://openpi-assets/checkpoints/pi05_libero/assets", asset_id="physical-intelligence/libero"),
+        ),
+        batch_size=64,
+        lr_schedule=_optimizer.CosineDecaySchedule(warmup_steps=100, peak_lr=5e-5, decay_steps=1_000_000, decay_lr=5e-5),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+        ema_decay=None,
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_libero/params"),
+        freeze_filter=pi0_config.Pi0Config(
+            pi05=True, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        num_train_steps=100_000,
+        save_interval=200,
+        keep_period=200,
+        num_workers=8,
+    ),
+    # Same on-policy LoRA setup, initialized from our underfit LIBERO-90 checkpoint (1k run, step 1000) and its norm stats.
+    TrainConfig(
+        name="pi05_libero90_ctx",
+        model=pi0_config.Pi0Config(
+            pi05=True, action_horizon=10, discrete_state_input=False,
+            paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora",
+        ),
+        data=LiberoContextDataConfig(
+            repo_id="ctx:",
+            assets=AssetsConfig(assets_dir="checkpoints/pi05_libero90/libero90_1k_w333/200/assets", asset_id="ryanhoangt/libero_90_lerobot_v21"),
+        ),
+        batch_size=64,
+        lr_schedule=_optimizer.CosineDecaySchedule(warmup_steps=100, peak_lr=5e-5, decay_steps=1_000_000, decay_lr=5e-5),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+        ema_decay=None,
+        weight_loader=weight_loaders.CheckpointWeightLoader("checkpoints/pi05_libero90/libero90_1k_w333/200/params"),
+        freeze_filter=pi0_config.Pi0Config(
+            pi05=True, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        num_train_steps=100_000,
+        save_interval=200,
+        keep_period=200,
+        num_workers=8,
+    ),
+    TrainConfig(
+        name="pi05_libero90_ctx_plora",
+        model=pi0_config.Pi0Config(
+            pi05=True, action_horizon=10, discrete_state_input=False,
+            paligemma_variant="gemma_2b_lora128", action_expert_variant="gemma_300m_lora128",
+        ),
+        data=LiberoContextDataConfig(
+            repo_id="ctx:",
+            assets=AssetsConfig(assets_dir="checkpoints/pi05_libero90/libero90_1k_w333/200/assets", asset_id="ryanhoangt/libero_90_lerobot_v21"),
+        ),
+        batch_size=64,
+        lr_schedule=_optimizer.CosineDecaySchedule(warmup_steps=1, peak_lr=5e-5, decay_steps=1_000_000, decay_lr=5e-5),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+        ema_decay=None,
+        weight_loader=weight_loaders.CheckpointWeightLoader("checkpoints/pi05_libero90/libero90_1k_w333/200/params"),
+        # Pure LoRA (DiT on-policy recipe): everything but the adapters is frozen, incl. SigLIP and the action/state
+        # projections, so zeroing every lora_b is exactly the base (the anchor / negative reference in scripts/train.py).
+        freeze_filter=nnx.All(nnx.Param, nnx.Not(nnx_utils.PathRegex(".*lora.*"))),
+        num_train_steps=100_000,
+        save_interval=200,
+        keep_period=200,
+        num_workers=8,
     ),
     #
     # Fine-tuning Aloha configs.
