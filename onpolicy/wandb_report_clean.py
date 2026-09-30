@@ -509,7 +509,9 @@ def blocks_for(D, P, G, SH, base, api):
             f"- **Correction text** (real − generic): +{pf['real'] - pf['generic']:.2f}.\n"
             f"- **Wrong-task context hurts**: shuffled {f3(pf['shuffled'])} ≈ empty {f3(pf['empty'])}, far below the null slot ({f3(pf['null'])}).\n"
             "- ⇒ On training tasks the model genuinely uses frames + feedback; the same mechanism does **not** transfer to held-out LIBERO-10 (section 4).\n"
-            + (f"- **Text alone** (textonly − null): {pf['textonly'] - pf['null']:+.2f}; frames + text (real) vs text alone: {pf['real'] - pf['textonly']:+.2f}.\n"
+            + (f"- **Frames vs text** (over null): frames alone (generic) {pf['generic'] - pf['null']:+.2f}, text alone (textonly) "
+               f"{pf['textonly'] - pf['null']:+.2f}, both (real) {pf['real'] - pf['null']:+.2f}. On held-out L10 the blank-tile modes are the worst: "
+               f"textonly {f3(l10pf.get('textonly'))}, null {f3(l10pf.get('null'))} vs empty {f3(l10pf.get('empty'))}.\n"
                if L.get("textonly", {}).get("done") else
                "- `textonly` (VLM feedback text, blank frames): the first run was invalid (judge budget cap hit mid-run) — **rerun in progress**.\n")),
         wr.H2("Held-out LIBERO-10 controls at step 7000"),
@@ -565,8 +567,9 @@ def blocks_for(D, P, G, SH, base, api):
             "1. **Retrieval-based targeted supervision**: DTW-align each failed rollout to the task's demos and sample demo (s*, a*) around where it deviates, "
             "phase-weighted with soft weights p = ½·uniform + ½·deviation mass (so the whole demo stays covered).\n"
             "2. **Representation for the DTW alignment: `siglip_patch`** — the policy's own frozen SigLIP image tokens (4×4 pooled), which separated failures "
-            "earliest in the comparison above (section 6).\n"
-            "3. **Finish the step-7000 controls**: `textonly` rerun on L90 and L10 (in progress)."),
+            "earliest in the comparison above (section 6)."
+            + ("" if D["l90"].get("textonly", {}).get("done") and D["l10_ctrl"].get("b128_round60_text/textonly", {}).get("done")
+               else "\n3. **Finish the step-7000 controls**: `textonly` rerun on L90 and L10 (in progress).")),
         wr.H1("Appendix: data sources"),
         wr.MarkdownBlock(
             f"- offline evals: `{S}/eval/<model>/<suite>/results_*.jsonl`\n"
