@@ -40,12 +40,14 @@ L10_STEPS = {"b128_round15": 2000, "b128_round30": 3000, "b128_round45": 5000, "
 MODES = ["real", "real_noinstr", "shuffled", "empty"]
 COLORS = {"real": "#2a78d6", "real_noinstr": "#eb6834", "shuffled": "#1baf7a", "empty": "#eda100"}
 INK, MUTED = "#0b0b0b", "#52514e"
+REPR_PREFIX = [25, 50, 75, 100, 150, 200, 300]  # = onpolicy.localize_repr.PREFIX
+REPR_VARIANTS = [f"{r}/{w}" for r in ("dino_cls", "dino_patch", "siglip_patch", "siglip_global") for w in ("avg", "wrist2")]
 SHEETS = [("r080_task64_c80064-0_a2", "VLM right, DTW late: the policy reaches for the wrong (left) bowl at t≈12 (VLM, red); "
            "DTW only diverges at t=248 (blue)."),
           ("r091_task41_c91041-0_a0", "DTW right: fumbling grasp of the frying pan; DTW diverges at t=80, the VLM points at t≈338."),
           ("r093_task72_c93072-0_a0", "Mug never released (stall at t=222); DTW (t=209) is closer than the VLM (t≈288)."),
-          ("r090_task24_c90024-0_a1", "DTW false alarm: DTW diverges at t=17 while the visible error (failed bowl grasp) is at "
-           "t≈275 (VLM).")]
+          ("r090_task24_c90024-0_a1", "DTW false alarm: DTW diverges at t=17, long before the hand-checked onset (drawer fumble ≈100); "
+           "the VLM points at t≈275.")]
 
 
 # ----------------------------------------------------------------------------- data
@@ -147,6 +149,11 @@ def compute():
                      for r in jsonl(f"{loc}/results.jsonl")}
     costs = [float(line.split()[-1]) for line in open(f"{S}/judge_ledger.txt") if line.strip()]
     D["judge"] = {"total": sum(costs), "calls": len(costs)}
+    rp = f"{OP}/localize_test/repr"
+    if os.path.exists(f"{rp}/metrics.json"):  # DTW representation comparison (onpolicy/localize_repr.py)
+        D["repr"] = json.load(open(f"{rp}/metrics.json"))
+        onset = [ln for ln in open(f"{rp}/table.txt") if ln.startswith("(true onset)")]
+        D["repr_onset"] = [c.strip() for c in onset[0][len("(true onset)"):].split("  ") if c.strip()] if onset else []
     return D
 
 
@@ -231,6 +238,19 @@ def plots(D):
     ax.grid(axis="y", visible=False)
     ax.set_xlim(0, 1)
     out["l90_bars"] = save_fig(fig, "l90_bars.png")
+
+    # DTW representation comparison: early-separation AUROC vs prefix length (avg weighting only).
+    if D.get("repr"):
+        fig, ax = plt.subplots(figsize=(10, 3.6))
+        for i, v in enumerate(("dino_cls", "dino_patch", "siglip_patch", "siglip_global")):
+            m = D["repr"].get(f"{v}/avg")
+            if m:
+                ax.plot(REPR_PREFIX, m["auroc"], color=list(COLORS.values())[i], lw=2, marker="o", ms=5,
+                        ls="--" if v == "dino_cls" else "-", label=f"{v} (mean {m['auc_mean']:.3f})")
+        style(ax, "Failure-vs-success AUROC using only the first t steps (DTW divergence score; agentview:wrist 1:1)", "AUROC", "prefix t (steps)")
+        ax.set_ylim(0.5, 1.0)
+        ax.legend(fontsize=8, frameon=False, loc="lower right")
+        out["repr_curve"] = save_fig(fig, "repr_curve.png")
     return out
 
 
@@ -359,6 +379,43 @@ def blocks_for(D, P, G, SH, base, api):
         f"\n- [{EXP} rollouts]({link(ROLLOUT_RUN, PROJECT)}) (`{ROLLOUT_RUN}`)"
 
     img = lambda name, cap="": wr.Image(url=f"{base}/{name}", caption=cap)  # noqa: E731
+    repr_blocks = []
+    RM = D.get("repr")
+    if RM:
+        hdr = ["variant"] + [f"t≤{t}" for t in REPR_PREFIX] + ["mean", "full", "det.", "FP (succ.)", "t0 median [IQR]"]
+        rows = []
+        for v in REPR_VARIANTS:
+            m = RM.get(v)
+            if m:
+                cells = [f"**{f3(m['auc_mean'])}**" if v == "siglip_patch/avg" else f3(m["auc_mean"])]
+                rows.append([f"`{v}`"] + [f3(a) for a in m["auroc"]] + cells + [f3(m["full_auroc"]), f"{m['det']:.2f}", f"{m['fp']:.2f}",
+                             f"{m['t0_med']:.0f} [{m['t0_iqr'][0]:.0f}, {m['t0_iqr'][1]:.0f}]"])
+        case_ids = [sid for sid, _ in SHEETS]
+        onset = D.get("repr_onset") or ["?"] * len(case_ids)
+        hand = [["(hand-checked onset)"] + onset] + [[f"`{v}`"] + [str(RM[v]["hand"].get(f"{c}_failure")) for c in case_ids] for v in REPR_VARIANTS if v in RM]
+        g = lambda v, k: RM[v][k] if v in RM else float("nan")  # noqa: E731
+        repr_blocks = [
+            wr.H2("Which representation for the DTW distance?"),
+            wr.P("Same 60 failures + 30 successes, same open-end DTW and leave-one-out calibration; only the per-frame embedding changes. "
+                 "Local cost = mean over K cells of 1 − cos. dino_cls = DINOv2 ViT-S/14 CLS (the baseline above); dino_patch = DINOv2 patch tokens pooled "
+                 "to a 4×4 grid; siglip_patch = π0.5's frozen SigLIP image tokens (as fed to the LLM) pooled 4×4; siglip_global = those tokens mean-pooled. "
+                 "Weighting agentview:wrist = 1:1 (avg) or 1:2 (wrist2). "
+                 "Early-separation AUROC at t = AUROC of the score max_{s≤t} d/τ − 1 between failures and successes."),
+            wr.MarkdownBlock(md_table(hdr, rows)),
+            *([img(P["repr_curve"])] if "repr_curve" in P else []),
+            wr.MarkdownBlock("**Hand-checked t0 on the 4 contact-sheet cases** (step where each variant's DTW first diverges)\n\n" + md_table(
+                ["variant", "r080 wrong bowl", "r091 fumbled grasp", "r093 never released", "r090 drawer fumble"], hand)),
+            wr.MarkdownBlock(
+                f"- **siglip_patch separates earliest**: mean early AUROC {g('siglip_patch/avg', 'auc_mean'):.3f} vs {g('dino_cls/avg', 'auc_mean'):.3f} for the "
+                f"dino_cls baseline. dino_patch is close behind ({g('dino_patch/avg', 'auc_mean'):.3f}) with the lowest FP of the patch variants "
+                f"({g('dino_patch/avg', 'fp'):.2f}); siglip_global/wrist2 has the lowest FP overall ({g('siglip_global/wrist2', 'fp'):.2f}).\n"
+                "- **Uncertainty**: with 60 failures / 30 successes the AUROC standard error is ≈0.05, so patch > global is suggestive and "
+                "siglip_patch vs dino_patch is a tie.\n"
+                "- **No representation fixes the semantic failures** (wrong bowl, never releasing): every variant fires 60–150 steps after the true onset. "
+                "The patch variants also raise earlier false alarms (t≈20).\n"
+                "- **Wrist weighting barely matters** (avg vs wrist2 within ≈0.01 mean AUROC; 0.02 for siglip_global).\n"
+                "- ⇒ Use **siglip_patch** (the policy's own frozen features; nothing extra to run) for the retrieval-based supervision below."),
+        ]
     B = [
         wr.TableOfContents(),
         wr.H1("TL;DR"),
@@ -485,9 +542,10 @@ def blocks_for(D, P, G, SH, base, api):
                 ["VLM error step t1 (median)", "106"], ["DTW–VLM agreement |t0 − t1| (median, IQR)", "56 [9, 94] steps"],
                 ["within 25 / within 50 steps", "0.36 / 0.44"], ["VLM earlier than DTW", "0.29"]])
             + "\n\nThe two signals are complementary: the VLM names *semantic* errors early (wrong object), DTW catches *kinematic* deviations (fumbled grasp, stalls) "
-              "but also fires on harmless deviations. A representation comparison (DINOv2 patch features, π0.5 SigLIP features) for the DTW distance is in progress."),
+              "but also fires on harmless deviations."),
         *[img(n, c) for n, c in SH],
-        wr.P("Contact sheets: 32 frames of the failed rollout; red box = VLM error frame, blue box = DTW divergence t0."),
+        wr.P("Contact sheets: 32 frames of the failed rollout; red box = VLM error frame, blue box = DTW divergence t0 (DINOv2 CLS features)."),
+        *repr_blocks,
 
         wr.H1("7. Qualitative rollouts"),
         wr.P("Left: agentview, right: wrist. Captions show each attempt's outcome and the VLM feedback that the next attempt conditions on. "
@@ -506,8 +564,9 @@ def blocks_for(D, P, G, SH, base, api):
         wr.MarkdownBlock(
             "1. **Retrieval-based targeted supervision**: DTW-align each failed rollout to the task's demos and sample demo (s*, a*) around where it deviates, "
             "phase-weighted with soft weights p = ½·uniform + ½·deviation mass (so the whole demo stays covered).\n"
-            "2. **Representation comparison** for the alignment distance (DINOv2 patches vs π0.5 SigLIP) — in progress.\n"
-            "3. **Finish controls at step 7000**: `textonly` rerun on L90 and L10 (in progress), L10 `null`."),
+            "2. **Representation for the DTW alignment: `siglip_patch`** — the policy's own frozen SigLIP image tokens (4×4 pooled), which separated failures "
+            "earliest in the comparison above (section 6).\n"
+            "3. **Finish the step-7000 controls**: `textonly` rerun on L90 and L10 (in progress)."),
         wr.H1("Appendix: data sources"),
         wr.MarkdownBlock(
             f"- offline evals: `{S}/eval/<model>/<suite>/results_*.jsonl`\n"
