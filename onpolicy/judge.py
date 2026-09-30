@@ -26,7 +26,7 @@ SUCCESS_FEEDBACK = "The task was completed correctly."
 # Hard cap on this project's judge spend (USD). Every paid call appends its cost to LEDGER (first line: the spend
 # before the ledger existed); judges refuse to call once the total reaches BUDGET, and onpolicy/run.py stops.
 LEDGER = os.environ.get("JUDGE_LEDGER", "/gscratch/scrubbed/sriyash/openpi_pt/judge_ledger.txt")
-BUDGET = float(os.environ.get("JUDGE_BUDGET", "500"))
+BUDGET = float(os.environ.get("JUDGE_BUDGET", "1000"))
 
 
 class BudgetExceeded(RuntimeError):
