@@ -1,0 +1,9 @@
+# Ubuntu 22.04 runtime for openpi's main uv env (host is RHEL8/glibc 2.28; openpi targets Ubuntu 22.04).
+# Same CUDA base as openpi's LIBERO Dockerfile. The venv itself lives in scrubbed ($S/venv), created from inside.
+Bootstrap: docker
+From: nvidia/cuda@sha256:2d913b09e6be8387e1a10976933642c73c840c0b735f0bf3c28d97fc9bc422e0
+
+%post
+    echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99sandbox
+    apt-get update && apt-get install -y git git-lfs curl ca-certificates build-essential clang ffmpeg libgl1 libglib2.0-0
+    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh

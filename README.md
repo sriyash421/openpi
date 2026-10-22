@@ -1,3 +1,5 @@
+> **This branch (`libero90-feedback`)**: on-policy VLM-feedback fine-tuning of π0.5 on LIBERO-90. See [`onpolicy/README.md`](onpolicy/README.md) for the method, results and how to reproduce.
+
 # openpi
 
 openpi holds open-source models and packages for robotics, published by the [Physical Intelligence team](https://www.physicalintelligence.company/).

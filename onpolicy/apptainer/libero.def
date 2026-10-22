@@ -1,0 +1,35 @@
+# Apptainer translation of openpi examples/libero/Dockerfile (same base, packages, uv, requirements, config).
+# The openpi repo is bound at /app at runtime, as the Docker volume mount does.
+Bootstrap: docker
+From: nvidia/cuda@sha256:2d913b09e6be8387e1a10976933642c73c840c0b735f0bf3c28d97fc9bc422e0
+
+%files
+    /gscratch/socialrl/sriyash/openpi_pt/examples/libero/requirements.txt /opt/reqs/requirements.txt
+    /gscratch/socialrl/sriyash/openpi_pt/third_party/libero/requirements.txt /opt/reqs/requirements-libero.txt
+    /gscratch/socialrl/sriyash/openpi_pt/packages/openpi-client/pyproject.toml /opt/reqs/openpi-client/pyproject.toml
+
+%post
+    echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99sandbox
+    apt-get update && apt-get install -y make g++ clang libosmesa6-dev libgl1-mesa-glx libegl1 libglew-dev \
+        libglfw3-dev libgles2-mesa-dev libglib2.0-0 libsm6 libxrender1 libxext6 curl ca-certificates
+    curl -LsSf https://astral.sh/uv/0.5.1/install.sh | env UV_INSTALL_DIR=/bin UV_NO_MODIFY_PATH=1 sh
+    export UV_LINK_MODE=copy UV_PYTHON_INSTALL_DIR=/opt/uv-python UV_CACHE_DIR=/tmp/uv-cache
+    uv venv --python 3.8 /.venv
+    echo 'setuptools<70' > /opt/reqs/build-constraints.txt  # newest setuptools breaks gym 0.25.2 sdist on py3.8
+    uv pip sync --build-constraint /opt/reqs/build-constraints.txt --python /.venv/bin/python /opt/reqs/requirements.txt /opt/reqs/requirements-libero.txt /opt/reqs/openpi-client/pyproject.toml \
+        --extra-index-url https://download.pytorch.org/whl/cu113 --index-strategy=unsafe-best-match
+    rm -rf /tmp/uv-cache
+    mkdir -p /opt/libero && cat > /opt/libero/config.yaml <<'CFG'
+benchmark_root: /app/third_party/libero/libero/libero
+bddl_files: /app/third_party/libero/libero/libero/bddl_files
+init_states: /app/third_party/libero/libero/libero/init_files
+datasets: /app/third_party/libero/libero/datasets
+assets: /app/third_party/libero/libero/libero/assets
+CFG
+    mkdir -p /usr/share/glvnd/egl_vendor.d
+    echo '{"file_format_version" : "1.0.0", "ICD" : { "library_path" : "libEGL_nvidia.so.0" }}' > /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+
+%environment
+    export PATH=/.venv/bin:$PATH
+    export PYTHONPATH=/app:/app/packages/openpi-client/src:/app/third_party/libero
+    export LIBERO_CONFIG_PATH=/opt/libero MUJOCO_GL=egl PYOPENGL_PLATFORM=egl PYTHONUNBUFFERED=1
